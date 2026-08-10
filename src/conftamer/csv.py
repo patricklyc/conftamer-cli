@@ -1,24 +1,33 @@
 import csv
 
-from conftamer.models import NodeType, ParameterNode, ReceiveNode, SendNode
+from conftamer.models import (
+    BaseNode,
+    NodeType,
+    ParameterNode,
+    ReceiveNode,
+    SendNode,
+)
 
 
-def read_csv(file_path: str):
-    nodes = []
+def read_csv(
+    file_path: str,
+) -> list[tuple[BaseNode, BaseNode]]:
+    edges = []
+
     with open(file_path) as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
             match row:
                 case [
-                    "Parameter", module_id, name, 
+                    "Parameter", module_id, param_name, 
                     "Send", _module_id, api_id, request_id, respond_code,
                 ]:  # fmt: skip
-                    nodes.append(
+                    edges.append(
                         (
                             ParameterNode(
                                 node_type=NodeType.PARAMETER,
                                 module_id=module_id,
-                                name=name,
+                                param_name=param_name,
                             ),
                             SendNode(
                                 node_type=NodeType.SEND,
@@ -33,7 +42,7 @@ def read_csv(file_path: str):
                     "Receive", module_id, api_id, request_pattern, respond_code,
                     "Send", _module_id, _api_id, request_id, _respond_code,
                 ]:  # fmt: skip
-                    nodes.append(
+                    edges.append(
                         (
                             ReceiveNode(
                                 node_type=NodeType.RECEIVE,
@@ -51,3 +60,18 @@ def read_csv(file_path: str):
                             ),
                         )
                     )
+                case _:
+                    # TODO
+                    raise Exception("parsing error")
+
+    return edges
+
+
+if __name__ == "__main__":
+    nodes = read_csv("test_gen.csv")
+    print(nodes)
+    nodes = [(r[0].model_dump(), r[1].model_dump()) for r in nodes]
+    import igraph as ig
+
+    g = ig.Graph.TupleList(nodes, directed=True)
+    print(g)
