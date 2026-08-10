@@ -10,7 +10,7 @@ class NodeType(str, Enum):
     SEND = "Send"
 
 
-class BaseNode(BaseModel):
+class BaseNode(BaseModel, frozen=True):
     pass
 
 
