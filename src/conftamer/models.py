@@ -19,11 +19,6 @@ class ParameterNode(BaseNode):
     module_id: str
     param_name: str
 
-    # @model_validator(mode="after")
-    # def write_igraph_vertex_name(self) -> Self:
-    #     self.name = str(self)
-    #     return self
-
 
 class ReceiveNode(BaseNode):
     node_type: Literal[NodeType.RECEIVE] = NodeType.RECEIVE
@@ -32,11 +27,6 @@ class ReceiveNode(BaseNode):
     request_pattern: str
     respond_code: int
 
-    # @model_validator(mode="after")
-    # def write_igraph_vertex_name(self) -> Self:
-    #     self.name = str(self)
-    #     return self
-
 
 class SendNode(BaseNode):
     node_type: Literal[NodeType.SEND] = NodeType.SEND
@@ -44,8 +34,3 @@ class SendNode(BaseNode):
     api_id: str
     request_id: str
     respond_code: int
-
-    # @model_validator(mode="after")
-    # def write_igraph_vertex_name(self) -> Self:
-    #     self.name = str(self)
-    #     return self
