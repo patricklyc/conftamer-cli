@@ -1,7 +1,7 @@
 from enum import Enum
-from typing import Literal, Self
+from typing import Literal
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel
 
 
 class NodeType(str, Enum):
