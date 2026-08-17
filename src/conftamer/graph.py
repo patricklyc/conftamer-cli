@@ -11,13 +11,9 @@ def to_graph(edges: list[tuple[BaseNode, BaseNode]]) -> ig.Graph:
     ig_edges = [(vs.index(a), vs.index(b)) for a, b in edges]
     vattrs: list[dict[str, str]] = [v.model_dump() for v in vs]
     for v in vattrs:
-        v["label"] = f"{v.get('module_id')} {
-            (
-                v.get('param_name')
-                or v.get('request_id')
-                or v.get('request_pattern')
-            )
-        }"
+        v["label"] = (
+            f"{v.get('module_id')} {(v.get('param_name') or v.get('request_id') or v.get('request_pattern'))}"
+        )
 
     g = ig.Graph(len(vs), ig_edges, directed=True)
     for i in range(len(vs)):
