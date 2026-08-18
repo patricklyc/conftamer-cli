@@ -13,7 +13,7 @@ def main(filename: str):
 
     g = to_graph(edges)
     print(g)
-    g.write_graphml(filename)
+    g.write_graphml(f"{filename}.graphml")
 
 
 if __name__ == "__main__":
