@@ -1,4 +1,5 @@
 import typer
+from rich import print
 
 from conftamer.csv import read_csv
 from conftamer.graph import to_graph

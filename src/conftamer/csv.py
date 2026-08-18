@@ -61,17 +61,6 @@ def read_csv(
                         )
                     )
                 case _:
-                    # TODO
-                    raise Exception("parsing error")
+                    raise ValueError("parsing error")
 
     return edges
-
-
-if __name__ == "__main__":
-    nodes = read_csv("test_gen.csv")
-    print(nodes)
-    nodes = [(r[0].model_dump(), r[1].model_dump()) for r in nodes]
-    import igraph as ig
-
-    g = ig.Graph.TupleList(nodes, directed=True)
-    print(g)

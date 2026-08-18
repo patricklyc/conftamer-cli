@@ -3,15 +3,12 @@ name = "conftamer"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-authors = [
-    { name = "Patrick Lau", email = "patricklyc@berkeley.edu" }
-]
 requires-python = ">=3.14"
+authors = [{ name = "Patrick Lau", email = "patricklyc@berkeley.edu" }]
 dependencies = [
-    "igraph>=1.0.0",
-    "polars>=1.43.2",
-    "pydantic>=2.13.4",
-    "typer>=0.27.1",
+  "igraph>=1.0.0",
+  "pydantic>=2.13.4",
+  "typer>=0.27.1",
 ]
 
 [project.scripts]
