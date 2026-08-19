@@ -25,7 +25,7 @@ class ReceiveNode(BaseNode):
     module_id: str
     api_id: str
     request_pattern: str
-    respond_code: int
+    response_code: int
 
 
 class SendNode(BaseNode):
@@ -33,4 +33,4 @@ class SendNode(BaseNode):
     module_id: str
     api_id: str
     request_id: str
-    respond_code: int
+    response_code: int

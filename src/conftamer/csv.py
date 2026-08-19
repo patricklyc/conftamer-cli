@@ -20,7 +20,7 @@ def read_csv(
             match row:
                 case [
                     "Parameter", module_id, param_name, 
-                    "Send", _module_id, api_id, request_id, respond_code,
+                    "Send", _module_id, api_id, request_id, response_code,
                 ]:  # fmt: skip
                     edges.append(
                         (
@@ -34,13 +34,13 @@ def read_csv(
                                 module_id=_module_id,
                                 api_id=api_id,
                                 request_id=request_id,
-                                respond_code=respond_code,
+                                response_code=response_code,
                             ),
                         )
                     )
                 case [
-                    "Receive", module_id, api_id, request_pattern, respond_code,
-                    "Send", _module_id, _api_id, request_id, _respond_code,
+                    "Receive", module_id, api_id, request_pattern, response_code,
+                    "Send", _module_id, _api_id, request_id, _response_code,
                 ]:  # fmt: skip
                     edges.append(
                         (
@@ -49,14 +49,14 @@ def read_csv(
                                 module_id=module_id,
                                 api_id=api_id,
                                 request_pattern=request_pattern,
-                                respond_code=respond_code,
+                                response_code=response_code,
                             ),
                             SendNode(
                                 node_type=NodeType.SEND,
                                 module_id=_module_id,
                                 api_id=_api_id,
                                 request_id=request_id,
-                                respond_code=_respond_code,
+                                response_code=_response_code,
                             ),
                         )
                     )
