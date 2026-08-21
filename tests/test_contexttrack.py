@@ -19,6 +19,7 @@ from conftamer.contexttrack.matching import (
     match_responses,
     match_routes,
 )
+from conftamer.contexttrack.parser import parse_contexttrack
 
 
 def test_request_sent_preserves_nested_input():
@@ -155,7 +156,7 @@ def record(sequence: int, event: dict) -> EventRecord:
     )
 
 
-def test_matches_routes_and_responses():
+def test_matches_routes_and_responses(tmp_path):
     context = {"context_id": "id:1"}
     records = [
         record(
@@ -238,6 +239,26 @@ def test_matches_routes_and_responses():
     assert route_warnings == []
     assert response_warnings == []
 
+    event_file = tmp_path / "events.jsonl"
+    event_file.write_text(
+        "\n".join(
+            json.dumps(item.event.model_dump(by_alias=True, exclude_none=True))
+            for item in records
+        )
+    )
+    graph = parse_contexttrack(event_file, module_id="example.org/service").graph
+    nodes = {(node.type, getattr(node, "message", None)): node for node in graph.nodes}
+    receive_request = nodes[("Receive", "Request")]
+    send_request = nodes[("Send", "Request")]
+    receive_response = nodes[("Receive", "Response")]
+    send_response = nodes[("Send", "Response")]
+    assert len(graph.nodes) == 4
+    assert {(edge.source, edge.target) for edge in graph.edges} == {
+        (receive_request.id, send_request.id),
+        (receive_request.id, send_response.id),
+        (receive_response.id, send_response.id),
+    }
+
 
 def test_ambiguous_response_is_not_matched():
     requests = [
@@ -265,3 +286,51 @@ def test_ambiguous_response_is_not_matched():
     assert len(warnings) == 1
     assert warnings[0].input_line == response.input_line
     assert "ambiguous" in warnings[0].message
+
+
+def test_matches_sequential_requests_and_duplicate_hook():
+    first = record(0, request_sent(10, "id:1"))
+    first_response = record(
+        1,
+        {
+            "kind": "Response received",
+            "pid": 10,
+            "message": {
+                "resp.StatusCode": "200",
+                "req.Method": "GET",
+                "req.URL.Path": "/items",
+            },
+            "context": {"context_id": "id:1"},
+        },
+    )
+    duplicate = record(
+        2,
+        {
+            "kind": "Response received",
+            "pid": 10,
+            "message": {"resp.StatusCode": "200"},
+            "context": {"context_id": "id:1"},
+        },
+    )
+    second = record(3, request_sent(10, "id:1"))
+    second_response = record(
+        4,
+        {
+            "kind": "Response received",
+            "pid": 10,
+            "message": {
+                "resp.StatusCode": "201",
+                "req.Method": "get",
+                "req.URL.Path": "/items",
+            },
+            "context": {"context_id": "id:1"},
+        },
+    )
+    groups, _ = group_events(
+        [second_response, duplicate, first, second, first_response]
+    )
+
+    matches, warnings = match_responses(groups)
+
+    assert matches.received == {1: first, 4: second}
+    assert warnings == []

@@ -46,28 +46,21 @@ def match_routes(
     warnings = []
 
     for records in groups.values():
-        for index, route_record in enumerate(records):
-            route = route_record.event
-            if not isinstance(route, RequestRoutedEvent):
-                continue
-
-            candidates = [
-                record
-                for record in records[:index]
-                if isinstance(record.event, RequestReceivedEvent)
-                and record.event.message.method == route.message.method
-                and record.event.message.path == route.message.path
-            ]
-            if len(candidates) != 1:
-                warnings.append(
-                    ParseWarning(
-                        route_record.input_line,
-                        "route has no unambiguous request match",
+        requests = []
+        for record in sorted(records, key=lambda item: item.sequence):
+            event = record.event
+            if isinstance(event, RequestReceivedEvent):
+                requests.append(record)
+            elif isinstance(event, RequestRoutedEvent):
+                candidates = [
+                    request for request in requests if _same_endpoint(request, record)
+                ]
+                if candidates:
+                    routes[candidates[-1].sequence] = event.message.pattern
+                else:
+                    warnings.append(
+                        ParseWarning(record.input_line, "route has no request match")
                     )
-                )
-                continue
-
-            routes[candidates[0].sequence] = route.message.pattern
 
     return routes, warnings
 
@@ -80,57 +73,84 @@ def match_responses(
     warnings = []
 
     for records in groups.values():
-        for index, response_record in enumerate(records):
-            response = response_record.event
-
-            if isinstance(response, ResponseSentEvent):
-                request_type = RequestReceivedEvent
-                matches = sent
-            elif isinstance(response, ResponseReceivedEvent):
-                request_type = RequestSentEvent
-                matches = received
-            else:
-                continue
-
-            method = response.message.method
-            path = response.message.path
-            candidates = [
-                record
-                for record in records[:index]
-                if isinstance(record.event, request_type)
-                and record.event.message.method == method
-                and record.event.message.path == path
-            ]
-            request = _choose_request(candidates, response_record)
-            if request is None:
-                reason = "ambiguous" if len(candidates) > 1 else "missing"
-                warnings.append(
-                    ParseWarning(
-                        response_record.input_line,
-                        f"{reason} request match for response",
-                    )
+        inbound = []
+        outbound = []
+        previous_sent = None
+        previous_received = None
+        for record in sorted(records, key=lambda item: item.sequence):
+            event = record.event
+            if isinstance(event, RequestReceivedEvent):
+                inbound.append(record)
+            elif isinstance(event, RequestSentEvent):
+                outbound.append(record)
+            elif isinstance(event, ResponseSentEvent):
+                previous_sent = _match_response(
+                    record, inbound, sent, warnings, previous_sent
                 )
-                continue
-
-            matches[response_record.sequence] = request
+            elif isinstance(event, ResponseReceivedEvent):
+                previous_received = _match_response(
+                    record, outbound, received, warnings, previous_received
+                )
 
     return ResponseMatches(sent=sent, received=received), warnings
 
 
-def _choose_request(
-    candidates: Sequence[EventRecord],
+def _match_response(
     response: EventRecord,
+    requests: list[EventRecord],
+    matches: dict[int, EventRecord],
+    warnings: list[ParseWarning],
+    previous: EventRecord | None,
+) -> EventRecord:
+    message = response.event.message
+    if message.method is None or message.path is None:
+        if not _is_duplicate(response, previous):
+            warnings.append(
+                ParseWarning(response.input_line, "response has no endpoint")
+            )
+        return response
+
+    candidates = [request for request in requests if _same_endpoint(request, response)]
+    request = _choose_request(candidates, response)
+    if request is None:
+        if not _is_duplicate(response, previous):
+            reason = "ambiguous" if len(candidates) > 1 else "missing"
+            warnings.append(
+                ParseWarning(response.input_line, f"{reason} request match")
+            )
+        return response
+
+    requests.remove(request)
+    matches[response.sequence] = request
+    return response
+
+
+def _choose_request(
+    candidates: Sequence[EventRecord], event: EventRecord
 ) -> EventRecord | None:
     if len(candidates) == 1:
         return candidates[0]
-    if response.event.goroutine_id is None:
-        return None
-
     same_goroutine = [
         candidate
         for candidate in candidates
-        if candidate.event.goroutine_id == response.event.goroutine_id
+        if event.event.goroutine_id is not None
+        and candidate.event.goroutine_id == event.event.goroutine_id
     ]
-    if len(same_goroutine) == 1:
-        return same_goroutine[0]
-    return None
+    return same_goroutine[0] if len(same_goroutine) == 1 else None
+
+
+def _same_endpoint(first: EventRecord, second: EventRecord) -> bool:
+    first_message = first.event.message
+    second_message = second.event.message
+    return (
+        first_message.method.upper() == second_message.method.upper()
+        and first_message.path == second_message.path
+    )
+
+
+def _is_duplicate(response: EventRecord, previous: EventRecord | None) -> bool:
+    return (
+        previous is not None
+        and response.sequence == previous.sequence + 1
+        and response.event.message.status == previous.event.message.status
+    )
