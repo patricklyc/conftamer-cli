@@ -12,3 +12,4 @@ wheels/
 *.csv
 *.gml
 *.graphml
+*.pdf
