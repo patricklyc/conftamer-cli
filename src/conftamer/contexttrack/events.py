@@ -1,6 +1,8 @@
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
 
 class ContextTrackModel(BaseModel):
@@ -98,3 +100,38 @@ ContextTrackEvent = Annotated[
 ]
 
 EVENT_ADAPTER = TypeAdapter(ContextTrackEvent)
+
+
+@dataclass(frozen=True)
+class EventRecord:
+    sequence: int
+    input_line: int
+    event: ContextTrackEvent
+
+
+@dataclass(frozen=True)
+class ParseWarning:
+    input_line: int
+    message: str
+
+
+def read_events(
+    path: str | Path,
+) -> tuple[list[EventRecord], list[ParseWarning]]:
+    records = []
+    warnings = []
+
+    with Path(path).open() as event_file:
+        for input_line, line in enumerate(event_file, start=1):
+            if not line.strip():
+                continue
+
+            try:
+                event = EVENT_ADAPTER.validate_json(line)
+            except ValidationError as error:
+                warnings.append(ParseWarning(input_line, str(error)))
+                continue
+
+            records.append(EventRecord(len(records), input_line, event))
+
+    return records, warnings

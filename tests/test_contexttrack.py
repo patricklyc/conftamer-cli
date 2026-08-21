@@ -1,15 +1,20 @@
+import json
+
 import pytest
 from pydantic import ValidationError
 
 from conftamer.contexttrack.events import (
     EVENT_ADAPTER,
     ContextInfo,
+    EventRecord,
     ReceivedResponseMessage,
     RequestID,
     RequestMessage,
     RequestSentEvent,
     ResponseReceivedEvent,
+    read_events,
 )
+from conftamer.contexttrack.matching import group_events
 
 
 def test_request_sent_preserves_nested_input():
@@ -85,3 +90,54 @@ def test_unknown_event_kind_is_rejected():
                 "context": {"context_id": "id:3"},
             }
         )
+
+
+def request_sent(pid: int, context_id: str | None) -> dict:
+    return {
+        "kind": "Request sent",
+        "pid": pid,
+        "message": {
+            "req.Method": "GET",
+            "req.URL.Host": "example.org",
+            "req.URL.Path": "/items",
+        },
+        "context": {"context_id": context_id},
+    }
+
+
+def test_read_events_warns_and_continues_after_bad_line(tmp_path):
+    event_file = tmp_path / "events.jsonl"
+    event_file.write_text(
+        "\n".join(
+            [
+                json.dumps(request_sent(10, "id:1")),
+                "{bad json",
+                "",
+                json.dumps(request_sent(10, "id:2")),
+            ]
+        )
+    )
+
+    records, warnings = read_events(event_file)
+
+    assert [record.input_line for record in records] == [1, 4]
+    assert [record.sequence for record in records] == [0, 1]
+    assert len(warnings) == 1
+    assert warnings[0].input_line == 2
+
+
+def test_group_events_separates_processes_and_missing_context():
+    events = [
+        EVENT_ADAPTER.validate_python(request_sent(10, "id:1")),
+        EVENT_ADAPTER.validate_python(request_sent(20, "id:1")),
+        EVENT_ADAPTER.validate_python(request_sent(10, None)),
+    ]
+    records = [
+        EventRecord(sequence=index, input_line=index + 1, event=event)
+        for index, event in enumerate(events)
+    ]
+
+    groups, ungrouped = group_events(records)
+
+    assert list(groups) == [(10, "id:1"), (20, "id:1")]
+    assert ungrouped == [records[2]]
