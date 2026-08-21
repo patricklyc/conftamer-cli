@@ -1,11 +1,33 @@
+import sys
+from pathlib import Path
+
 import igraph as ig
 import typer
 from rich import print
 
+from conftamer.contexttrack import parse_contexttrack
 from conftamer.csv import read_csv
 from conftamer.graph import to_graph
+from conftamer.pmgraph import write_pmgraph
 
 app = typer.Typer()
+
+
+@app.command()
+def contexttrack(
+    input_path: Path,
+    module_id: str = typer.Option(..., "--module-id"),
+    output: Path | None = typer.Option(None, "--output"),
+):
+    result = parse_contexttrack(input_path, module_id=module_id)
+    output_path = output or Path(f"{input_path}.pmgraph.json")
+    write_pmgraph(result.graph, output_path)
+
+    for warning in result.warnings:
+        print(
+            f"warning: line {warning.input_line}: {warning.message}",
+            file=sys.stderr,
+        )
 
 
 @app.command()
