@@ -14,7 +14,11 @@ from conftamer.contexttrack.events import (
     ResponseReceivedEvent,
     read_events,
 )
-from conftamer.contexttrack.matching import group_events
+from conftamer.contexttrack.matching import (
+    group_events,
+    match_responses,
+    match_routes,
+)
 
 
 def test_request_sent_preserves_nested_input():
@@ -141,3 +145,123 @@ def test_group_events_separates_processes_and_missing_context():
 
     assert list(groups) == [(10, "id:1"), (20, "id:1")]
     assert ungrouped == [records[2]]
+
+
+def record(sequence: int, event: dict) -> EventRecord:
+    return EventRecord(
+        sequence=sequence,
+        input_line=sequence + 1,
+        event=EVENT_ADAPTER.validate_python(event),
+    )
+
+
+def test_matches_routes_and_responses():
+    context = {"context_id": "id:1"}
+    records = [
+        record(
+            0,
+            {
+                "kind": "Request received",
+                "pid": 10,
+                "goroutine_id": 5,
+                "message": {
+                    "req.Method": "GET",
+                    "req.URL.Path": "/items/1",
+                },
+                "context": context,
+            },
+        ),
+        record(
+            1,
+            {
+                "kind": "Request routed",
+                "pid": 10,
+                "message": {
+                    "req.Method": "GET",
+                    "req.URL.Path": "/items/1",
+                    "pattern": "/items/{id}",
+                },
+                "context": context,
+            },
+        ),
+        record(
+            2,
+            {
+                "kind": "Request sent",
+                "pid": 10,
+                "goroutine_id": 7,
+                "message": {
+                    "req.Method": "POST",
+                    "req.URL.Host": "inventory:8080",
+                    "req.URL.Path": "/reserve",
+                },
+                "context": context,
+            },
+        ),
+        record(
+            3,
+            {
+                "kind": "Response received",
+                "pid": 10,
+                "goroutine_id": 7,
+                "message": {
+                    "resp.StatusCode": "200",
+                    "req.Method": "POST",
+                    "req.URL.Path": "/reserve",
+                },
+                "context": context,
+            },
+        ),
+        record(
+            4,
+            {
+                "kind": "Response sent",
+                "pid": 10,
+                "goroutine_id": 5,
+                "message": {
+                    "code": "201",
+                    "req.Method": "GET",
+                    "req.URL.Path": "/items/1",
+                },
+                "context": context,
+            },
+        ),
+    ]
+    groups, _ = group_events(records)
+
+    routes, route_warnings = match_routes(groups)
+    responses, response_warnings = match_responses(groups)
+
+    assert routes == {0: "/items/{id}"}
+    assert responses.received == {3: records[2]}
+    assert responses.sent == {4: records[0]}
+    assert route_warnings == []
+    assert response_warnings == []
+
+
+def test_ambiguous_response_is_not_matched():
+    requests = [
+        record(0, request_sent(10, "id:1")),
+        record(1, request_sent(10, "id:1")),
+    ]
+    response = record(
+        2,
+        {
+            "kind": "Response received",
+            "pid": 10,
+            "message": {
+                "resp.StatusCode": "200",
+                "req.Method": "GET",
+                "req.URL.Path": "/items",
+            },
+            "context": {"context_id": "id:1"},
+        },
+    )
+    groups, _ = group_events([*requests, response])
+
+    matches, warnings = match_responses(groups)
+
+    assert matches.received == {}
+    assert len(warnings) == 1
+    assert warnings[0].input_line == response.input_line
+    assert "ambiguous" in warnings[0].message
