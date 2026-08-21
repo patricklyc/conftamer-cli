@@ -2,13 +2,17 @@ import itertools
 
 import igraph as ig
 
-from conftamer.csv import read_csv
 from conftamer.models import BaseNode
 
 
 def to_graph(edges: list[tuple[BaseNode, BaseNode]]) -> ig.Graph:
-    vs = list(set(itertools.chain.from_iterable(edges)))
-    ig_edges = [(vs.index(a), vs.index(b)) for a, b in edges]
+    nodes = itertools.chain.from_iterable(edges)
+    vs = list(dict.fromkeys(nodes))
+
+    vertex_ids = {vertex: index for index, vertex in enumerate(vs)}
+    ig_edges = [
+        (vertex_ids[source], vertex_ids[target]) for source, target in edges
+    ]
     vattrs: list[dict[str, str]] = [v.model_dump() for v in vs]
     for v in vattrs:
         v["label"] = (
@@ -21,9 +25,11 @@ def to_graph(edges: list[tuple[BaseNode, BaseNode]]) -> ig.Graph:
     return g
 
 
-if __name__ == "__main__":
-    edges = read_csv("test_gen.csv")
-
-    g = to_graph(edges)
-    print(g)
-    g.write_graphml("test_gen.graphml")
+def to_subgraph(graph: ig.Graph, node_id: int) -> ig.Graph:
+    v = []
+    v.extend(graph.subcomponent(node_id, mode="in"))
+    v.extend(graph.subcomponent(node_id, mode="out"))
+    print(v)
+    sg: ig.Graph = graph.subgraph(v)
+    print(sg)
+    return sg
