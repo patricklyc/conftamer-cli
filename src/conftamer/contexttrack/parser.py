@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -90,16 +91,15 @@ def _to_node(
     event = record.event
 
     if isinstance(event, RequestReceivedEvent):
-        fields = {
-            "api_id": event.api_id,
-            "method": event.message.method.upper(),
-            "pattern": routes.get(
-                record.sequence,
-                _http_path(event.message.path),
-            ),
-        }
+        api_id = event.api_id
+        method = event.message.method.upper()
+        pattern = routes.get(record.sequence, _http_path(event.message.path))
+        fields = {"api_id": api_id, "method": method, "pattern": pattern}
         return ReceiveRequestNode(
-            id=_id(module_id, "Receive", "Request", fields), **fields
+            id=_id(module_id, "Receive", "Request", fields),
+            api_id=api_id,
+            method=method,
+            pattern=pattern,
         )
 
     if isinstance(event, RequestSentEvent):
@@ -110,15 +110,21 @@ def _to_node(
         if request is None or not isinstance(request.event, RequestSentEvent):
             return None
         sent = _send_request(request.event, module_id)
+        status = event.message.status
         fields = {
             "api_id": sent.api_id,
             "method": sent.method,
             "host": sent.host,
             "path": sent.path,
-            "status": event.message.status,
+            "status": status,
         }
         return ReceiveResponseNode(
-            id=_id(module_id, "Receive", "Response", fields), **fields
+            id=_id(module_id, "Receive", "Response", fields),
+            api_id=sent.api_id,
+            method=sent.method,
+            host=sent.host,
+            path=sent.path,
+            status=status,
         )
 
     if isinstance(event, ResponseSentEvent):
@@ -128,13 +134,20 @@ def _to_node(
         received = _to_node(request, module_id, routes, responses)
         if not isinstance(received, ReceiveRequestNode):
             return None
+        status = event.message.status
         fields = {
             "api_id": received.api_id,
             "method": received.method,
             "pattern": received.pattern,
-            "status": event.message.status,
+            "status": status,
         }
-        return SendResponseNode(id=_id(module_id, "Send", "Response", fields), **fields)
+        return SendResponseNode(
+            id=_id(module_id, "Send", "Response", fields),
+            api_id=received.api_id,
+            method=received.method,
+            pattern=received.pattern,
+            status=status,
+        )
 
     return None
 
@@ -144,20 +157,30 @@ def _send_request(event: RequestSentEvent, module_id: str) -> SendRequestNode:
     if not request.host:
         raise NodeConversionError("request endpoint has no host")
 
-    fields = {
-        "api_id": event.api_id,
-        "method": request.method.upper(),
-        "host": request.host,
-        "path": _http_path(request.path),
-    }
-    return SendRequestNode(id=_id(module_id, "Send", "Request", fields), **fields)
+    api_id = event.api_id
+    method = request.method.upper()
+    host = request.host
+    path = _http_path(request.path)
+    fields = {"api_id": api_id, "method": method, "host": host, "path": path}
+    return SendRequestNode(
+        id=_id(module_id, "Send", "Request", fields),
+        api_id=api_id,
+        method=method,
+        host=host,
+        path=path,
+    )
 
 
 def _http_path(path: str) -> str:
     return path or "/"
 
 
-def _id(module_id: str, node_type: str, message: str, fields: dict) -> str:
+def _id(
+    module_id: str,
+    node_type: str,
+    message: str,
+    fields: Mapping[str, object],
+) -> str:
     return make_node_id(
         module_id,
         {"type": node_type, "message": message, **fields},

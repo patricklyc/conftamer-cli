@@ -20,6 +20,12 @@ from conftamer.contexttrack.matching import (
     match_routes,
 )
 from conftamer.contexttrack.parser import parse_contexttrack
+from conftamer.pmgraph import (
+    ReceiveRequestNode,
+    ReceiveResponseNode,
+    SendRequestNode,
+    SendResponseNode,
+)
 
 
 def test_request_sent_preserves_nested_input():
@@ -460,7 +466,17 @@ def test_duplicate_response_does_not_consume_newer_request():
 def test_matches_client_response_after_redirect():
     context = {"context_id": "id:1"}
     events = [
-        request_sent(10, "id:1"),
+        {
+            "kind": "Request sent",
+            "pid": 10,
+            "goroutine_id": 7,
+            "message": {
+                "req.Method": "GET",
+                "req.URL.Host": "example.org",
+                "req.URL.Path": "/items",
+            },
+            "context": context,
+        },
         {
             "kind": "Response received",
             "pid": 10,
@@ -472,7 +488,17 @@ def test_matches_client_response_after_redirect():
             },
             "context": context,
         },
-        request_sent(10, "id:1"),
+        {
+            "kind": "Request sent",
+            "pid": 10,
+            "goroutine_id": 7,
+            "message": {
+                "req.Method": "GET",
+                "req.URL.Host": "example.org",
+                "req.URL.Path": "/redirected",
+            },
+            "context": context,
+        },
         {
             "kind": "Response received",
             "pid": 10,
@@ -492,9 +518,6 @@ def test_matches_client_response_after_redirect():
             "api_id": "example.org/api",
         },
     ]
-    events[0]["goroutine_id"] = 7
-    events[2]["goroutine_id"] = 7
-    events[2]["message"]["req.URL.Path"] = "/redirected"
     records = [record(sequence, event) for sequence, event in enumerate(events)]
     groups, _ = group_events(records)
 
@@ -567,15 +590,24 @@ def test_preserves_outbound_api_id_and_normalizes_empty_http_path(tmp_path):
 
     result = parse_contexttrack(event_file, module_id="example.org/service")
 
-    nodes = {(node.type, node.message): node for node in result.graph.nodes}
-    sent = nodes[("Send", "Request")]
-    received = nodes[("Receive", "Response")]
+    sent = next(
+        node for node in result.graph.nodes if isinstance(node, SendRequestNode)
+    )
+    received = next(
+        node for node in result.graph.nodes if isinstance(node, ReceiveResponseNode)
+    )
+    receive_request = next(
+        node for node in result.graph.nodes if isinstance(node, ReceiveRequestNode)
+    )
+    send_response = next(
+        node for node in result.graph.nodes if isinstance(node, SendResponseNode)
+    )
     assert sent.api_id == "example.org/api"
     assert sent.path == "/"
     assert received.api_id == "example.org/api"
     assert received.path == "/"
-    assert nodes[("Receive", "Request")].pattern == "/"
-    assert nodes[("Send", "Response")].pattern == "/"
+    assert receive_request.pattern == "/"
+    assert send_response.pattern == "/"
     assert result.warnings == ()
 
 

@@ -64,8 +64,8 @@ def match_routes(
                 key
                 for key in chains
                 if method == key[0]
-                and path != chains[key][-1].event.message.path
-                and chains[key][-1].event.message.path.endswith(path)
+                and path != _route_event(chains[key][-1]).message.path
+                and _route_event(chains[key][-1]).message.path.endswith(path)
             ]
             if len(candidates) > 1:
                 warnings.append(
@@ -93,14 +93,23 @@ def match_routes(
     return routes, warnings
 
 
-def _endpoint(record: EventRecord) -> tuple[str, str]:
+def _route_event(record: EventRecord) -> RequestRoutedEvent:
+    event = record.event
+    if not isinstance(event, RequestRoutedEvent):
+        raise TypeError("route chain contains a non-route event")
+    return event
+
+
+def _endpoint(record: EventRecord) -> tuple[str, str] | None:
     message = record.event.message
+    if message.method is None or message.path is None:
+        return None
     return message.method.upper(), message.path
 
 
 def _full_pattern(chain: Sequence[EventRecord]) -> str:
-    original_path = chain[0].event.message.path
-    last_message = chain[-1].event.message
+    original_path = _route_event(chain[0]).message.path
+    last_message = _route_event(chain[-1]).message
     if last_message.path == original_path:
         return last_message.pattern
 
@@ -162,9 +171,7 @@ def _match_response(
         candidates = [
             request
             for request in requests
-            if request.event.message.method.upper() == message.method.upper()
-            and response.event.goroutine_id is not None
-            and request.event.goroutine_id == response.event.goroutine_id
+            if _same_method_and_goroutine(request, response)
         ]
     request = _choose_request(candidates, response)
     if request is None:
@@ -192,11 +199,19 @@ def _choose_request(
 
 
 def _same_endpoint(first: EventRecord, second: EventRecord) -> bool:
-    first_message = first.event.message
-    second_message = second.event.message
+    first_endpoint = _endpoint(first)
+    return first_endpoint is not None and first_endpoint == _endpoint(second)
+
+
+def _same_method_and_goroutine(request: EventRecord, response: EventRecord) -> bool:
+    request_endpoint = _endpoint(request)
+    response_endpoint = _endpoint(response)
     return (
-        first_message.method.upper() == second_message.method.upper()
-        and first_message.path == second_message.path
+        request_endpoint is not None
+        and response_endpoint is not None
+        and request_endpoint[0] == response_endpoint[0]
+        and response.event.goroutine_id is not None
+        and request.event.goroutine_id == response.event.goroutine_id
     )
 
 
