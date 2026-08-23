@@ -48,11 +48,26 @@ The parser preserves ContextTrack's nested `message`, `context`, and
 context, pairs responses with requests, and creates an edge from every Receive
 to every later Send in the same group.
 
+`module_id` identifies the module whose PMGraph is being generated. An event's
+`api_id` instead identifies the organization or API associated with that
+communication; one module's PMGraph may therefore contain several API IDs.
+Outbound API IDs are preserved from ContextTrack and copied to matched response
+nodes.
+
+During node conversion, an empty HTTP URL path is normalized to `/`. Nested
+router events are combined into the full pattern seen by the original request,
+including routes behind `StripPrefix`-style path rewriting. ContextTrack may
+also emit both wire-level and client-level hooks for one received response;
+these hooks are collapsed into one response node when their status and request
+flow match, including redirects whose hooks report different paths.
+
 ## Limitations
 
-- `--module-id` is required because ContextTrack does not export it.
-- Outbound API IDs remain unresolved (`null`); ContextTrack identifies the local
-  caller, not the destination API owner.
+- `--module-id` is required because ContextTrack does not export it. Inputs
+  should contain events for that module.
+- Events without enough endpoint information for a PMGraph label, such as an
+  outbound request with no host, are accepted as ContextTrack input but omitted
+  with a warning rather than guessed.
 - Context edges are heuristic evidence of influence, not proof of causality.
 - Malformed or ambiguous events are skipped with warnings on standard error.
 - ContextTrack does not produce configuration Parameter nodes or edges.

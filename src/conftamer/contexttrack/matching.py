@@ -46,23 +46,71 @@ def match_routes(
     warnings = []
 
     for records in groups.values():
-        requests = []
-        for record in sorted(records, key=lambda item: item.sequence):
-            event = record.event
-            if isinstance(event, RequestReceivedEvent):
-                requests.append(record)
-            elif isinstance(event, RequestRoutedEvent):
-                candidates = [
-                    request for request in requests if _same_endpoint(request, record)
-                ]
-                if candidates:
-                    routes[candidates[-1].sequence] = event.message.pattern
-                else:
-                    warnings.append(
-                        ParseWarning(record.input_line, "route has no request match")
-                    )
+        ordered = sorted(records, key=lambda item: item.sequence)
+        requests = [
+            record
+            for record in ordered
+            if isinstance(record.event, RequestReceivedEvent)
+        ]
+        chains: dict[tuple[str, str], list[EventRecord]] = {}
+
+        for record in ordered:
+            if not isinstance(record.event, RequestRoutedEvent):
+                continue
+
+            method = record.event.message.method.upper()
+            path = record.event.message.path
+            candidates = [
+                key
+                for key in chains
+                if method == key[0]
+                and path != chains[key][-1].event.message.path
+                and chains[key][-1].event.message.path.endswith(path)
+            ]
+            if len(candidates) > 1:
+                warnings.append(
+                    ParseWarning(record.input_line, "ambiguous route chain")
+                )
+                continue
+            if candidates:
+                chains[candidates[0]].append(record)
+                continue
+
+            key = (method, path)
+            chains.setdefault(key, []).append(record)
+
+        for key, chain in chains.items():
+            candidates = [request for request in requests if _endpoint(request) == key]
+            if not candidates:
+                warnings.append(
+                    ParseWarning(chain[0].input_line, "route has no request match")
+                )
+                continue
+
+            pattern = _full_pattern(chain)
+            routes.update((candidate.sequence, pattern) for candidate in candidates)
 
     return routes, warnings
+
+
+def _endpoint(record: EventRecord) -> tuple[str, str]:
+    message = record.event.message
+    return message.method.upper(), message.path
+
+
+def _full_pattern(chain: Sequence[EventRecord]) -> str:
+    original_path = chain[0].event.message.path
+    last_message = chain[-1].event.message
+    if last_message.path == original_path:
+        return last_message.pattern
+
+    prefix = original_path[: len(original_path) - len(last_message.path)]
+    path_start = last_message.pattern.find("/")
+    if path_start < 0:
+        return last_message.pattern
+    return (
+        last_message.pattern[:path_start] + prefix + last_message.pattern[path_start:]
+    )
 
 
 def match_responses(
@@ -102,22 +150,26 @@ def _match_response(
     warnings: list[ParseWarning],
     previous: EventRecord | None,
 ) -> EventRecord:
+    if _is_duplicate(response, previous, matches):
+        return response
+
     message = response.event.message
     if message.method is None or message.path is None:
-        if not _is_duplicate(response, previous):
-            warnings.append(
-                ParseWarning(response.input_line, "response has no endpoint")
-            )
         return response
 
     candidates = [request for request in requests if _same_endpoint(request, response)]
+    if not candidates and isinstance(response.event, ResponseReceivedEvent):
+        candidates = [
+            request
+            for request in requests
+            if request.event.message.method.upper() == message.method.upper()
+            and response.event.goroutine_id is not None
+            and request.event.goroutine_id == response.event.goroutine_id
+        ]
     request = _choose_request(candidates, response)
     if request is None:
-        if not _is_duplicate(response, previous):
-            reason = "ambiguous" if len(candidates) > 1 else "missing"
-            warnings.append(
-                ParseWarning(response.input_line, f"{reason} request match")
-            )
+        reason = "ambiguous" if len(candidates) > 1 else "missing"
+        warnings.append(ParseWarning(response.input_line, f"{reason} request match"))
         return response
 
     requests.remove(request)
@@ -148,9 +200,27 @@ def _same_endpoint(first: EventRecord, second: EventRecord) -> bool:
     )
 
 
-def _is_duplicate(response: EventRecord, previous: EventRecord | None) -> bool:
-    return (
-        previous is not None
-        and response.sequence == previous.sequence + 1
-        and response.event.message.status == previous.event.message.status
+def _is_duplicate(
+    response: EventRecord,
+    previous: EventRecord | None,
+    matches: Mapping[int, EventRecord],
+) -> bool:
+    if previous is None or previous.sequence not in matches:
+        return False
+
+    event = response.event
+    previous_event = previous.event
+    if not isinstance(event, ResponseReceivedEvent) or not isinstance(
+        previous_event, ResponseReceivedEvent
+    ):
+        return False
+    if previous_event.api_id is not None or event.api_id is None:
+        return False
+
+    message = event.message
+    previous_message = previous_event.message
+    return message.status == previous_message.status and (
+        message.method is None
+        or previous_message.method is None
+        or message.method.upper() == previous_message.method.upper()
     )

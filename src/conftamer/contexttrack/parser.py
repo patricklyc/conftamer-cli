@@ -39,6 +39,10 @@ class Occurrence:
     node: PMNode
 
 
+class NodeConversionError(ValueError):
+    pass
+
+
 @dataclass(frozen=True)
 class ContextTrackResult:
     graph: PMGraph
@@ -55,6 +59,9 @@ def parse_contexttrack(path: str | Path, *, module_id: str) -> ContextTrackResul
     for record in records:
         try:
             node = _to_node(record, module_id, routes, responses)
+        except NodeConversionError as error:
+            warnings.append(ParseWarning(record.input_line, str(error)))
+            continue
         except ValidationError as error:
             warnings.append(ParseWarning(record.input_line, str(error)))
             continue
@@ -86,7 +93,10 @@ def _to_node(
         fields = {
             "api_id": event.api_id,
             "method": event.message.method.upper(),
-            "pattern": routes.get(record.sequence, event.message.path),
+            "pattern": routes.get(
+                record.sequence,
+                _http_path(event.message.path),
+            ),
         }
         return ReceiveRequestNode(
             id=_id(module_id, "Receive", "Request", fields), **fields
@@ -131,13 +141,20 @@ def _to_node(
 
 def _send_request(event: RequestSentEvent, module_id: str) -> SendRequestNode:
     request = event.request_id or event.message
+    if not request.host:
+        raise NodeConversionError("request endpoint has no host")
+
     fields = {
-        "api_id": None,
+        "api_id": event.api_id,
         "method": request.method.upper(),
         "host": request.host,
-        "path": request.path,
+        "path": _http_path(request.path),
     }
     return SendRequestNode(id=_id(module_id, "Send", "Request", fields), **fields)
+
+
+def _http_path(path: str) -> str:
+    return path or "/"
 
 
 def _id(module_id: str, node_type: str, message: str, fields: dict) -> str:

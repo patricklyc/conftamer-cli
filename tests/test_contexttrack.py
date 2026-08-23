@@ -260,6 +260,86 @@ def test_matches_routes_and_responses(tmp_path):
     }
 
 
+def test_reconstructs_nested_route_after_prefix_stripping(tmp_path):
+    context = {"context_id": "id:1"}
+    events = [
+        {
+            "kind": "Request received",
+            "pid": 10,
+            "message": {
+                "req.Method": "GET",
+                "req.URL.Path": "/api/v1/status/config",
+            },
+            "context": context,
+            "api_id": "example.org/api",
+        },
+        {
+            "kind": "Request routed",
+            "pid": 10,
+            "message": {
+                "req.Method": "GET",
+                "req.URL.Path": "/api/v1/status/config",
+                "pattern": "/api/v1/",
+            },
+            "context": context,
+        },
+        {
+            "kind": "Request routed",
+            "pid": 10,
+            "message": {
+                "req.Method": "GET",
+                "req.URL.Path": "/status/config",
+                "pattern": "/status/config",
+            },
+            "context": context,
+        },
+        {
+            "kind": "Response sent",
+            "pid": 10,
+            "message": {
+                "code": "200",
+                "req.Method": "GET",
+                "req.URL.Path": "/api/v1/status/config",
+            },
+            "context": context,
+        },
+    ]
+    event_file = tmp_path / "events.jsonl"
+    event_file.write_text("\n".join(json.dumps(event) for event in events))
+
+    result = parse_contexttrack(event_file, module_id="example.org/service")
+
+    patterns = {node.pattern for node in result.graph.nodes if hasattr(node, "pattern")}
+    assert patterns == {"/api/v1/status/config"}
+    assert result.warnings == ()
+
+
+def test_does_not_guess_ambiguous_nested_route_chain():
+    context = {"context_id": "id:1"}
+    routes = [
+        record(
+            sequence,
+            {
+                "kind": "Request routed",
+                "pid": 10,
+                "message": {
+                    "req.Method": "GET",
+                    "req.URL.Path": path,
+                    "pattern": path,
+                },
+                "context": context,
+            },
+        )
+        for sequence, path in enumerate(["/one/items", "/two/items", "/items"])
+    ]
+    groups, _ = group_events(routes)
+
+    matches, warnings = match_routes(groups)
+
+    assert matches == {}
+    assert any(warning.message == "ambiguous route chain" for warning in warnings)
+
+
 def test_ambiguous_response_is_not_matched():
     requests = [
         record(0, request_sent(10, "id:1")),
@@ -310,6 +390,7 @@ def test_matches_sequential_requests_and_duplicate_hook():
             "pid": 10,
             "message": {"resp.StatusCode": "200"},
             "context": {"context_id": "id:1"},
+            "api_id": "example.org/api",
         },
     )
     second = record(3, request_sent(10, "id:1"))
@@ -334,3 +415,191 @@ def test_matches_sequential_requests_and_duplicate_hook():
 
     assert matches.received == {1: first, 4: second}
     assert warnings == []
+
+
+def test_duplicate_response_does_not_consume_newer_request():
+    first_request = record(0, request_sent(10, "id:1"))
+    wire_response = record(
+        1,
+        {
+            "kind": "Response received",
+            "pid": 10,
+            "message": {
+                "resp.StatusCode": "200",
+                "req.Method": "GET",
+                "req.URL.Path": "/items",
+            },
+            "context": {"context_id": "id:1"},
+        },
+    )
+    newer_request = record(2, request_sent(10, "id:1"))
+    client_response = record(
+        3,
+        {
+            "kind": "Response received",
+            "pid": 10,
+            "message": {
+                "resp.StatusCode": "200",
+                "req.Method": "GET",
+                "req.URL.Path": "/items",
+            },
+            "context": {"context_id": "id:1"},
+            "api_id": "example.org/api",
+        },
+    )
+    groups, _ = group_events(
+        [first_request, wire_response, newer_request, client_response]
+    )
+
+    matches, warnings = match_responses(groups)
+
+    assert matches.received == {wire_response.sequence: first_request}
+    assert warnings == []
+
+
+def test_matches_client_response_after_redirect():
+    context = {"context_id": "id:1"}
+    events = [
+        request_sent(10, "id:1"),
+        {
+            "kind": "Response received",
+            "pid": 10,
+            "goroutine_id": 7,
+            "message": {
+                "resp.StatusCode": "302",
+                "req.Method": "GET",
+                "req.URL.Path": "/items",
+            },
+            "context": context,
+        },
+        request_sent(10, "id:1"),
+        {
+            "kind": "Response received",
+            "pid": 10,
+            "message": {"resp.StatusCode": "500"},
+            "context": context,
+        },
+        {
+            "kind": "Response received",
+            "pid": 10,
+            "goroutine_id": 7,
+            "message": {
+                "resp.StatusCode": "500",
+                "req.Method": "GET",
+                "req.URL.Path": "/original",
+            },
+            "context": context,
+            "api_id": "example.org/api",
+        },
+    ]
+    events[0]["goroutine_id"] = 7
+    events[2]["goroutine_id"] = 7
+    events[2]["message"]["req.URL.Path"] = "/redirected"
+    records = [record(sequence, event) for sequence, event in enumerate(events)]
+    groups, _ = group_events(records)
+
+    matches, warnings = match_responses(groups)
+
+    assert matches.received == {1: records[0], 4: records[2]}
+    assert warnings == []
+
+
+def test_preserves_outbound_api_id_and_normalizes_empty_http_path(tmp_path):
+    context = {"context_id": "id:1"}
+    events = [
+        {
+            "kind": "Request received",
+            "pid": 10,
+            "message": {"req.Method": "GET", "req.URL.Path": ""},
+            "context": {"context_id": "id:2"},
+            "api_id": "example.org/api",
+        },
+        {
+            "kind": "Response sent",
+            "pid": 10,
+            "message": {
+                "code": "204",
+                "req.Method": "GET",
+                "req.URL.Path": "",
+            },
+            "context": {"context_id": "id:2"},
+        },
+        {
+            "kind": "Request sent",
+            "pid": 10,
+            "message": {
+                "req.Method": "GET",
+                "req.URL.Host": "example.org",
+                "req.URL.Path": "",
+            },
+            "context": context,
+            "request_id": {
+                "method": "GET",
+                "host": "example.org",
+                "path": "",
+            },
+            "api_id": "example.org/api",
+        },
+        {
+            "kind": "Response received",
+            "pid": 10,
+            "message": {
+                "resp.StatusCode": "200",
+                "req.Method": "GET",
+                "req.URL.Path": "",
+            },
+            "context": context,
+        },
+        {
+            "kind": "Response received",
+            "pid": 10,
+            "message": {
+                "resp.StatusCode": "200",
+                "req.Method": "GET",
+                "req.URL.Path": "",
+            },
+            "context": context,
+            "api_id": "example.org/api",
+        },
+    ]
+    event_file = tmp_path / "events.jsonl"
+    event_file.write_text("\n".join(json.dumps(event) for event in events))
+
+    result = parse_contexttrack(event_file, module_id="example.org/service")
+
+    nodes = {(node.type, node.message): node for node in result.graph.nodes}
+    sent = nodes[("Send", "Request")]
+    received = nodes[("Receive", "Response")]
+    assert sent.api_id == "example.org/api"
+    assert sent.path == "/"
+    assert received.api_id == "example.org/api"
+    assert received.path == "/"
+    assert nodes[("Receive", "Request")].pattern == "/"
+    assert nodes[("Send", "Response")].pattern == "/"
+    assert result.warnings == ()
+
+
+def test_reports_request_without_host_as_unlabelable(tmp_path):
+    event_file = tmp_path / "events.jsonl"
+    event_file.write_text(
+        json.dumps(
+            {
+                "kind": "Request sent",
+                "pid": 10,
+                "message": {
+                    "req.Method": "GET",
+                    "req.URL.Host": "",
+                    "req.URL.Path": "",
+                },
+                "context": {"context_id": "id:1"},
+                "request_id": {"method": "GET", "host": "", "path": ""},
+                "api_id": "go.opentelemetry.io",
+            }
+        )
+    )
+
+    result = parse_contexttrack(event_file, module_id="example.org/service")
+
+    assert result.graph.nodes == ()
+    assert len(result.warnings) == 1
+    assert result.warnings[0].message == "request endpoint has no host"
