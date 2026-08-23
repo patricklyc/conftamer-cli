@@ -1,3 +1,4 @@
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Literal
@@ -113,6 +114,28 @@ class EventRecord:
 class ParseWarning:
     input_line: int
     message: str
+
+
+GroupKey = tuple[int, str]
+EventGroups = Mapping[GroupKey, Sequence[EventRecord]]
+
+
+def group_events(
+    records: Iterable[EventRecord],
+) -> tuple[dict[GroupKey, list[EventRecord]], list[EventRecord]]:
+    groups: dict[GroupKey, list[EventRecord]] = {}
+    ungrouped = []
+
+    for record in records:
+        context_id = record.event.context.context_id
+        if context_id is None:
+            ungrouped.append(record)
+            continue
+
+        key = (record.event.pid, context_id)
+        groups.setdefault(key, []).append(record)
+
+    return groups, ungrouped
 
 
 def read_events(

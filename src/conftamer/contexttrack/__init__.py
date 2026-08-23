@@ -1,8 +1,8 @@
-from conftamer.contexttrack.events import EVENT_ADAPTER, ContextTrackEvent
-from conftamer.contexttrack.parser import (
+from conftamer.contexttrack.conversion import (
     ContextTrackResult,
     parse_contexttrack,
 )
+from conftamer.contexttrack.events import EVENT_ADAPTER, ContextTrackEvent
 
 __all__ = [
     "EVENT_ADAPTER",

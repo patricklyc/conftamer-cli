@@ -3,20 +3,26 @@
 ## Project purpose
 
 tool34 builds directed configuration and message-flow graphs for ConfTamer.
-The current CLI reads edge records, constructs an `igraph` graph, and exports
-GraphML. The sibling repository `../conftamer` and
+The CLI converts ContextTrack JSONL traces to PMGraph and retains a legacy CSV
+to GraphML workflow. The sibling repository `../conftamer` and
 `ConfTamer_HotNets_2026.pdf` are upstream references; treat them as read-only
 unless the user explicitly requests changes there.
 
 ## Repository map
 
 - `src/conftamer/main.py`: Typer CLI commands.
-- `src/conftamer/models.py`: Pydantic node models and node types.
-- `src/conftamer/csv.py`: legacy CSV edge parser.
-- `src/conftamer/graph.py`: graph construction and subgraph helpers.
+- `src/conftamer/pmgraph.py`: PMGraph models, validation, IDs, and serialization.
+- `src/conftamer/csv_graph.py`: legacy CSV models, parsing, and igraph creation.
+- `src/conftamer/contexttrack/events.py`: ContextTrack models, JSONL reading,
+  and context grouping.
+- `src/conftamer/contexttrack/routes.py`: route matching and reconstruction.
+- `src/conftamer/contexttrack/responses.py`: request/response correlation.
+- `src/conftamer/contexttrack/conversion.py`: ContextTrack-to-PMGraph conversion.
+- `tests/test_contexttrack_*.py`: tests split by events, routes, responses, and
+  conversion behavior.
 - `pyproject.toml`: Python version, dependencies, and CLI entry point.
-- `test_*.csv`: local sample inputs; CSV, GraphML, and PDF files are ignored by
-  Git and may not be available in every checkout.
+- Files under `data/` are local samples ignored by Git and may not be available
+  in every checkout.
 
 ## Priorities
 

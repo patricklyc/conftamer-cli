@@ -43,7 +43,7 @@ ContextTrack events map to nodes as follows:
 | `Response sent` | Send Response |
 | `Request routed` | Route metadata; no node |
 
-The parser preserves ContextTrack's nested `message`, `context`, and
+The converter preserves ContextTrack's nested `message`, `context`, and
 `request_id` structures until node conversion. It groups events by process and
 context, pairs responses with requests, and creates an edge from every Receive
 to every later Send in the same group.

@@ -6,20 +6,17 @@ from pydantic import ValidationError
 
 from conftamer.contexttrack.events import (
     EventRecord,
+    GroupKey,
     ParseWarning,
     RequestReceivedEvent,
     RequestSentEvent,
     ResponseReceivedEvent,
     ResponseSentEvent,
+    group_events,
     read_events,
 )
-from conftamer.contexttrack.matching import (
-    GroupKey,
-    ResponseMatches,
-    group_events,
-    match_responses,
-    match_routes,
-)
+from conftamer.contexttrack.responses import ResponseMatches, match_responses
+from conftamer.contexttrack.routes import match_routes
 from conftamer.pmgraph import (
     PMEdge,
     PMGraph,
