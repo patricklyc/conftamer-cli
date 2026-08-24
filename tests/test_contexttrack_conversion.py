@@ -114,13 +114,8 @@ def test_matches_routes_and_responses(tmp_path):
             for item in records
         )
     )
-    graph = parse_contexttrack(
-        event_file, module_id="example.org/service"
-    ).graph
-    nodes = {
-        (node.type, getattr(node, "message", None)): node
-        for node in graph.nodes
-    }
+    graph = parse_contexttrack(event_file, module_id="example.org/service").graph
+    nodes = {(node.type, getattr(node, "message", None)): node for node in graph.nodes}
     receive_request = nodes[("Receive", "Request")]
     send_request = nodes[("Send", "Request")]
     receive_response = nodes[("Receive", "Response")]
@@ -197,24 +192,16 @@ def test_preserves_outbound_api_id_and_normalizes_empty_http_path(tmp_path):
     result = parse_contexttrack(event_file, module_id="example.org/service")
 
     sent = next(
-        node
-        for node in result.graph.nodes
-        if isinstance(node, SendRequestNode)
+        node for node in result.graph.nodes if isinstance(node, SendRequestNode)
     )
     received = next(
-        node
-        for node in result.graph.nodes
-        if isinstance(node, ReceiveResponseNode)
+        node for node in result.graph.nodes if isinstance(node, ReceiveResponseNode)
     )
     receive_request = next(
-        node
-        for node in result.graph.nodes
-        if isinstance(node, ReceiveRequestNode)
+        node for node in result.graph.nodes if isinstance(node, ReceiveRequestNode)
     )
     send_response = next(
-        node
-        for node in result.graph.nodes
-        if isinstance(node, SendResponseNode)
+        node for node in result.graph.nodes if isinstance(node, SendResponseNode)
     )
     assert sent.api_id == "example.org/api"
     assert sent.path == "/"
