@@ -47,9 +47,7 @@ class ContextTrackResult:
     warnings: tuple[ParseWarning, ...]
 
 
-def parse_contexttrack(
-    path: str | Path, *, module_id: str
-) -> ContextTrackResult:
+def parse_contexttrack(path: str | Path, *, module_id: str) -> ContextTrackResult:
     records, warnings = read_events(path)
     groups, ungrouped = group_events(records)
     routes, route_warnings = match_routes(groups)
@@ -66,9 +64,7 @@ def parse_contexttrack(
             warnings.append(ParseWarning(record.input_line, str(error)))
             continue
         if node is not None:
-            occurrences.append(
-                Occurrence(_group_key(record), record.sequence, node)
-            )
+            occurrences.append(Occurrence(_group_key(record), record.sequence, node))
 
     warnings.extend(
         ParseWarning(record.input_line, "event has no context ID")
@@ -79,9 +75,7 @@ def parse_contexttrack(
 
     return ContextTrackResult(
         graph=_to_graph(module_id, occurrences),
-        warnings=tuple(
-            sorted(warnings, key=lambda warning: warning.input_line)
-        ),
+        warnings=tuple(sorted(warnings, key=lambda warning: warning.input_line)),
     )
 
 
@@ -91,68 +85,68 @@ def _to_node(
     routes: dict[int, str],
     responses: ResponseMatches,
 ) -> PMNode | None:
-    event = record.event
+    match record.event:
+        case RequestReceivedEvent() as event:
+            api_id = event.api_id
+            method = event.message.method.upper()
+            pattern = routes.get(record.sequence, _http_path(event.message.path))
+            fields = {"api_id": api_id, "method": method, "pattern": pattern}
+            return ReceiveRequestNode(
+                id=_id(module_id, "Receive", "Request", fields),
+                api_id=api_id,
+                method=method,
+                pattern=pattern,
+            )
 
-    if isinstance(event, RequestReceivedEvent):
-        api_id = event.api_id
-        method = event.message.method.upper()
-        pattern = routes.get(record.sequence, _http_path(event.message.path))
-        fields = {"api_id": api_id, "method": method, "pattern": pattern}
-        return ReceiveRequestNode(
-            id=_id(module_id, "Receive", "Request", fields),
-            api_id=api_id,
-            method=method,
-            pattern=pattern,
-        )
+        case RequestSentEvent() as event:
+            return _send_request(event, module_id)
 
-    if isinstance(event, RequestSentEvent):
-        return _send_request(event, module_id)
+        case ResponseReceivedEvent() as event:
+            request = responses.received.get(record.sequence)
+            if request is None or not isinstance(request.event, RequestSentEvent):
+                return None
+            sent = _send_request(request.event, module_id)
+            status = event.message.status
+            fields = {
+                "api_id": sent.api_id,
+                "method": sent.method,
+                "host": sent.host,
+                "path": sent.path,
+                "status": status,
+            }
+            return ReceiveResponseNode(
+                id=_id(module_id, "Receive", "Response", fields),
+                api_id=sent.api_id,
+                method=sent.method,
+                host=sent.host,
+                path=sent.path,
+                status=status,
+            )
 
-    if isinstance(event, ResponseReceivedEvent):
-        request = responses.received.get(record.sequence)
-        if request is None or not isinstance(request.event, RequestSentEvent):
+        case ResponseSentEvent() as event:
+            request = responses.sent.get(record.sequence)
+            if request is None:
+                return None
+            received = _to_node(request, module_id, routes, responses)
+            if not isinstance(received, ReceiveRequestNode):
+                return None
+            status = event.message.status
+            fields = {
+                "api_id": received.api_id,
+                "method": received.method,
+                "pattern": received.pattern,
+                "status": status,
+            }
+            return SendResponseNode(
+                id=_id(module_id, "Send", "Response", fields),
+                api_id=received.api_id,
+                method=received.method,
+                pattern=received.pattern,
+                status=status,
+            )
+
+        case _:
             return None
-        sent = _send_request(request.event, module_id)
-        status = event.message.status
-        fields = {
-            "api_id": sent.api_id,
-            "method": sent.method,
-            "host": sent.host,
-            "path": sent.path,
-            "status": status,
-        }
-        return ReceiveResponseNode(
-            id=_id(module_id, "Receive", "Response", fields),
-            api_id=sent.api_id,
-            method=sent.method,
-            host=sent.host,
-            path=sent.path,
-            status=status,
-        )
-
-    if isinstance(event, ResponseSentEvent):
-        request = responses.sent.get(record.sequence)
-        if request is None:
-            return None
-        received = _to_node(request, module_id, routes, responses)
-        if not isinstance(received, ReceiveRequestNode):
-            return None
-        status = event.message.status
-        fields = {
-            "api_id": received.api_id,
-            "method": received.method,
-            "pattern": received.pattern,
-            "status": status,
-        }
-        return SendResponseNode(
-            id=_id(module_id, "Send", "Response", fields),
-            api_id=received.api_id,
-            method=received.method,
-            pattern=received.pattern,
-            status=status,
-        )
-
-    return None
 
 
 def _send_request(event: RequestSentEvent, module_id: str) -> SendRequestNode:

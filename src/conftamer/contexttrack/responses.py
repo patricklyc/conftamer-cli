@@ -31,19 +31,21 @@ def match_responses(
         previous_sent = None
         previous_received = None
         for record in sorted(records, key=lambda item: item.sequence):
-            event = record.event
-            if isinstance(event, RequestReceivedEvent):
-                inbound.append(record)
-            elif isinstance(event, RequestSentEvent):
-                outbound.append(record)
-            elif isinstance(event, ResponseSentEvent):
-                previous_sent = _match_response(
-                    record, inbound, sent, warnings, previous_sent
-                )
-            elif isinstance(event, ResponseReceivedEvent):
-                previous_received = _match_response(
-                    record, outbound, received, warnings, previous_received
-                )
+            match record.event:
+                case RequestReceivedEvent():
+                    inbound.append(record)
+                case RequestSentEvent():
+                    outbound.append(record)
+                case ResponseSentEvent():
+                    previous_sent = _match_response(
+                        record, inbound, sent, warnings, previous_sent
+                    )
+                case ResponseReceivedEvent():
+                    previous_received = _match_response(
+                        record, outbound, received, warnings, previous_received
+                    )
+                case _:
+                    continue
 
     return ResponseMatches(sent=sent, received=received), warnings
 
