@@ -256,17 +256,21 @@ Before editing:
 4. stop for clarification if an assumption is false, the public behavior must
    change, or scope expands.
 
-After every Python implementation, format the changed files:
+After every Python implementation, format the changed files. Format every
+changed TOML file with Tombi:
 
 ```bash
 uvx ruff format <changed-python-files>
+uvx tombi format <changed-toml-files>
 ```
 
-Run focused verification first, then the complete checks:
+Run focused verification first, then the complete checks. Include the Tombi
+check whenever the change includes TOML files:
 
 ```bash
 uv run pytest -q <relevant-tests>
 uvx ruff format --check src tests
+uvx tombi format --check <changed-toml-files>
 uvx ty check
 uv run pytest -q
 ```

@@ -1,0 +1,242 @@
+name: Release binaries
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  metadata:
+    name: Validate release metadata
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Read and validate version
+        id: version
+        shell: bash
+        run: |
+          version="$(python3 - <<'PY'
+          import tomllib
+
+          with open("pyproject.toml", "rb") as file:
+              print(tomllib.load(file)["project"]["version"])
+          PY
+          )"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            expected_tag="v${version}"
+            if [[ "$GITHUB_REF_NAME" != "$expected_tag" ]]; then
+              echo "Tag $GITHUB_REF_NAME does not match project version $version" >&2
+              exit 1
+            fi
+            if [[ "$(git cat-file -t "$GITHUB_REF_NAME")" != "tag" ]]; then
+              echo "Release tag $GITHUB_REF_NAME must be annotated" >&2
+              exit 1
+            fi
+          fi
+
+  checks:
+    name: Release checks (Python 3.13)
+    runs-on: ubuntu-22.04
+    env:
+      UV_PYTHON: "3.13"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+          python-version: "3.13"
+
+      - name: Install locked dependencies
+        run: uv sync --locked --dev
+
+      - name: Check formatting
+        run: uvx ruff format --check src tests
+
+      - name: Check types
+        run: uvx ty check
+
+      - name: Run tests
+        run: uv run pytest -q
+
+  build:
+    name: Build ${{ matrix.artifact }}
+    needs: [metadata, checks]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            artifact: linux-x86_64
+            executable: conftamer
+          - os: macos-14
+            artifact: macos-arm64
+            executable: conftamer
+          - os: windows-2022
+            artifact: windows-x86_64
+            executable: conftamer.exe
+
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    env:
+      UV_PYTHON: "3.13"
+      RELEASE_NAME: conftamer-${{ needs.metadata.outputs.version }}-${{ matrix.artifact }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+          python-version: "3.13"
+
+      - name: Install locked build dependencies
+        run: uv sync --locked --no-dev --group build
+
+      - name: Build one-file executable
+        shell: bash
+        run: |
+          uv run --no-sync pyinstaller \
+            --clean \
+            --noconfirm \
+            --onefile \
+            --name conftamer \
+            --paths src \
+            --exclude-module tkinter \
+            src/conftamer/main.py
+
+      - name: Smoke-test packaged CLI
+        shell: bash
+        run: |
+          executable="./dist/${{ matrix.executable }}"
+          "$executable" --help
+          "$executable" contexttrack --help
+          "$executable" graph --help
+          "$executable" subgraph --help
+
+          mkdir -p smoke
+          cat > smoke/events.jsonl <<'EOF'
+          {"kind":"Request received","pid":1,"message":{"req.Method":"GET","req.URL.Path":"/health"},"context":{"context_id":"smoke"}}
+          EOF
+          "$executable" contexttrack \
+            smoke/events.jsonl \
+            --module-id example.org/smoke \
+            --output smoke/result.pmgraph.json
+          test -s smoke/result.pmgraph.json
+
+          uv run --no-sync python - <<'PY'
+          from pathlib import Path
+
+          from conftamer.pmgraph import PMGraph
+
+          PMGraph.model_validate_json(Path("smoke/result.pmgraph.json").read_text())
+          PY
+
+          cat > smoke/edges.csv <<'EOF'
+          Parameter,example.org/service,port,Send,example.org/service,example.org/api,GET /health,200
+          Receive,example.org/service,example.org/api,/health,200,Send,example.org/service,example.org/api,GET /status,200
+          EOF
+          "$executable" graph smoke/edges.csv
+          test -s smoke/edges.csv.graphml
+          rm smoke/edges.csv.graphml
+          "$executable" subgraph smoke/edges.csv 0
+          test -s smoke/edges.csv.graphml
+
+      - name: Name release executable
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            cp "dist/${{ matrix.executable }}" "${RELEASE_NAME}.exe"
+          else
+            cp "dist/${{ matrix.executable }}" "$RELEASE_NAME"
+          fi
+
+      - name: Upload executable
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: conftamer-${{ matrix.artifact }}
+          path: ${{ env.RELEASE_NAME }}*
+          if-no-files-found: error
+          retention-days: 14
+
+  attest:
+    name: Attest release provenance
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+
+    steps:
+      - name: Download executables
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: conftamer-*
+          path: release
+          merge-multiple: true
+
+      - name: Attest executable provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-path: release/conftamer-*
+
+  publish:
+    name: Publish GitHub release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [metadata, build, attest]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download executables
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: conftamer-*
+          path: release
+          merge-multiple: true
+
+      - name: Create checksums
+        working-directory: release
+        run: sha256sum conftamer-* > SHA256SUMS
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" release/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --verify-tag \
+              --generate-notes \
+              --title "ConfTamer ${{ needs.metadata.outputs.version }}" \
+              release/*
+          fi
