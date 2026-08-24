@@ -1,4 +1,8 @@
-from conftamer.contexttrack.events import EVENT_ADAPTER, EventRecord, group_events
+from conftamer.contexttrack.events import (
+    EVENT_ADAPTER,
+    EventRecord,
+    group_events,
+)
 from conftamer.contexttrack.responses import match_responses
 
 
@@ -195,7 +199,9 @@ def test_matches_client_response_after_redirect():
             "api_id": "example.org/api",
         },
     ]
-    records = [record(sequence, event) for sequence, event in enumerate(events)]
+    records = [
+        record(sequence, event) for sequence, event in enumerate(events)
+    ]
     groups, _ = group_events(records)
 
     matches, warnings = match_responses(groups)

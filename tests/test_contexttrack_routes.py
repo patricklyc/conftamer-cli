@@ -1,7 +1,11 @@
 import json
 
 from conftamer.contexttrack.conversion import parse_contexttrack
-from conftamer.contexttrack.events import EVENT_ADAPTER, EventRecord, group_events
+from conftamer.contexttrack.events import (
+    EVENT_ADAPTER,
+    EventRecord,
+    group_events,
+)
 from conftamer.contexttrack.routes import match_routes
 
 
@@ -62,7 +66,9 @@ def test_reconstructs_nested_route_after_prefix_stripping(tmp_path):
 
     result = parse_contexttrack(event_file, module_id="example.org/service")
 
-    patterns = {node.pattern for node in result.graph.nodes if hasattr(node, "pattern")}
+    patterns = {
+        node.pattern for node in result.graph.nodes if hasattr(node, "pattern")
+    }
     assert patterns == {"/api/v1/status/config"}
     assert result.warnings == ()
 
@@ -90,4 +96,6 @@ def test_does_not_guess_ambiguous_nested_route_chain():
     matches, warnings = match_routes(groups)
 
     assert matches == {}
-    assert any(warning.message == "ambiguous route chain" for warning in warnings)
+    assert any(
+        warning.message == "ambiguous route chain" for warning in warnings
+    )
