@@ -47,7 +47,9 @@ class ContextTrackResult:
     warnings: tuple[ParseWarning, ...]
 
 
-def parse_contexttrack(path: str | Path, *, module_id: str) -> ContextTrackResult:
+def parse_contexttrack(
+    path: str | Path, *, module_id: str
+) -> ContextTrackResult:
     records, warnings = read_events(path)
     groups, ungrouped = group_events(records)
     routes, route_warnings = match_routes(groups)
@@ -64,7 +66,9 @@ def parse_contexttrack(path: str | Path, *, module_id: str) -> ContextTrackResul
             warnings.append(ParseWarning(record.input_line, str(error)))
             continue
         if node is not None:
-            occurrences.append(Occurrence(_group_key(record), record.sequence, node))
+            occurrences.append(
+                Occurrence(_group_key(record), record.sequence, node)
+            )
 
     warnings.extend(
         ParseWarning(record.input_line, "event has no context ID")
@@ -75,7 +79,9 @@ def parse_contexttrack(path: str | Path, *, module_id: str) -> ContextTrackResul
 
     return ContextTrackResult(
         graph=_to_graph(module_id, occurrences),
-        warnings=tuple(sorted(warnings, key=lambda warning: warning.input_line)),
+        warnings=tuple(
+            sorted(warnings, key=lambda warning: warning.input_line)
+        ),
     )
 
 
