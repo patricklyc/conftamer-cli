@@ -315,3 +315,8 @@ uv run conftamer contexttrack --help
 uv run conftamer graph --help
 uv run conftamer subgraph --help
 ```
+
+## License
+
+ConfTamer is licensed under the GNU General Public License, version 2 only.
+See [LICENSE](LICENSE) for the complete terms.
