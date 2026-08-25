@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich import print
@@ -14,8 +15,8 @@ app = typer.Typer()
 @app.command()
 def contexttrack(
     input_path: Path,
-    module_id: str = typer.Option(..., "--module-id"),
-    output: Path | None = typer.Option(None, "--output"),
+    module_id: Annotated[str, typer.Option("--module-id")],
+    output: Annotated[Path | None, typer.Option("--output")] = None,
 ):
     result = parse_contexttrack(input_path, module_id=module_id)
     output_path = output or Path(f"{input_path}.pmgraph.json")
