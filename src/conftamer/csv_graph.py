@@ -131,7 +131,5 @@ def to_subgraph(graph: ig.Graph, node_id: int) -> ig.Graph:
     vertices = []
     vertices.extend(graph.subcomponent(node_id, mode="in"))
     vertices.extend(graph.subcomponent(node_id, mode="out"))
-    print(vertices)
     subgraph: ig.Graph = graph.subgraph(vertices)
-    print(subgraph)
     return subgraph
