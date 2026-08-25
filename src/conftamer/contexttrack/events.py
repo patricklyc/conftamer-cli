@@ -10,7 +10,8 @@ class ContextTrackModel(BaseModel):
     model_config = ConfigDict(
         frozen=True,
         extra="allow",
-        populate_by_name=True,
+        validate_by_name=True,
+        validate_by_alias=True,
     )
 
 
