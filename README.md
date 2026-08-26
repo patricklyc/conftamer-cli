@@ -83,6 +83,9 @@ uv run conftamer subgraph edges.csv 12
 
 The command writes the selected subgraph to `edges.csv.graphml`.
 
+The generated GraphML files are intended to be imported and explored with
+[Gephi Lite](https://lite.gephi.org/).
+
 The CSV file must be headerless. Each row must have one of these forms:
 
 ```text
