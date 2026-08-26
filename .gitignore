@@ -9,8 +9,11 @@ wheels/
 # Virtual environments
 .venv
 
-*.csv
 *.gml
 *.graphml
+*.pmgraph.json
 *.pdf
+
+# Local captures and scratch inputs. Committed user-facing vectors live in
+# examples/ instead.
 data/

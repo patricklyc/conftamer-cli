@@ -93,6 +93,28 @@ Parameter,<module_id>,<parameter_name>,Send,<module_id>,<api_id>,<request_id>,<r
 Receive,<module_id>,<api_id>,<request_pattern>,<response_code>,Send,<module_id>,<api_id>,<request_id>,<response_code>
 ```
 
+## Try the included examples
+
+The repository includes small and large inputs for both conversion workflows.
+Convert the ContextTrack quickstart trace with:
+
+```bash
+uv run conftamer contexttrack \
+  examples/contexttrack/prometheus/scrape-ok.jsonl \
+  --module-id github.com/prometheus \
+  --output /tmp/scrape-ok.pmgraph.json
+```
+
+Try the minimal legacy graph without leaving generated output in the checkout:
+
+```bash
+cp examples/legacy/minimal.csv /tmp/conftamer-minimal.csv
+uv run conftamer graph /tmp/conftamer-minimal.csv
+```
+
+See the [example catalog](examples/README.md) for larger vectors, expected
+behavior, provenance notes, and additional commands.
+
 ## Further reference
 
 See the [technical reference](docs/technical-reference.md) for conversion
