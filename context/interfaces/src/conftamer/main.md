@@ -4,6 +4,7 @@
 ## Responsible for
 - Registering the top-level Typer application and its commands.
 - Dispatching ContextTrack conversion and legacy CSV graph operations.
+- Resolving legacy subgraph queries, including ambiguous interactive choices.
 - Choosing output paths and writing PMGraph or GraphML files.
 - Printing conversion warnings to standard error and graph summaries to
   standard output.
@@ -23,7 +24,7 @@ def contexttrack(
 def graph(filename: str): ...
 
 
-def subgraph(filename: str, node_id: int): ...
+def subgraph(filename: str, query: str): ...
 ```
 
 The functions are exposed as the `contexttrack`, `graph`, and `subgraph` CLI

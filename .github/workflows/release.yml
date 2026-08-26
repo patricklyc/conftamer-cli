@@ -161,7 +161,7 @@ jobs:
           "$executable" graph smoke/edges.csv
           test -s smoke/edges.csv.graphml
           rm smoke/edges.csv.graphml
-          "$executable" subgraph smoke/edges.csv 0
+          "$executable" subgraph smoke/edges.csv port
           test -s smoke/edges.csv.graphml
 
       - name: Name release executable

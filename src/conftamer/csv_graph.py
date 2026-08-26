@@ -127,6 +127,22 @@ def to_graph(edges: list[tuple[BaseNode, BaseNode]]) -> ig.Graph:
     return graph
 
 
+def find_nodes(graph: ig.Graph, query: str) -> list[int]:
+    normalized_query = query.strip().casefold()
+    if not normalized_query:
+        raise ValueError("search query must not be empty")
+
+    return [
+        vertex.index
+        for vertex in graph.vs
+        if any(
+            normalized_query in str(value).casefold()
+            for value in vertex.attributes().values()
+            if value is not None
+        )
+    ]
+
+
 def to_subgraph(graph: ig.Graph, node_id: int) -> ig.Graph:
     vertices = []
     vertices.extend(graph.subcomponent(node_id, mode="in"))

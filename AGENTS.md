@@ -76,7 +76,7 @@ Do not change any of the following without explicit approval:
 - CLI command names or options:
   - `conftamer contexttrack INPUT_PATH --module-id MODULE_ID [--output PATH]`
   - `conftamer graph FILENAME`
-  - `conftamer subgraph FILENAME NODE_ID`
+  - `conftamer subgraph FILENAME QUERY`
 - the supported import `from conftamer.contexttrack import parse_contexttrack`;
 - PMGraph `format`, `version`, node shapes, edge shape, or ID derivation;
 - default ContextTrack output path `<input>.pmgraph.json`;

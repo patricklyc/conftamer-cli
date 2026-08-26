@@ -75,11 +75,16 @@ uv run conftamer graph edges.csv
 The command prints an `igraph` summary and writes `edges.csv.graphml`.
 
 Generate the subgraph containing a selected vertex and all vertices in its
-incoming and outgoing components:
+incoming and outgoing components by searching its attributes:
 
 ```bash
-uv run conftamer subgraph edges.csv 12
+uv run conftamer subgraph edges.csv config_a
 ```
+
+The query is a case-insensitive substring matched against every node attribute
+value. A unique match is selected automatically. If several nodes match, the
+command displays their full attributes and prompts for a numbered choice. A
+query with no matches exits without writing a graph.
 
 The command writes the selected subgraph to `edges.csv.graphml`.
 
