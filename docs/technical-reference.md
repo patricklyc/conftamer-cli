@@ -209,11 +209,12 @@ field values, such as a non-integer response code, surface Pydantic validation
 errors. New input formats should target PMGraph rather than extend the CSV
 representation.
 
-The `subgraph` command selects a vertex with a trimmed, case-insensitive
-substring search over all populated node attribute values. It uses a unique
-match automatically and displays a numbered list of full node attributes when
-several vertices match. Blank or unmatched queries, and ambiguous searches
-without a usable selection, exit without writing GraphML.
+The `subgraph` command interprets a trimmed integer query as a zero-based vertex
+ID. Other queries use a trimmed, case-insensitive substring search over all
+populated node attribute values. The command uses a unique search match
+automatically and displays a numbered list of full node attributes when several
+vertices match. Invalid IDs, blank or unmatched queries, and ambiguous searches
+without a usable selection exit without writing GraphML.
 
 See the [README](../README.md#convert-legacy-csv-to-graphml) for accepted row
 shapes and command-line usage.

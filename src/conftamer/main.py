@@ -58,6 +58,18 @@ def _format_node(graph: ig.Graph, node_id: int) -> str:
 
 def _select_node(graph: ig.Graph, query: str) -> int:
     try:
+        node_id = int(query.strip())
+    except ValueError:
+        pass
+    else:
+        if not 0 <= node_id < graph.vcount():
+            _exit_with_error(
+                f"node id {node_id} is out of range for graph with "
+                f"{graph.vcount()} nodes"
+            )
+        return node_id
+
+    try:
         matches = find_nodes(graph, query)
     except ValueError as error:
         _exit_with_error(str(error))
