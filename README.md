@@ -18,6 +18,26 @@ uv run conftamer --help
 The examples below use `uv run conftamer`. If ConfTamer is installed in the
 active environment, invoke `conftamer` directly instead.
 
+### Use a standalone binary in CI/CD
+
+CI/CD jobs can use a standalone executable built by the **Release binaries**
+GitHub Actions workflow instead of installing Python, `uv`, and the project
+dependencies:
+
+1. Open the repository's **Actions** tab.
+2. Select **Release binaries** and open its latest successful run.
+3. Under **Artifacts**, download the archive for the job's platform:
+   - `conftamer-linux-x86_64`
+   - `conftamer-macos-arm64`
+   - `conftamer-windows-x86_64`
+4. Extract the archive. On Linux or macOS, grant the extracted `conftamer-*`
+   file execute permission with `chmod +x`. The Windows executable ends in
+   `.exe`.
+5. Invoke the extracted executable directly from the CI/CD job.
+
+Actions artifacts are retained for 14 days, so download the executable while
+the workflow run is still available.
+
 ## Convert ContextTrack JSONL to PMGraph
 
 Convert a ContextTrack trace with:
