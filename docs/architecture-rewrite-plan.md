@@ -94,11 +94,11 @@ ContextTrack events.jsonl
     -> semantic message fragment + Send occurrence index
 
 parameter-influence.jsonl
-    -> evidence.py
+    -> evidence/models.py + evidence/importer.py
     -> Parameter nodes + Parameter -> Send edges
 
 unmarshaler.graphml + accessors.graphml
-    -> static_graph.py
+    -> static_graph/models.py + static_graph/graphml.py
     -> validated StaticGraph documents + CType indexes
     -> direct igraph query/export
 
@@ -107,12 +107,12 @@ message fragment + exact parameter join
     -> PMGraph v2 JSON
 
 PMGraph/AppGraph JSON
-    -> analysis.py
+    -> analysis/igraph.py
     -> igraph.Graph
     -> query and Gephi Lite GraphML
 
 application manifest + two or more PMGraph files
-    -> appgraph/matching.py + appgraph/stitch.py
+    -> appgraph/manifest.py + appgraph/matching.py + appgraph/stitch.py
     -> one AppGraph JSON
     -> igraph query/export
 ```
@@ -145,51 +145,73 @@ The implementation must remain small enough to review as a whole:
 
 The budget is checked after every implementation task. If a task would exceed it, simplify data structures and consolidate duplicated code before adding another abstraction or file.
 
-### 3.2 Lean source tree
+### 3.2 Domain-oriented source tree
 
 ```text
 src/conftamer/
 ├── __init__.py
-├── cli.py                 # Typer orchestration only
-├── diagnostics.py         # shared structured diagnostics
-├── pmgraph.py             # PMGraph models, identity, validation, and JSON I/O
-├── build.py               # evidence-to-PMGraph orchestration
-├── evidence.py            # parameter sidecar models, reading, and exact join
-├── static_graph.py        # US/Accessors GraphML models, reading, and igraph adapter
-├── analysis.py            # canonical graph adapters, query, and Gephi export
+├── cli.py                     # Typer orchestration only
+├── diagnostics.py             # shared structured diagnostics
+├── build.py                   # evidence-to-PMGraph orchestration
+│
+├── pmgraph/
+│   ├── __init__.py
+│   ├── models.py              # nodes, edges, validation, and semantic IDs
+│   └── io.py                  # deterministic PMGraph JSON
 │
 ├── contexttrack/
 │   ├── __init__.py
-│   ├── models.py          # permissive upstream event models
-│   ├── matching.py        # route and response inference
-│   └── importer.py        # JSONL reading and PMGraph projection
+│   ├── models.py              # permissive upstream event models
+│   ├── matching.py            # route and response inference
+│   └── importer.py            # JSONL reading and PMGraph projection
 │
-└── appgraph/
+├── evidence/
+│   ├── __init__.py
+│   ├── models.py              # parameter-sidecar records
+│   └── importer.py            # reading, validation, and exact Send join
+│
+├── static_graph/
+│   ├── __init__.py
+│   ├── models.py              # US/Accessors graph records
+│   └── graphml.py             # GraphML loading, validation, and igraph projection
+│
+├── appgraph/
+│   ├── __init__.py
+│   ├── models.py              # canonical AppGraph models and JSON I/O
+│   ├── manifest.py            # application authority bindings
+│   ├── matching.py            # bounded HTTP candidate matching
+│   └── stitch.py              # multi-PMGraph contraction and pruning
+│
+└── analysis/
     ├── __init__.py
-    ├── models.py          # manifest and AppGraph models plus JSON I/O
-    ├── matching.py        # bounded HTTP candidate matching
-    └── stitch.py          # multi-PMGraph contraction and pruning
+    └── igraph.py              # canonical adapters, queries, and Gephi export
 ```
 
-Split one of these files only after it approaches its line ceiling and contains two independently testable responsibilities. The tree is a maximum useful decomposition, not a requirement to create empty wrappers.
+This keeps domain ownership visible without returning to one-file-per-function fragmentation. A package gains another module only when a current module approaches its line ceiling and has two independently testable responsibilities.
 
 ### 3.3 Tests
 
 ```text
 tests/
-├── test_pmgraph.py
 ├── test_build.py
-├── test_evidence.py
-├── test_static_graph.py
-├── test_analysis.py
+├── pmgraph/
+│   ├── test_models.py
+│   └── test_io.py
 ├── contexttrack/
 │   ├── test_reader.py
 │   ├── test_matching.py
 │   └── test_importer.py
+├── evidence/
+│   └── test_importer.py
+├── static_graph/
+│   └── test_graphml.py
 ├── appgraph/
 │   ├── test_models.py
+│   ├── test_manifest.py
 │   ├── test_matching.py
 │   └── test_stitch.py
+├── analysis/
+│   └── test_igraph.py
 ├── fixtures/
 │   ├── contexttrack/
 │   ├── parameter_influence/
@@ -199,7 +221,7 @@ tests/
 └── test_cli.py
 ```
 
-Tests cover distinct behavior rather than every internal helper combination. Shared setup is extracted only when it is shorter and clearer than local setup.
+Tests mirror domain packages and cover distinct behavior rather than every internal helper combination. Shared setup is extracted only when it is shorter and clearer than local setup.
 
 ### 3.4 Normative documentation
 
@@ -643,7 +665,7 @@ Within each context group, every resolved Receive occurrence influences every la
 
 ## 10. Parameter Evidence Join
 
-`evidence.py` validates the parameter sidecar and static references, then performs the only accepted parameter/message join.
+`evidence/importer.py` validates the parameter sidecar and static references, then performs the only accepted parameter/message join using records from `evidence/models.py`.
 
 For each valid influence record:
 
@@ -1073,7 +1095,7 @@ CLI rules:
 
 **Produces:** New repository instructions, consumer contracts, and representative inputs for every parser. No source implementation begins until this task is reviewed.
 
-- [ ] Rewrite `AGENTS.md` to remove CSV/v1 constraints and establish the lean source tree, 3,000-line hard gate, external-producer boundary, multi-PMGraph stitching contract, test placement, and verification commands.
+- [ ] Rewrite `AGENTS.md` to remove CSV/v1 constraints and establish the domain-oriented source tree, 3,000-line hard gate, external-producer boundary, multi-PMGraph stitching contract, test placement, and verification commands.
 - [ ] Search `AGENTS.md` for stale legacy command names, CSV requirements, and PMGraph v1 invariants.
 - [ ] Specify all required, optional, and ignored fields.
 - [ ] Specify exact Send occurrence-key comparison.
@@ -1088,8 +1110,11 @@ CLI rules:
 
 **Files:**
 - Create: `src/conftamer/diagnostics.py`
-- Rewrite: `src/conftamer/pmgraph.py`
-- Create: `tests/test_pmgraph.py`
+- Replace: `src/conftamer/pmgraph.py` with `src/conftamer/pmgraph/__init__.py`
+- Create: `src/conftamer/pmgraph/models.py`
+- Create: `src/conftamer/pmgraph/io.py`
+- Create: `tests/pmgraph/test_models.py`
+- Create: `tests/pmgraph/test_io.py`
 
 **Interfaces:**
 
@@ -1114,7 +1139,7 @@ def write_pmgraph(graph: PMGraph, path: str | Path) -> None: ...
 - [ ] Test Parameter-to-Send and Receive-to-Send edges.
 - [ ] Test invalid IDs, duplicate IDs, duplicate edges, missing endpoints, self-edges, and status bounds.
 - [ ] Test evidence merging and semantic ID stability.
-- [ ] Implement minimal models, identity, validation, and JSON I/O in `pmgraph.py`; split it only if it exceeds the 450-line model-file ceiling.
+- [ ] Implement nodes, edges, semantic IDs, and validation in `pmgraph/models.py`; keep filesystem and deterministic JSON concerns in `pmgraph/io.py`.
 - [ ] Verify byte-identical serialization from shuffled inputs.
 - [ ] Record the current production line count and confirm the cumulative total remains under budget.
 - [ ] Commit as `feat: define canonical PMGraph v2`.
@@ -1146,8 +1171,10 @@ def write_pmgraph(graph: PMGraph, path: str | Path) -> None: ...
 ### Task 4: Parse and explore US/Accessors GraphML
 
 **Files:**
-- Create: `src/conftamer/static_graph.py`
-- Create: `tests/test_static_graph.py`
+- Create: `src/conftamer/static_graph/__init__.py`
+- Create: `src/conftamer/static_graph/models.py`
+- Create: `src/conftamer/static_graph/graphml.py`
+- Create: `tests/static_graph/test_graphml.py`
 
 **Produces:** Validated static models, CType indexes, and igraph projections.
 
@@ -1156,15 +1183,17 @@ def write_pmgraph(graph: PMGraph, path: str | Path) -> None: ...
 - [ ] Test shared CType payload agreement across graphs.
 - [ ] Test static search and ancestor/descendant neighborhoods.
 - [ ] Test GraphML export/read-back without losing isolated nodes or AST paths.
-- [ ] Keep static models, parsing, validation, CType indexing, and the small igraph adapter in one readable module.
+- [ ] Keep static records in `models.py`; keep GraphML parsing, validation, CType indexing, and the small igraph projection in `graphml.py`.
 - [ ] Record the cumulative production line count.
 - [ ] Commit as `feat: parse and explore gopls GraphML`.
 
 ### Task 5: Parse and join parameter-influence input
 
 **Files:**
-- Create: `src/conftamer/evidence.py`
-- Create: `tests/test_evidence.py`
+- Create: `src/conftamer/evidence/__init__.py`
+- Create: `src/conftamer/evidence/models.py`
+- Create: `src/conftamer/evidence/importer.py`
+- Create: `tests/evidence/test_importer.py`
 
 **Produces:** Parameter nodes, Parameter-to-Send edges, capability state, and diagnostics.
 
@@ -1173,7 +1202,7 @@ def write_pmgraph(graph: PMGraph, path: str | Path) -> None: ...
 - [ ] Test complete and partial sidecars.
 - [ ] Test duplicate records, several parameters for one occurrence, and several occurrences for one semantic Send.
 - [ ] Test orphan and non-Send references without fallback matching.
-- [ ] Implement sidecar models, reading, exact join, and evidence aggregation in one module without a generic evidence framework.
+- [ ] Define only the sidecar record models in `evidence/models.py`; keep reading, validation, exact join, and evidence aggregation together in `evidence/importer.py` without a generic evidence framework.
 - [ ] Record the cumulative production line count.
 - [ ] Commit as `feat: join parameter evidence to message sends`.
 
@@ -1200,8 +1229,9 @@ def write_pmgraph(graph: PMGraph, path: str | Path) -> None: ...
 ### Task 7: Add canonical igraph analysis and Gephi export
 
 **Files:**
-- Create: `src/conftamer/analysis.py`
-- Create: `tests/test_analysis.py`
+- Create: `src/conftamer/analysis/__init__.py`
+- Create: `src/conftamer/analysis/igraph.py`
+- Create: `tests/analysis/test_igraph.py`
 
 **Produces:** PMGraph/AppGraph adapters, search, influence queries, and visualization GraphML.
 
@@ -1210,7 +1240,7 @@ def write_pmgraph(graph: PMGraph, path: str | Path) -> None: ...
 - [ ] Test optional-value sanitization and nested JSON attributes.
 - [ ] Export and re-read PMGraph GraphML through igraph.
 - [ ] Reuse query and GraphML-sanitization primitives with static graphs without merging domain models.
-- [ ] Keep canonical adapters, queries, and Gephi export in one module unless it reaches the file ceiling.
+- [ ] Keep canonical adapters, queries, and Gephi export together in `analysis/igraph.py`; add another module only if this file reaches the ceiling with two separable responsibilities.
 - [ ] Record the cumulative production line count.
 - [ ] Commit as `feat: analyze and export ConfTamer graphs with igraph`.
 
@@ -1219,9 +1249,11 @@ def write_pmgraph(graph: PMGraph, path: str | Path) -> None: ...
 **Files:**
 - Create: `src/conftamer/appgraph/__init__.py`
 - Create: `src/conftamer/appgraph/models.py`
+- Create: `src/conftamer/appgraph/manifest.py`
 - Create: `src/conftamer/appgraph/matching.py`
 - Create: `src/conftamer/appgraph/stitch.py`
 - Create: `tests/appgraph/test_models.py`
+- Create: `tests/appgraph/test_manifest.py`
 - Create: `tests/appgraph/test_matching.py`
 - Create: `tests/appgraph/test_stitch.py`
 
@@ -1263,7 +1295,7 @@ def write_appgraph(graph: AppGraph, path: str | Path) -> None: ...
 - [ ] Test contraction across three or more PMGraphs, edge remapping, evidence, and input-file-order determinism.
 - [ ] Test explicit unmatched pruning and idempotence.
 - [ ] Export and re-read AppGraph GraphML.
-- [ ] Keep manifest/AppGraph models and JSON I/O in `models.py`, HTTP candidate logic in `matching.py`, and contraction/pruning in `stitch.py`.
+- [ ] Keep AppGraph models and JSON I/O in `models.py`, application bindings in `manifest.py`, HTTP candidate logic in `matching.py`, and contraction/pruning in `stitch.py`.
 - [ ] Record the cumulative production line count and confirm the total remains below the 3,000-line hard gate.
 - [ ] Commit as `feat: stitch multiple PMGraphs into AppGraphs`.
 
@@ -1294,7 +1326,7 @@ def write_appgraph(graph: AppGraph, path: str | Path) -> None: ...
 **Files to delete:**
 - `src/conftamer/csv_graph.py`
 - `src/conftamer/main.py` after `cli.py` becomes the entry point
-- replaced ContextTrack v1 modules after their behavior moves to the lean ContextTrack package
+- replaced ContextTrack v1 modules after their behavior moves to the domain-oriented ContextTrack package
 - `tests/test_csv_graph.py`
 - `tests/test_main.py` after its distinct CLI behavior moves to `tests/test_cli.py`
 - replaced v1 PMGraph and ContextTrack tests
@@ -1328,10 +1360,10 @@ def write_appgraph(graph: AppGraph, path: str | Path) -> None: ...
 Run focused tests after each task. After the final change, run fresh complete verification:
 
 ```bash
-uv run pytest -q tests/test_pmgraph.py tests/test_build.py
-uv run pytest -q tests/test_evidence.py tests/test_static_graph.py
+uv run pytest -q tests/pmgraph tests/test_build.py
+uv run pytest -q tests/evidence tests/static_graph
 uv run pytest -q tests/contexttrack tests/appgraph
-uv run pytest -q tests/test_analysis.py tests/test_cli.py
+uv run pytest -q tests/analysis tests/test_cli.py
 
 uvx ruff format --check src tests
 uvx tombi format --check pyproject.toml
