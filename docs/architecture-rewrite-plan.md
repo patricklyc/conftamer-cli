@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rewrite this repository as a focused graph compiler and explorer that consumes ContextTrack and parameter-influence JSONL plus gopls US/Accessors GraphML, builds canonical PMGraphs, stitches two or more PMGraph files into one AppGraph, analyzes both graph types with `python-igraph`, and exports GraphML for Gephi Lite.
+**Goal:** Rewrite this repository as a focused graph compiler and explorer that consumes ContextTrack and ParamTrack JSONL output plus gopls US/Accessors GraphML, builds canonical PMGraphs, stitches two or more PMGraph files into one AppGraph, analyzes both graph types with `python-igraph`, and exports GraphML for Gephi Lite.
 
 **Architecture:** Source-specific parsers validate external artifacts and project them into strict Pydantic domain models. PMGraph and AppGraph JSON are canonical; igraph is a one-way, disposable analysis representation. This repository does not run module tests, control Delve, perform static analysis, or derive parameter influence.
 
@@ -17,10 +17,10 @@
 - PMGraph v2 and the replacement CLI are intentionally breaking contracts.
 - Keep the final production implementation under 3,000 physical Python lines in `src/conftamer`; exceeding that budget requires explicit approval and an explanation of why simplification is insufficient.
 - Consume two gopls GraphML files: Unmarshaler Subgraph and Accessors.
-- Consume raw ContextTrack JSONL and a parameter-influence JSONL sidecar.
+- Consume raw ContextTrack JSONL and ParamTrack's parameter-influence JSONL output.
 - Join parameter evidence to Send events only through an exact shared occurrence identity.
 - Use US/Accessors GraphML for evidence validation and direct graph exploration; do not insert CType nodes into PMGraph.
-- Do not reproduce the external runner's CType path, YAML tag, Delve stack, or goroutine analysis.
+- Do not reproduce ParamTrack's CType path, YAML tag, Delve stack, or goroutine analysis.
 - Include a Behavior node in the PMGraph schema, but do not invent Behavior instances from current inputs.
 - Require an application manifest to bind runtime authorities to module IDs before stitching.
 - Contract only mutually unique Send/Receive matches; retain and mark unmatched nodes by default.
@@ -39,13 +39,13 @@
 This repository owns:
 
 - parsing and validating ContextTrack event JSONL;
-- parsing and validating parameter-influence JSONL;
+- parsing and validating ParamTrack output JSONL;
 - parsing and validating US GraphML;
 - parsing and validating Accessors GraphML;
 - validating parameter evidence against ContextTrack Send occurrences and CType identities;
 - constructing deterministic PMGraph v2 documents;
 - converting PMGraph and AppGraph documents to igraph;
-- querying canonical and static graphs;
+- querying canonical and CType graphs;
 - exporting visualization GraphML for Gephi Lite;
 - validating application manifests;
 - loading two or more PMGraph files in one stitch operation;
@@ -67,7 +67,7 @@ This repository does not plan or implement:
 - ContextTrack instrumentation;
 - assignment of run, process, event, or Send occurrence IDs;
 - parameter-key derivation from CType paths and Go tags;
-- creation of the parameter-influence sidecar; or
+- creation of ParamTrack output; or
 - wrappers around the external analyzers or test runner.
 
 Those systems are external producers. This repository defines only the contracts it accepts from them.
@@ -77,9 +77,9 @@ Those systems are external producers. This repository defines only the contracts
 A parameter-enriched PMGraph build assumes that the supplied files describe the same module and observed test run:
 
 - ContextTrack events carry stable run/process identities and Send occurrence IDs.
-- Parameter-influence records reference those exact Send occurrence IDs.
-- Parameter metadata records the content digests of the exact US and Accessors files used by the external runner.
-- Parameter records contain already-derived configuration keys and CType evidence.
+- ParamTrack records reference those exact Send occurrence IDs.
+- ParamTrack metadata records the content digests of the exact US and Accessors files it consumed.
+- ParamTrack records contain already-derived configuration keys and CType evidence.
 
 If those assumptions are false, this tool reports the inconsistency and omits unsupported Parameter edges rather than guessing a join.
 
@@ -93,13 +93,13 @@ ContextTrack events.jsonl
     -> contexttrack/importer.py + contexttrack/matching.py
     -> semantic message fragment + Send occurrence index
 
-parameter-influence.jsonl
-    -> evidence/models.py + evidence/importer.py
+paramtrack.jsonl
+    -> paramtrack/models.py + paramtrack/importer.py
     -> Parameter nodes + Parameter -> Send edges
 
 unmarshaler.graphml + accessors.graphml
-    -> static_graph/models.py + static_graph/graphml.py
-    -> validated StaticGraph documents + CType indexes
+    -> ctype_graph/models.py + ctype_graph/graphml.py
+    -> validated CTypeGraph documents + CType indexes
     -> direct igraph query/export
 
 message fragment + exact parameter join
@@ -120,11 +120,12 @@ application manifest + two or more PMGraph files
 ### Boundary rules
 
 - Raw input models do not leak into PMGraph or AppGraph models.
-- CType/accessor nodes remain `StaticGraph` nodes, never PMGraph nodes.
+- CType/accessor nodes remain `CTypeGraph` nodes, never PMGraph nodes.
 - Partial ContextTrack hooks remain observations and diagnostics rather than incomplete semantic nodes.
-- Parameter keys are consumed as runner results; this tool does not recalculate them.
+- Parameter keys are consumed as ParamTrack results; this tool does not recalculate them.
 - Canonical JSON never depends on igraph serialization.
 - Gephi GraphML is not accepted as gopls GraphML.
+- `contexttrack/`, `paramtrack/`, and `ctype_graph/` are input adapters: they consume producer output and never invoke those producers.
 
 ---
 
@@ -139,7 +140,7 @@ The implementation must remain small enough to review as a whole:
 - target file size: at most 300 lines, with a 450-line ceiling for model-heavy files;
 - target function size: at most 40 lines, with a 60-line ceiling when linear control flow is clearer than extraction;
 - no generic service, repository, plugin, visitor, or graph-wrapper layers;
-- no duplicated PMGraph/AppGraph/static-graph query implementations;
+- no duplicated PMGraph/AppGraph/CType-graph query implementations;
 - no compatibility adapters for removed CSV or PMGraph v1 behavior; and
 - no one-function modules unless they establish a real dependency boundary.
 
@@ -152,7 +153,7 @@ src/conftamer/
 ├── __init__.py
 ├── cli.py                     # Typer orchestration only
 ├── diagnostics.py             # shared structured diagnostics
-├── build.py                   # evidence-to-PMGraph orchestration
+├── build.py                   # accepted producer output to PMGraph orchestration
 │
 ├── pmgraph/
 │   ├── __init__.py
@@ -165,14 +166,14 @@ src/conftamer/
 │   ├── matching.py            # route and response inference
 │   └── importer.py            # JSONL reading and PMGraph projection
 │
-├── evidence/
+├── paramtrack/
 │   ├── __init__.py
-│   ├── models.py              # parameter-sidecar records
+│   ├── models.py              # ParamTrack output records
 │   └── importer.py            # reading, validation, and exact Send join
 │
-├── static_graph/
+├── ctype_graph/
 │   ├── __init__.py
-│   ├── models.py              # US/Accessors graph records
+│   ├── models.py              # US/Accessors CType graph records
 │   └── graphml.py             # GraphML loading, validation, and igraph projection
 │
 ├── appgraph/
@@ -201,9 +202,9 @@ tests/
 │   ├── test_reader.py
 │   ├── test_matching.py
 │   └── test_importer.py
-├── evidence/
+├── paramtrack/
 │   └── test_importer.py
-├── static_graph/
+├── ctype_graph/
 │   └── test_graphml.py
 ├── appgraph/
 │   ├── test_models.py
@@ -214,7 +215,7 @@ tests/
 │   └── test_igraph.py
 ├── fixtures/
 │   ├── contexttrack/
-│   ├── parameter_influence/
+│   ├── paramtrack/
 │   └── gopls/
 │       ├── unmarshaler.graphml
 │       └── accessors.graphml
@@ -231,7 +232,7 @@ docs/
 ├── architecture-rewrite-plan.md
 └── formats/
     ├── contexttrack-input-v1.md
-    ├── parameter-influence-v1.md
+    ├── paramtrack-output-v1.md
     ├── gopls-graphml-v1.md
     ├── pmgraph-v2.md
     ├── application-v1.md
@@ -322,28 +323,28 @@ Validation rules:
 - Malformed lines produce diagnostics while later lines continue to parse.
 - Context grouping uses `(run_id, process_instance_id, context_id)` when the identities exist.
 
-Old captures without the additional identities may still build message-only PMGraphs. They cannot be joined with parameter sidecars and do not advertise `parameter-influence`.
+Old captures without the additional identities may still build message-only PMGraphs. They cannot be joined with ParamTrack output and do not advertise `parameter-influence`.
 
 ---
 
-## 6. Accepted Parameter-Influence JSONL
+## 6. Accepted ParamTrack Output JSONL
 
 ### 6.1 Record shapes
 
-The sidecar is a versioned JSONL file with one metadata record, zero or more influence records, and one terminal summary record.
+ParamTrack output is a versioned JSONL file with one metadata record, zero or more influence records, and one terminal summary record.
 
 Metadata:
 
 ```json
 {
   "record": "metadata",
-  "format": "conftamer.parameter-influence",
+  "format": "conftamer.paramtrack",
   "version": 1,
   "module_id": "example.org/service",
   "run_id": "run-uuid",
   "unmarshaler_sha256": "sha256:...",
   "accessors_sha256": "sha256:...",
-  "runner_version": "..."
+  "paramtrack_version": "..."
 }
 ```
 
@@ -386,19 +387,19 @@ Summary:
 - Every influence occurrence key resolves to exactly one ContextTrack Send.
 - Identical repeated influence records are deduplicated.
 - Different parameter keys for one occurrence remain distinct.
-- A missing or non-complete summary marks the sidecar partial.
+- A missing or non-complete summary marks the ParamTrack output partial.
 
-### 6.3 Partial and invalid evidence
+### 6.3 Partial and invalid ParamTrack output
 
 - A graph digest mismatch is fatal for parameter enrichment.
-- A structural sidecar error rejects parameter enrichment rather than guessing around it.
+- A structural ParamTrack error rejects parameter enrichment rather than guessing around it.
 - An orphan influence record produces an error and no edge.
 - A Send without parameter records remains a valid unparameterized Send.
-- A partial sidecar may be inspected through diagnostics but does not add the `parameter-influence` capability.
+- Partial ParamTrack output may be inspected through diagnostics but does not add the `parameter-influence` capability.
 
 ### 6.4 Semantic aggregation
 
-Input evidence is occurrence-specific; PMGraph nodes are semantic. If several Send occurrences collapse to one semantic Send, the graph contains the union of their Parameter edges. Each edge retains all exact supporting occurrence evidence.
+ParamTrack evidence is occurrence-specific; PMGraph nodes are semantic. If several Send occurrences collapse to one semantic Send, the graph contains the union of their Parameter edges. Each edge retains all exact supporting occurrence evidence.
 
 ---
 
@@ -439,7 +440,7 @@ Validation requires:
 - nonempty, unique names within a vertex;
 - each alias resolving to one vertex per graph;
 - shared CType payloads agreeing between US and Accessors; and
-- parameter-sidecar CType IDs resolving through canonical ID or an unambiguous alias.
+- ParamTrack CType IDs resolving through canonical ID or an unambiguous alias.
 
 ### 7.3 Edges
 
@@ -463,11 +464,11 @@ An empty path is `[]`, not a missing attribute.
 - Validate graph direction, graph kind, and edge endpoints.
 - Reject conflicting duplicate canonical IDs.
 
-### 7.5 Static graph role
+### 7.5 CType graph role
 
 US and Accessors serve two purposes in this repository:
 
-1. validate CType references and source digests in parameter-influence evidence; and
+1. validate CType references and source digests in ParamTrack output; and
 2. support direct igraph search, neighborhood queries, and Gephi export.
 
 This repository does not derive parameter keys or PMGraph edges from AST paths.
@@ -495,7 +496,7 @@ Capabilities are a sorted, unique subset of:
 - `parameter-influence`
 - `observable-behaviors`
 
-`parameter-influence` is present only after a complete sidecar, both static graphs, and the ContextTrack run validate together.
+`parameter-influence` is present only after complete ParamTrack output, both CType graphs, and the ContextTrack run validate together.
 
 ### 8.2 Node union
 
@@ -547,7 +548,7 @@ target = Send or Behavior
 
 Current inputs create:
 
-- `Parameter -> Send` from parameter-influence evidence; and
+- `Parameter -> Send` from ParamTrack evidence; and
 - `Receive -> Send` from ContextTrack context evidence.
 
 Additional rules:
@@ -573,7 +574,7 @@ Evidence does not participate in semantic identity. Evidence includes:
 - source artifact digest;
 - ContextTrack input line;
 - exact Send occurrence key;
-- parameter sidecar line;
+- ParamTrack input line;
 - CType canonical IDs;
 - inference kind; and
 - test ID when present.
@@ -663,9 +664,28 @@ Within each context group, every resolved Receive occurrence influences every la
 
 ---
 
-## 10. Parameter Evidence Join
+## 10. ParamTrack Import and Join
 
-`evidence/importer.py` validates the parameter sidecar and static references, then performs the only accepted parameter/message join using records from `evidence/models.py`.
+`paramtrack/importer.py` validates ParamTrack output and CType graph references, then performs the only accepted parameter/message join using records from `paramtrack/models.py`.
+
+```python
+@dataclass(frozen=True)
+class ParamTrackImport:
+    nodes: tuple[ParameterNode, ...]
+    edges: tuple[PMEdge, ...]
+    complete: bool
+    diagnostics: tuple[Diagnostic, ...]
+
+
+def import_paramtrack(
+    path: str | Path,
+    *,
+    sends: Mapping[SendOccurrenceKey, str],
+    ctypes: CTypeIndex,
+) -> ParamTrackImport: ...
+```
+
+The name describes the producer boundary only: this package imports ParamTrack output and does not run ParamTrack.
 
 For each valid influence record:
 
@@ -673,12 +693,12 @@ For each valid influence record:
 2. retrieve the semantic Send node ID;
 3. create or reuse the semantic Parameter node;
 4. create `Parameter -> Send`; and
-5. attach occurrence, sidecar line, CType, inference, and test evidence.
+5. attach the occurrence, ParamTrack line, CType, inference, and test evidence.
 
 Rules:
 
 - no fallback matching;
-- no parameter derivation from static paths;
+- no parameter derivation from CType paths;
 - no edge from Parameter to Receive;
 - identical edges merge evidence;
 - several parameters may influence one Send;
@@ -702,7 +722,7 @@ def build_pmgraph(
     *,
     module_id: str,
     events: str | Path,
-    parameter_influence: str | Path | None = None,
+    paramtrack_output: str | Path | None = None,
     unmarshaler: str | Path | None = None,
     accessors: str | Path | None = None,
 ) -> BuildResult: ...
@@ -711,31 +731,31 @@ def build_pmgraph(
 Rules:
 
 - ContextTrack events are required.
-- Message-only PMGraphs omit all three parameter/static inputs.
-- If one parameter/static input is supplied, all three are required.
+- Message-only PMGraphs omit the ParamTrack output and both CType graph inputs.
+- If one ParamTrack/CType input is supplied, all three are required.
 - Every module ID must agree.
-- The sidecar run ID must match the events.
-- Sidecar graph digests must match the GraphML bytes.
+- The ParamTrack run ID must match the events.
+- ParamTrack graph digests must match the GraphML bytes.
 - Message nodes and Receive edges come from ContextTrack.
-- Parameter nodes and Parameter edges come from the exact sidecar join.
+- Parameter nodes and Parameter edges come from the exact ParamTrack join.
 - `observed-message-influence` is present when ContextTrack conversion succeeds.
-- `parameter-influence` is present only for a complete validated sidecar.
+- `parameter-influence` is present only for complete validated ParamTrack output.
 - Diagnostics are sorted by source, line, code, and message.
 
 ---
 
-## 12. Static Graph Exploration
+## 12. CType Graph Exploration
 
-US and Accessors are represented by a `StaticGraph` model independent of PMGraph.
+US and Accessors are represented by a `CTypeGraph` model independent of PMGraph.
 
 ```python
-def load_gopls_graphml(path: str | Path) -> StaticGraph: ...
+def load_gopls_graphml(path: str | Path) -> CTypeGraph: ...
 
-def static_to_igraph(graph: StaticGraph) -> ig.Graph: ...
+def ctype_to_igraph(graph: CTypeGraph) -> ig.Graph: ...
 
-def find_static_vertices(graph: ig.Graph, query: str) -> tuple[int, ...]: ...
+def find_ctype_vertices(graph: ig.Graph, query: str) -> tuple[int, ...]: ...
 
-def static_neighborhood(
+def ctype_neighborhood(
     graph: ig.Graph,
     vertices: Iterable[int],
     *,
@@ -751,7 +771,7 @@ The igraph projection uses:
 - graph kind as graph metadata; and
 - all isolated vertices and parallel edges.
 
-Static graph querying reuses generic search/neighborhood helpers but not PMGraph models.
+CType graph querying reuses generic search/neighborhood helpers but not PMGraph models.
 
 ---
 
@@ -983,7 +1003,7 @@ status
 members_json
 ```
 
-Static graph vertices expose:
+CType graph vertices expose:
 
 ```text
 name
@@ -995,14 +1015,14 @@ methods_json
 tags_json
 ```
 
-PMGraph/AppGraph edges include `relation="influence"`. Static edges preserve `edge_kind`, `path_index`, and `ast_path_json`.
+PMGraph/AppGraph edges include `relation="influence"`. CType graph edges preserve `edge_kind`, `path_index`, and `ast_path_json`.
 
 Rules:
 
 - nested values become canonical JSON strings;
 - absent values become empty strings, never `None` or `"None"`;
 - scalar attribute types are homogeneous;
-- graph direction and parallel static edges are preserved;
+- graph direction and parallel CType edges are preserved;
 - format metadata remains on the graph;
 - tests re-read exported files with `ig.Graph.Read_GraphML()`; and
 - canonical documents are not reconstructed from GraphML.
@@ -1021,13 +1041,13 @@ This repository exposes no analyzer, test-runner, or Delve command.
 conftamer build
     --module-id MODULE
     --events EVENTS.jsonl
-    [--parameter-influence PARAMS.jsonl
+    [--paramtrack-output PARAMTRACK.jsonl
      --unmarshaler UNMARSHALER.graphml
      --accessors ACCESSORS.graphml]
     --output MODULE.pmgraph.json
 ```
 
-The three parameter/static options are supplied together or omitted together.
+The ParamTrack output and two CType graph options are supplied together or omitted together.
 
 ### Stitch multiple PMGraphs into an AppGraph
 
@@ -1043,7 +1063,7 @@ conftamer stitch
 
 `stitch` requires at least two PMGraph files and produces exactly one AppGraph. Input file order does not affect canonical output.
 
-### Query a canonical or static graph
+### Query a canonical or CType graph
 
 ```text
 conftamer query
@@ -1083,13 +1103,13 @@ CLI rules:
 - Rewrite: `AGENTS.md`
 - Create: `docs/architecture.md`
 - Create: `docs/formats/contexttrack-input-v1.md`
-- Create: `docs/formats/parameter-influence-v1.md`
+- Create: `docs/formats/paramtrack-output-v1.md`
 - Create: `docs/formats/gopls-graphml-v1.md`
 - Create: `docs/formats/pmgraph-v2.md`
 - Create: `docs/formats/application-v1.md`
 - Create: `docs/formats/appgraph-v1.md`
 - Create: `tests/fixtures/contexttrack/joined-events.jsonl`
-- Create: `tests/fixtures/parameter_influence/joined-parameters.jsonl`
+- Create: `tests/fixtures/paramtrack/joined-output.jsonl`
 - Create: `tests/fixtures/gopls/unmarshaler.graphml`
 - Create: `tests/fixtures/gopls/accessors.graphml`
 
@@ -1099,7 +1119,7 @@ CLI rules:
 - [ ] Search `AGENTS.md` for stale legacy command names, CSV requirements, and PMGraph v1 invariants.
 - [ ] Specify all required, optional, and ignored fields.
 - [ ] Specify exact Send occurrence-key comparison.
-- [ ] Specify sidecar metadata, influence, summary, completeness, and digest behavior.
+- [ ] Specify ParamTrack metadata, influence, summary, completeness, and digest behavior.
 - [ ] Specify both GraphML graph kinds and scalar encoding.
 - [ ] Ensure fixture parameter records resolve to exactly one fixture Send event.
 - [ ] Ensure fixture CType IDs and graph digests validate.
@@ -1168,43 +1188,44 @@ def write_pmgraph(graph: PMGraph, path: str | Path) -> None: ...
 - [ ] Record the cumulative production line count and simplify repeated inference helpers before adding files.
 - [ ] Commit as `feat: import correlated ContextTrack events`.
 
-### Task 4: Parse and explore US/Accessors GraphML
+### Task 4: Parse and explore gopls CType GraphML
 
 **Files:**
-- Create: `src/conftamer/static_graph/__init__.py`
-- Create: `src/conftamer/static_graph/models.py`
-- Create: `src/conftamer/static_graph/graphml.py`
-- Create: `tests/static_graph/test_graphml.py`
+- Create: `src/conftamer/ctype_graph/__init__.py`
+- Create: `src/conftamer/ctype_graph/models.py`
+- Create: `src/conftamer/ctype_graph/graphml.py`
+- Create: `tests/ctype_graph/test_graphml.py`
 
-**Produces:** Validated static models, CType indexes, and igraph projections.
+**Produces:** Validated CType graph models, CType indexes, and igraph projections.
 
 - [ ] Test both graph kinds field-for-field.
 - [ ] Test malformed markers, versions, JSON attributes, direction, endpoints, aliases, and parallel edges.
 - [ ] Test shared CType payload agreement across graphs.
-- [ ] Test static search and ancestor/descendant neighborhoods.
+- [ ] Test CType search and ancestor/descendant neighborhoods.
 - [ ] Test GraphML export/read-back without losing isolated nodes or AST paths.
-- [ ] Keep static records in `models.py`; keep GraphML parsing, validation, CType indexing, and the small igraph projection in `graphml.py`.
+- [ ] Keep CType records in `models.py`; keep GraphML parsing, validation, CType indexing, and the small igraph projection in `graphml.py`.
 - [ ] Record the cumulative production line count.
-- [ ] Commit as `feat: parse and explore gopls GraphML`.
+- [ ] Commit as `feat: parse and explore gopls CType graphs`.
 
-### Task 5: Parse and join parameter-influence input
+### Task 5: Parse and join ParamTrack output
 
 **Files:**
-- Create: `src/conftamer/evidence/__init__.py`
-- Create: `src/conftamer/evidence/models.py`
-- Create: `src/conftamer/evidence/importer.py`
-- Create: `tests/evidence/test_importer.py`
+- Create: `src/conftamer/paramtrack/__init__.py`
+- Create: `src/conftamer/paramtrack/models.py`
+- Create: `src/conftamer/paramtrack/importer.py`
+- Create: `tests/paramtrack/test_importer.py`
 
 **Produces:** Parameter nodes, Parameter-to-Send edges, capability state, and diagnostics.
 
 - [ ] Test metadata/influence/summary ordering.
 - [ ] Test module, run, graph-digest, CType, and occurrence validation.
-- [ ] Test complete and partial sidecars.
+- [ ] Test complete and partial ParamTrack outputs.
 - [ ] Test duplicate records, several parameters for one occurrence, and several occurrences for one semantic Send.
 - [ ] Test orphan and non-Send references without fallback matching.
-- [ ] Define only the sidecar record models in `evidence/models.py`; keep reading, validation, exact join, and evidence aggregation together in `evidence/importer.py` without a generic evidence framework.
+- [ ] Define only ParamTrack output records in `paramtrack/models.py`; keep reading, validation, exact join, and evidence aggregation together in `paramtrack/importer.py` without a generic evidence framework.
 - [ ] Record the cumulative production line count.
-- [ ] Commit as `feat: join parameter evidence to message sends`.
+- [ ] Export `import_paramtrack` from `paramtrack/__init__.py` and document that it imports output without invoking ParamTrack.
+- [ ] Commit as `feat: import ParamTrack output`.
 
 ### Task 6: Build complete PMGraphs
 
@@ -1212,12 +1233,12 @@ def write_pmgraph(graph: PMGraph, path: str | Path) -> None: ...
 - Create: `src/conftamer/build.py`
 - Create: `tests/test_build.py`
 
-**Consumes:** ContextTrack import plus optional parameter sidecar and static graphs.
+**Consumes:** ContextTrack import plus optional ParamTrack output and CType graphs.
 
 **Produces:** `build_pmgraph()` and `BuildResult`.
 
 - [ ] Test message-only and parameter-enriched builds.
-- [ ] Test all-or-none parameter/static options.
+- [ ] Test all-or-none ParamTrack/CType graph options.
 - [ ] Test module, run, and digest disagreement.
 - [ ] Test capability and evidence union.
 - [ ] Test deterministic output under shuffled records.
@@ -1239,7 +1260,7 @@ def write_pmgraph(graph: PMGraph, path: str | Path) -> None: ...
 - [ ] Test exact and substring queries, ambiguity, ancestors, descendants, and induced edges.
 - [ ] Test optional-value sanitization and nested JSON attributes.
 - [ ] Export and re-read PMGraph GraphML through igraph.
-- [ ] Reuse query and GraphML-sanitization primitives with static graphs without merging domain models.
+- [ ] Reuse query and GraphML-sanitization primitives with CType graphs without merging domain models.
 - [ ] Keep canonical adapters, queries, and Gephi export together in `analysis/igraph.py`; add another module only if this file reaches the ceiling with two separable responsibilities.
 - [ ] Record the cumulative production line count.
 - [ ] Commit as `feat: analyze and export ConfTamer graphs with igraph`.
@@ -1312,7 +1333,7 @@ def write_appgraph(graph: AppGraph, path: str | Path) -> None: ...
 - [ ] Write failing help and command smoke tests.
 - [ ] Verify no analyzer, test-runner, or Delve command exists.
 - [ ] Implement thin orchestration over public interfaces.
-- [ ] Verify parameter/static build options are all-or-none.
+- [ ] Verify ParamTrack/CType graph build options are all-or-none.
 - [ ] Verify diagnostics use stderr and summaries use stdout.
 - [ ] Verify query accepts canonical JSON and versioned gopls GraphML.
 - [ ] Verify `stitch` accepts at least two PMGraph paths, loads every file, and emits one AppGraph independent of input order.
@@ -1346,10 +1367,10 @@ def write_appgraph(graph: AppGraph, path: str | Path) -> None: ...
 - [ ] Delete legacy code only after replacement suites pass.
 - [ ] Remove `contexttrack`, `graph`, and `subgraph` CLI commands.
 - [ ] Remove `parse_contexttrack` and PMGraph v1 compatibility exports.
-- [ ] Replace CSV examples and release smoke tests with build, static query, three-PMGraph stitch, query, and export workflows.
+- [ ] Replace CSV examples and release smoke tests with build, CType graph query, three-PMGraph stitch, query, and export workflows.
 - [ ] Document required external input fields without planning their producers.
 - [ ] Confirm the early `AGENTS.md` rewrite still matches the final implementation and line budget; make only factual corrections if verification exposed a mismatch.
-- [ ] Search for stale imports, old commands, CSV text, static parameter derivation, test-runner plans, PMGraph package paths, and PMGraph v1 references.
+- [ ] Search for stale imports, old commands, CSV text, duplicate CType parameter derivation, test-runner plans, PMGraph package paths, and PMGraph v1 references.
 - [ ] Run the final line-count gate after deleting superseded code; stop for approval if production code exceeds 3,000 physical lines.
 - [ ] Commit as `refactor: remove legacy CSV and PMGraph v1 workflows`.
 
@@ -1361,7 +1382,7 @@ Run focused tests after each task. After the final change, run fresh complete ve
 
 ```bash
 uv run pytest -q tests/pmgraph tests/test_build.py
-uv run pytest -q tests/evidence tests/static_graph
+uv run pytest -q tests/paramtrack tests/ctype_graph
 uv run pytest -q tests/contexttrack tests/appgraph
 uv run pytest -q tests/analysis tests/test_cli.py
 
@@ -1389,7 +1410,7 @@ Additional release checks:
 - confirm total production Python is at most 3,000 physical lines and no file exceeds 450 lines without approved justification;
 - re-read every generated GraphML file with `ig.Graph.Read_GraphML()`;
 - query both US and Accessors fixtures;
-- verify every parameter sidecar occurrence key resolves exactly once;
+- verify every ParamTrack occurrence key resolves exactly once;
 - manually load the visualization fixture in Gephi Lite;
 - inspect the complete diff, including untracked files;
 - confirm sibling repositories were not modified; and
