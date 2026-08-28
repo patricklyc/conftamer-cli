@@ -1,0 +1,33 @@
+Starting server: dlv test --headless --api-version=2 --accept-multiclient --listen localhost:4040 github.com/prometheus/prometheus/scrape -- -test.v -test.run ^TestManagerSTZeroIngestion$/^format=PrometheusProto$/^withST=false$/^stZeroIngest=false$
+API server listening at: 127.0.0.1:4040
+Connecting to dlv on localhost:4040
+=== RUN   TestManagerSTZeroIngestion
+=== PAUSE TestManagerSTZeroIngestion
+=== CONT  TestManagerSTZeroIngestion
+=== RUN   TestManagerSTZeroIngestion/format=PrometheusProto
+=== RUN   TestManagerSTZeroIngestion/format=PrometheusProto/withST=false
+=== RUN   TestManagerSTZeroIngestion/format=PrometheusProto/withST=false/stZeroIngest=false
+MSG SEND: &{Prometheus GET /metrics request}
+CF METHOD: /discovery.Manager.Run
+/discovery.Manager INGRESSES: [github.com/prometheus/common/config.TLSConfig /discovery/targetgroup.Group]
+CF METHOD: /scrape.Manager.Run
+/scrape.Manager INGRESSES: [github.com/prometheus/common/model.LabelSet github.com/prometheus/common/config.TLSConfig /config.ScrapeConfig /model/labels.Labels /discovery/targetgroup.Group]
+CF METHOD: /discovery.Manager.sender
+/discovery.Manager INGRESSES: [github.com/prometheus/common/config.TLSConfig /discovery/targetgroup.Group]
+CF METHOD: /scrape.Manager.reloader
+/scrape.Manager INGRESSES: [github.com/prometheus/common/model.LabelSet github.com/prometheus/common/config.TLSConfig /config.ScrapeConfig /model/labels.Labels /discovery/targetgroup.Group]
+CF METHOD: /discovery.Manager.updater
+/discovery.Manager INGRESSES: [github.com/prometheus/common/config.TLSConfig /discovery/targetgroup.Group]
+CF METHOD: /scrape.targetScraper.scrape
+/scrape.targetScraper INGRESSES: [github.com/prometheus/common/model.LabelSet /config.ScrapeConfig /model/labels.Labels]
+DF METHOD: /scrape.targetScraper.scrape
+CF METHOD: /scrape.scrapeLoop.scrapeAndReport
+/scrape.scrapeLoop INGRESSES: [/model/relabel.Config github.com/prometheus/common/model.LabelSet /config.ScrapeConfig /model/labels.Labels github.com/prometheus/common/model.ValidationScheme]
+CF METHOD: /scrape.scrapeLoop.run
+/scrape.scrapeLoop INGRESSES: [/model/relabel.Config github.com/prometheus/common/model.LabelSet /config.ScrapeConfig /model/labels.Labels github.com/prometheus/common/model.ValidationScheme]
+--- PASS: TestManagerSTZeroIngestion (0.60s)
+    --- PASS: TestManagerSTZeroIngestion/format=PrometheusProto (0.60s)
+        --- PASS: TestManagerSTZeroIngestion/format=PrometheusProto/withST=false (0.60s)
+            --- PASS: TestManagerSTZeroIngestion/format=PrometheusProto/withST=false/stZeroIngest=false (0.60s)
+PASS
+Target exited with status 0

@@ -1,9 +1,9 @@
 # Example inputs
 
-These checked-in inputs are intended for trying both ConfTamer conversion
-workflows from a repository checkout. They are examples and exploratory
-vectors, not fixtures used by the unit test suite. Generated `*.pmgraph.json`
-and `*.graphml` files are intentionally excluded from version control.
+These checked-in inputs are intended for trying ConfTamer workflows from a
+repository checkout. They are examples and exploratory vectors, not fixtures
+used by the unit test suite. Generated `*.pmgraph.json` and `*.graphml` files
+are intentionally excluded from version control.
 
 ## ContextTrack traces
 
@@ -59,6 +59,18 @@ Absolute source-file prefixes were normalized to
 `/go-conftamer/src/` before check-in. Runtime values such as process IDs,
 ports, and temporary socket names remain as captured because they exercise the
 input format.
+
+## ParamTrack artifacts
+
+[`paramtrack/`](paramtrack/) contains real Prometheus outputs from ParamTrack
+and the gopls CType analysis it consumes. The artifacts are grouped into:
+
+- `paramtrack/static/` for the Unmarshaler Subgraph, Accessors, and reference
+  analyzer output; and
+- `paramtrack/runs/` for per-run parameter CSV, hierarchy, and log output.
+
+See the [ParamTrack artifact catalog](paramtrack/README.md) for provenance,
+file roles, and observed graph/row counts.
 
 ## Legacy CSV inputs
 
