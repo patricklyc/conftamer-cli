@@ -1,0 +1,2812 @@
+strict digraph {
+
+
+	"github.com/prometheus/prometheus/tsdb.headSelectedSeriesIndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headSelectedSeriesIndexReader" -> "github.com/prometheus/prometheus/tsdb.headIndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.QueryFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.QueryFunc" -> "github.com/prometheus/prometheus/promql.Vector" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.yySymType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.yySymType" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/labels.Slice" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/labels.Slice" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.EngineOpts" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.EngineOpts" -> "github.com/prometheus/prometheus/promql/parser.Parser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.RDSSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.RDSSDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.RDSSDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.scrapeConfigTargetRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.scrapeConfigTargetRetriever" -> "github.com/prometheus/prometheus/web/api/testhelpers.FakeTargetRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.scrapeConfigTargetRetriever" -> "github.com/prometheus/prometheus/config.ScrapeConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.remoteWriteAppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.remoteWriteAppenderV2" -> "github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/zookeeper.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/zookeeper.Discovery" -> "github.com/prometheus/common/model.LabelSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/zookeeper.Discovery" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.timeLimitAppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.timeLimitAppenderV2" -> "github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/marathon.authTokenRoundTripper" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/marathon.authTokenRoundTripper" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/testwal.Records" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/testwal.Records" -> "github.com/prometheus/prometheus/tsdb/record.RefSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/testwal.Records" -> "github.com/prometheus/prometheus/tsdb/record.RefExemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.seriesMergerAdapter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.seriesMergerAdapter" -> "github.com/prometheus/prometheus/storage.VerticalSeriesMergeFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/index.Writer" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/index.Writer" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelPairs" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelPairs" -> "github.com/prometheus/common/model.LabelPair" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockSeriesEntry" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockSeriesEntry" -> "github.com/prometheus/prometheus/tsdb.seriesData" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.IndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.IndexReader" -> "github.com/prometheus/prometheus/model/labels.ScratchBuilder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.compatAppendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.compatAppendable" -> "github.com/prometheus/prometheus/storage.AppendableV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.compatAppendable" -> "github.com/prometheus/prometheus/storage.Appendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/consul.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/consul.SDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/consul.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.compareRuleTypes" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.compareRuleTypes" -> "github.com/prometheus/prometheus/cmd/promtool.compareRuleType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.sampleTypeScenario" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.sampleTypeScenario" -> "github.com/prometheus/prometheus/storage.LimitedAppenderV1" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.sampleTypeScenario" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.HeadAndOOOQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.HeadAndOOOQuerier" -> "github.com/prometheus/prometheus/tsdb.IndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.HeadAndOOOQuerier" -> "github.com/prometheus/prometheus/storage.Querier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.HeadAndOOOQuerier" -> "github.com/prometheus/prometheus/tsdb.Head" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headAppenderBase" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headAppenderBase" -> "github.com/prometheus/prometheus/tsdb.memSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headAppenderBase" -> "github.com/prometheus/prometheus/tsdb/record.RefSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headAppenderBase" -> "github.com/prometheus/prometheus/tsdb.Head" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headAppenderBase" -> "github.com/prometheus/prometheus/tsdb.appendBatch" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.byLabels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.byLabels" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.appender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.appender" -> "github.com/prometheus/prometheus/util/teststorage.baseAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.appender" -> "github.com/prometheus/prometheus/storage.Appender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertmanagerConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/marathon.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/marathon.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/marathon.SDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.SDKConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeSeriesSet" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteReadConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.DroppedTarget" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.DroppedTarget" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelNames" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeQuerier" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/stackit.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/stackit.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage_test.fanoutAppenderTestCase" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage_test.fanoutAppenderTestCase" -> "github.com/prometheus/prometheus/util/teststorage.Appendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage_test.fanoutAppenderTestCase" -> "github.com/prometheus/prometheus/scrape.sample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/dns.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/dns.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/xds.HTTPConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/xds.HTTPConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.parser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.parser" -> "github.com/prometheus/prometheus/promql/parser.yyParserImpl" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.ProtobufParser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.ProtobufParser" -> "github.com/prometheus/prometheus/model/labels.ScratchBuilder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.ProtobufParser" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockMetadata" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockMetadata" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Target" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Target" -> "github.com/prometheus/prometheus/config.ScrapeConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Target" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Target" -> "github.com/prometheus/common/model.LabelSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.VerticalSeriesMergeFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.VerticalSeriesMergeFunc" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/prometheus.senderFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/prometheus.senderFunc" -> "github.com/prometheus/prometheus/notifier.Alert" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.lazyGenericSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.lazyGenericSeriesSet" -> "github.com/prometheus/prometheus/storage.genericSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/hetzner.refresher" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/hetzner.refresher" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/xds.KumaSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/xds.KumaSDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/gce.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/gce.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.FileLoader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.FileLoader" -> "github.com/prometheus/prometheus/promql/parser.Parser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.loop" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.loop" -> "github.com/prometheus/prometheus/scrape.scrapeCache" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockChunkReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockChunkReader" -> "github.com/prometheus/prometheus/tsdb.Block" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.compareRuleType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.compareRuleType" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.Target" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.Target" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/kubernetes.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/kubernetes.Discovery" -> "github.com/prometheus/prometheus/discovery.Discoverer" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.Matrix" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.Matrix" -> "github.com/prometheus/prometheus/promql.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/otlptranslator/prometheusremotewrite.cachedResourceLabels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/otlptranslator/prometheusremotewrite.cachedResourceLabels" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.errorTestQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.errorTestQueryable" -> "github.com/prometheus/prometheus/storage.Querier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.errorTestQueryable" -> "github.com/prometheus/prometheus/storage.ExemplarQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/linode.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/linode.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/schema.IgnoreOverriddenMetadataLabelScratchBuilder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/schema.IgnoreOverriddenMetadataLabelScratchBuilder" -> "github.com/prometheus/prometheus/model/labels.ScratchBuilder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.LeveledCompactor" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.LeveledCompactor" -> "github.com/prometheus/prometheus/storage.VerticalChunkSeriesMergeFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.RulesRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.RulesRetriever" -> "github.com/prometheus/prometheus/rules.AlertingRule" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.RulesRetriever" -> "github.com/prometheus/prometheus/rules.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.NHCBParser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.NHCBParser" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.NHCBParser" -> "github.com/prometheus/prometheus/model/textparse.Parser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.NHCBParser" -> "github.com/prometheus/prometheus/model/exemplar.Exemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.NHCBParser" -> "github.com/prometheus/prometheus/model/labels.ScratchBuilder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.mergeGenericQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.mergeGenericQuerier" -> "github.com/prometheus/prometheus/storage.genericSeriesMergeFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.mergeGenericQuerier" -> "github.com/prometheus/prometheus/storage.genericQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.chunkQuerierAdapter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.chunkQuerierAdapter" -> "github.com/prometheus/prometheus/storage.genericQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.partialErrSearchQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.partialErrSearchQuerier" -> "github.com/prometheus/prometheus/storage.mockQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockChunkSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockChunkSeriesSet" -> "github.com/prometheus/prometheus/model/labels.ScratchBuilder" [  weight=0 ];
+
+	"github.com/prometheus/common/config.ProxyConfig" [  weight=0 ];
+
+	"github.com/prometheus/common/config.ProxyConfig" -> "github.com/prometheus/common/config.ProxyHeader" [  weight=0 ];
+
+	"github.com/prometheus/common/config.ProxyConfig" -> "github.com/prometheus/common/config.URL" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.Watchable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.Watchable" -> "github.com/prometheus/prometheus/scrape.Target" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.staticDiscoverer" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.staticDiscoverer" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.RangeHead" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.RangeHead" -> "github.com/prometheus/prometheus/tsdb.Head" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.lockStaticConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.lockStaticConfig" -> "github.com/prometheus/prometheus/discovery.StaticConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.SeriesEntry" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.SeriesEntry" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.WriteStorage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.WriteStorage" -> "github.com/prometheus/prometheus/storage/remote.QueueManager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.WriteStorage" -> "github.com/prometheus/prometheus/storage/remote.ReadyScrapeManager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.WriteStorage" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.WriteStorage" -> "github.com/prometheus/prometheus/tsdb/record.BuffersPool" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Manager" -> "github.com/prometheus/prometheus/rules.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Manager" -> "github.com/prometheus/prometheus/rules.ManagerOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.AppendableV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.AppendableV2" -> "github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.QueueConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.SDConfig" -> "github.com/prometheus/prometheus/discovery/aws.LightsailSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.SDConfig" -> "github.com/prometheus/prometheus/discovery/aws.MSKSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.SDConfig" -> "github.com/prometheus/prometheus/discovery/aws.RDSSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.SDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.SDConfig" -> "github.com/prometheus/prometheus/discovery/aws.EC2SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.SDConfig" -> "github.com/prometheus/prometheus/discovery/aws.ECSSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.SDConfig" -> "github.com/prometheus/prometheus/discovery/aws.ElasticacheSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/hetzner.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/hetzner.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/digitalocean.refresher" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/digitalocean.refresher" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/common/config.TLSVersion" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ExemplarAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ExemplarAppender" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ExemplarAppender" -> "github.com/prometheus/prometheus/model/exemplar.Exemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteWriteConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Handler" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Handler" -> "github.com/prometheus/prometheus/web/api/v1.API" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Handler" -> "github.com/prometheus/prometheus/storage.ExemplarQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Handler" -> "github.com/prometheus/prometheus/promql.Engine" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Handler" -> "github.com/prometheus/prometheus/config.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Handler" -> "github.com/prometheus/prometheus/scrape.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Handler" -> "github.com/prometheus/prometheus/web.LocalStorage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Handler" -> "github.com/prometheus/prometheus/storage.Storage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Handler" -> "github.com/prometheus/prometheus/web.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Handler" -> "github.com/prometheus/prometheus/notifier.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Handler" -> "github.com/prometheus/prometheus/rules.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.GroupOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.GroupOptions" -> "github.com/prometheus/prometheus/rules.ManagerOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.GroupOptions" -> "github.com/prometheus/prometheus/rules.Rule" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.GroupOptions" -> "github.com/prometheus/prometheus/rules.GroupEvalIterationFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.Manager" -> "github.com/prometheus/prometheus/discovery.Provider" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.Manager" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.Manager" -> "github.com/prometheus/common/config.HTTPClientOption" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.StorageConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/ovhcloud.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/ovhcloud.SDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headIndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headIndexReader" -> "github.com/prometheus/prometheus/tsdb.Head" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.deletedRefMeta" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.deletedRefMeta" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.onceProvider" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.onceProvider" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.appenderBase" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.appenderBase" -> "github.com/prometheus/prometheus/tsdb/record.RefExemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.appenderBase" -> "github.com/prometheus/prometheus/tsdb/agent.DB" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.appenderBase" -> "github.com/prometheus/prometheus/tsdb/agent.memSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.appenderBase" -> "github.com/prometheus/prometheus/tsdb/record.RefSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.ruleImporter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.ruleImporter" -> "github.com/prometheus/prometheus/rules.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.ruleImporter" -> "github.com/prometheus/prometheus/rules.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.ruleImporter" -> "github.com/prometheus/prometheus/cmd/promtool.ruleImporterConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/template.scenario" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/template.scenario" -> "github.com/prometheus/prometheus/promql.Vector" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Storage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Storage" -> "github.com/prometheus/prometheus/storage.SampleAndChunkQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Storage" -> "github.com/prometheus/prometheus/storage.Appendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Storage" -> "github.com/prometheus/prometheus/storage.AppendableV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.appenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.appenderV2" -> "github.com/prometheus/prometheus/tsdb/agent.appenderBase" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.StorageSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.StorageSeries" -> "github.com/prometheus/prometheus/promql.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.FunctionCall" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.FunctionCall" -> "github.com/prometheus/prometheus/promql.EvalNodeHelper" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.FunctionCall" -> "github.com/prometheus/prometheus/promql.Matrix" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.FunctionCall" -> "github.com/prometheus/prometheus/promql.Vector" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Compactor" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Compactor" -> "github.com/prometheus/prometheus/tsdb.BlockReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Compactor" -> "github.com/prometheus/prometheus/tsdb.Block" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.MetadataWatcher" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.MetadataWatcher" -> "github.com/prometheus/prometheus/storage/remote.ReadyScrapeManager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.MetadataWatcher" -> "github.com/prometheus/prometheus/storage/remote.Watchable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeProtocol" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/documentation/examples/remote_storage/remote_storage_adapter/opentsdb.StoreSamplesRequest" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/documentation/examples/remote_storage/remote_storage_adapter/opentsdb.StoreSamplesRequest" -> "github.com/prometheus/common/model.LabelValue" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.GetRef" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.GetRef" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/eureka.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/eureka.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.CircularExemplarStorage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.CircularExemplarStorage" -> "github.com/prometheus/prometheus/tsdb.circularBufferEntry" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.CircularExemplarStorage" -> "github.com/prometheus/prometheus/tsdb.indexEntry" [  weight=0 ];
+
+	"github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.HeadAndOOOIndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.HeadAndOOOIndexReader" -> "github.com/prometheus/prometheus/tsdb.headIndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericQuerierAdapter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericQuerierAdapter" -> "github.com/prometheus/prometheus/storage.Querier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericQuerierAdapter" -> "github.com/prometheus/prometheus/storage.ChunkQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/record.recordsMaker" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/record.recordsMaker" -> "github.com/prometheus/prometheus/tsdb/record.refsCreateFn" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.deletedSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.deletedSeries" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/wlog.WriteTo" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/wlog.WriteTo" -> "github.com/prometheus/prometheus/tsdb/record.RefSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/wlog.WriteTo" -> "github.com/prometheus/prometheus/tsdb/record.RefExemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.mockChunkSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.mockChunkSeriesSet" -> "github.com/prometheus/prometheus/storage.ChunkSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/labels.ScratchBuilder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/labels.ScratchBuilder" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.appendableV2Func" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.appendableV2Func" -> "github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.benchAppendFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.benchAppendFunc" -> "github.com/prometheus/prometheus/tsdb.Head" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.benchAppendFunc" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.ECSDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.ECSDiscovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.ECSDiscovery" -> "github.com/prometheus/prometheus/discovery/aws.ECSSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/azure.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/azure.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/azure.SDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.secondaryQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.secondaryQuerier" -> "github.com/prometheus/prometheus/storage.genericSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.secondaryQuerier" -> "github.com/prometheus/prometheus/storage.genericQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Manager" -> "github.com/prometheus/prometheus/storage.Appendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Manager" -> "github.com/prometheus/prometheus/storage.AppendableV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Manager" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Manager" -> "github.com/prometheus/prometheus/scrape.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Manager" -> "github.com/prometheus/prometheus/scrape.scrapePool" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Manager" -> "github.com/prometheus/prometheus/config.ScrapeConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Manager" -> "github.com/prometheus/prometheus/scrape.scrapeMetrics" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.sendLoop" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.sendLoop" -> "github.com/prometheus/prometheus/config.AlertmanagerConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.sendLoop" -> "github.com/prometheus/prometheus/notifier.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.sendLoop" -> "github.com/prometheus/prometheus/notifier.Alert" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericQuerier" -> "github.com/prometheus/prometheus/storage.genericSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.stripeSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.stripeSeries" -> "github.com/prometheus/prometheus/tsdb/agent.memSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.stripeSeries" -> "github.com/prometheus/prometheus/model/exemplar.Exemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.stripeSeries" -> "github.com/prometheus/prometheus/tsdb/agent.seriesHashmap" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericSeriesSetHeap" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericSeriesSetHeap" -> "github.com/prometheus/prometheus/storage.genericSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/record.BuffersPool" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/record.BuffersPool" -> "github.com/prometheus/prometheus/tsdb/record.RefSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/record.BuffersPool" -> "github.com/prometheus/prometheus/tsdb/record.RefExemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/nomad.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/nomad.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql_test.singleSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql_test.singleSeriesSet" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/common/config.Headers" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.seriesHashmap" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.seriesHashmap" -> "github.com/prometheus/prometheus/tsdb/agent.memSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.walSubsetProcessorInputItem" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.walSubsetProcessorInputItem" -> "github.com/prometheus/prometheus/tsdb.memSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.StaticConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.StaticConfig" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeMetrics" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeMetrics" -> "github.com/prometheus/prometheus/scrape.MetadataMetricsCollector" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.AlertDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.AlertDiscovery" -> "github.com/prometheus/prometheus/web/api/v1.Alert" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.Engine" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.Engine" -> "github.com/prometheus/prometheus/promql/parser.Parser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.labelAndAnnotation" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.labelAndAnnotation" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Samples" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Samples" -> "github.com/prometheus/common/model.Sample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeSeries" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.seriesDescription" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.seriesDescription" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.DeletedSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.DeletedSeries" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockSeriesSet" -> "github.com/prometheus/prometheus/tsdb.blockBaseSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.TargetRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.TargetRetriever" -> "github.com/prometheus/prometheus/config.ScrapeConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.TargetRetriever" -> "github.com/prometheus/prometheus/scrape.Target" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.mockQueryRangeAPI" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.mockQueryRangeAPI" -> "github.com/prometheus/common/model.Matrix" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockHistogram" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockHistogram" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/common/config.httpClientOptionFunc" [  weight=0 ];
+
+	"github.com/prometheus/common/config.httpClientOptionFunc" -> "github.com/prometheus/common/config.httpClientOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.ManagedIdentityConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.dependencyMap" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.dependencyMap" -> "github.com/prometheus/prometheus/rules.Rule" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.LightsailDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.LightsailDiscovery" -> "github.com/prometheus/prometheus/discovery/aws.LightsailSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.LightsailDiscovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.Storage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.Storage" -> "github.com/prometheus/prometheus/storage.SampleAndChunkQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.Storage" -> "github.com/prometheus/prometheus/storage/remote.WriteStorage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.countingTargetRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.countingTargetRetriever" -> "github.com/prometheus/prometheus/web/api/v1.TargetRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Labels" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/histogram.sample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/histogram.sample" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.testGroup" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.testGroup" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.testGroup" -> "github.com/prometheus/prometheus/promql/parser.Parser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.HistogramAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.HistogramAppender" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlockChunkQuerierFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlockChunkQuerierFunc" -> "github.com/prometheus/prometheus/tsdb.BlockReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlockChunkQuerierFunc" -> "github.com/prometheus/prometheus/storage.ChunkQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/triton.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/triton.Discovery" -> "github.com/prometheus/prometheus/discovery/triton.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/triton.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/record.RefExemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/record.RefExemplar" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/sigv4.SigV4Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.groupedAggregation" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.groupedAggregation" -> "github.com/prometheus/prometheus/promql.Vector" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.scrapeManagerMock" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.scrapeManagerMock" -> "github.com/prometheus/prometheus/scrape.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.mockChunkQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.mockChunkQuerier" -> "github.com/prometheus/prometheus/storage.ChunkSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.walSample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.walSample" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.appendBatch" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.appendBatch" -> "github.com/prometheus/prometheus/tsdb.exemplarWithSeriesRef" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.appendBatch" -> "github.com/prometheus/prometheus/tsdb.memSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/index.indexWriterSeriesSlice" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/index.indexWriterSeriesSlice" -> "github.com/prometheus/prometheus/tsdb/index.indexWriterSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.ElasticacheSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.ElasticacheSDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.ElasticacheSDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.maxSchemaAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.maxSchemaAppender" -> "github.com/prometheus/prometheus/storage.Appender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/http.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/http.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TracingConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.timeLimitAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.timeLimitAppender" -> "github.com/prometheus/prometheus/storage.Appender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.appender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.appender" -> "github.com/prometheus/prometheus/tsdb/agent.appenderBase" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Appendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Appendable" -> "github.com/prometheus/prometheus/storage.Appender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/moby.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/moby.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.Appendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.Appendable" -> "github.com/prometheus/prometheus/util/teststorage.compatAppendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.Appendable" -> "github.com/prometheus/prometheus/scrape.sample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.Appendable" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/record.refsCreateFn" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/record.refsCreateFn" -> "github.com/prometheus/prometheus/tsdb/record.RefSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.Manager" -> "github.com/prometheus/prometheus/notifier.alertmanagerSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.Manager" -> "github.com/prometheus/prometheus/notifier.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.otlpInstrumentedAppendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.otlpInstrumentedAppendable" -> "github.com/prometheus/prometheus/storage.AppendableV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.OOOCompactionHead" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.OOOCompactionHead" -> "github.com/prometheus/prometheus/tsdb.Head" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.yyLexer" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.yyLexer" -> "github.com/prometheus/prometheus/promql/parser.yySymType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.fParams" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.fParams" -> "github.com/prometheus/prometheus/promql.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TracingClientType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.RuleDetail" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.RuleDetail" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.writeHandler" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.writeHandler" -> "github.com/prometheus/prometheus/storage.Appendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/refresh.Discovery" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/xds.HTTPResourceClient" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/xds.HTTPResourceClient" -> "github.com/prometheus/prometheus/discovery/xds.HTTPResourceClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.sampleST" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.sampleST" -> "github.com/prometheus/prometheus/promql.Sample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ExemplarQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ExemplarQueryable" -> "github.com/prometheus/prometheus/storage.ExemplarQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/moby.DockerSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/moby.DockerSDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ExemplarStorage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ExemplarStorage" -> "github.com/prometheus/prometheus/storage.ExemplarQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ExemplarStorage" -> "github.com/prometheus/prometheus/storage.ExemplarAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.limitAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.limitAppender" -> "github.com/prometheus/prometheus/storage.Appender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/ovhcloud.dedicatedServerDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/ovhcloud.dedicatedServerDiscovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/ovhcloud.dedicatedServerDiscovery" -> "github.com/prometheus/prometheus/discovery/ovhcloud.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/client_golang/exp/api/remote.WriteMessageType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockBaseQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockBaseQuerier" -> "github.com/prometheus/prometheus/tsdb.IndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headChunkReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headChunkReader" -> "github.com/prometheus/prometheus/tsdb.Head" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.alertmanagerSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.alertmanagerSet" -> "github.com/prometheus/prometheus/notifier.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.alertmanagerSet" -> "github.com/prometheus/prometheus/config.AlertmanagerConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.alertmanagerSet" -> "github.com/prometheus/prometheus/notifier.sendLoop" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.metricWithBuckets" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.metricWithBuckets" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TSDBRetentionConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.Series" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.GroupEvalIterationFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.GroupEvalIterationFunc" -> "github.com/prometheus/prometheus/rules.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/hetzner.hcloudDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/hetzner.hcloudDiscovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/common/config.URL" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockExemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockExemplar" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/openstack.refresher" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/openstack.refresher" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.remoteWriteAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.remoteWriteAppender" -> "github.com/prometheus/prometheus/storage.Appender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/index.indexWriterSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/index.indexWriterSeries" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.chunkSeriesEntry" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.chunkSeriesEntry" -> "github.com/prometheus/prometheus/tsdb.seriesData" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.timestampTracker" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.timestampTracker" -> "github.com/prometheus/prometheus/storage/remote.baseTimestampTracker" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/record.Decoder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/record.Decoder" -> "github.com/prometheus/prometheus/model/labels.ScratchBuilder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.testSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.testSeriesSet" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.Alert" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.Alert" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/consul.consulService" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/consul.consulService" -> "github.com/prometheus/common/model.LabelSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlockWriter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlockWriter" -> "github.com/prometheus/prometheus/tsdb.Head" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.LeveledCompactorOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.LeveledCompactorOptions" -> "github.com/prometheus/prometheus/storage.VerticalChunkSeriesMergeFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockPopulatorFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockPopulatorFunc" -> "github.com/prometheus/prometheus/tsdb.BlockReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockPopulatorFunc" -> "github.com/prometheus/prometheus/tsdb.IndexReaderPostingsFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockPopulatorFunc" -> "github.com/prometheus/prometheus/storage.VerticalChunkSeriesMergeFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockPopulatorFunc" -> "github.com/prometheus/prometheus/tsdb.IndexWriter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.seriesSnapshot" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.seriesSnapshot" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.writeBenchmark" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.writeBenchmark" -> "github.com/prometheus/prometheus/tsdb.DB" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.seriesSetFilter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.seriesSetFilter" -> "github.com/prometheus/prometheus/storage.Querier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.seriesSetFilter" -> "github.com/prometheus/prometheus/storage.SeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.seriesFilter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.seriesFilter" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/oci.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/oci.SDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/oci.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.wblSubsetProcessor" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.wblSubsetProcessor" -> "github.com/prometheus/prometheus/tsdb.wblSubsetProcessorInputItem" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Alert" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Alert" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.limitAppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.limitAppenderV2" -> "github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.SeriesLifecycleCallback" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.SeriesLifecycleCallback" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.mockSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.mockSeriesSet" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/documentation/examples/custom-sd/adapter.Adapter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/documentation/examples/custom-sd/adapter.Adapter" -> "github.com/prometheus/prometheus/discovery.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/documentation/examples/custom-sd/adapter.Adapter" -> "github.com/prometheus/prometheus/discovery.Discoverer" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockBaseSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockBaseSeriesSet" -> "github.com/prometheus/prometheus/tsdb.IndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockBaseSeriesSet" -> "github.com/prometheus/prometheus/model/labels.ScratchBuilder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockBaseSeriesSet" -> "github.com/prometheus/prometheus/tsdb.seriesData" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.testTargetRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.testTargetRetriever" -> "github.com/prometheus/prometheus/scrape.Target" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/ionos.serverDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/ionos.serverDiscovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.limitedAppenderV1" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.limitedAppenderV1" -> "github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/record.RefSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/record.RefSeries" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/labels.Builder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/labels.Builder" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.seriesToChunkEncoder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.seriesToChunkEncoder" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.sampleAndChunkQueryableClient" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.sampleAndChunkQueryableClient" -> "github.com/prometheus/prometheus/storage/remote.ReadClient" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.sampleAndChunkQueryableClient" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.TargetsGatherer" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.TargetsGatherer" -> "github.com/prometheus/prometheus/scrape.Target" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.rwExporter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.rwExporter" -> "github.com/prometheus/prometheus/storage.AppendableV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.rwExporter" -> "github.com/prometheus/prometheus/config.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.baseAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.baseAppender" -> "github.com/prometheus/prometheus/util/teststorage.Appendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.sdCheckResult" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.sdCheckResult" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.queue" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.queue" -> "github.com/prometheus/prometheus/storage/remote.timeSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Head" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Head" -> "github.com/prometheus/prometheus/tsdb.memSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Head" -> "github.com/prometheus/prometheus/tsdb/record.RefSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Head" -> "github.com/prometheus/prometheus/tsdb/record.RefExemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Head" -> "github.com/prometheus/prometheus/tsdb.ExemplarStorage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Head" -> "github.com/prometheus/prometheus/tsdb.exemplarWithSeriesRef" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Head" -> "github.com/prometheus/prometheus/tsdb.HeadOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Head" -> "github.com/prometheus/prometheus/tsdb.stripeSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.fanout" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.fanout" -> "github.com/prometheus/prometheus/storage.Storage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.configLintConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.configLintConfig" -> "github.com/prometheus/prometheus/cmd/promtool.rulesLintConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.labelGenericQueriers" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.labelGenericQueriers" -> "github.com/prometheus/prometheus/storage.genericQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.parsedEntry" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.parsedEntry" -> "github.com/prometheus/prometheus/model/exemplar.Exemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.parsedEntry" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelPair" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelPair" -> "github.com/prometheus/common/model.LabelName" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelPair" -> "github.com/prometheus/common/model.LabelValue" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.Configs" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/http.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/http.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql_test.hintRecordingQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql_test.hintRecordingQuerier" -> "github.com/prometheus/prometheus/storage.Querier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockSample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockSample" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.checkpointWriter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.checkpointWriter" -> "github.com/prometheus/prometheus/tsdb/record.RefSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeChunkSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeChunkSeries" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockIndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockIndexReader" -> "github.com/prometheus/prometheus/tsdb.Block" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockIndexReader" -> "github.com/prometheus/prometheus/tsdb.IndexReader" [  weight=0 ];
+
+	"github.com/prometheus/common/config.OAuth2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.SeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.SeriesSet" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelName" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.byGroupSource" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.byGroupSource" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.testTargetParams" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.testTargetParams" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.testTargetParams" -> "github.com/prometheus/common/model.LabelSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertmanagerAPIVersion" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.ExemplarStorage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.ExemplarStorage" -> "github.com/prometheus/prometheus/model/exemplar.Exemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.ExemplarStorage" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.ExemplarStorage" -> "github.com/prometheus/prometheus/storage.ExemplarQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.Client" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.Client" -> "github.com/prometheus/client_golang/exp/api/remote.WriteMessageType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.labelsMutator" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.labelsMutator" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.searchRequest" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.searchRequest" -> "github.com/prometheus/prometheus/storage.Querier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.IndexReaderPostingsFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.IndexReaderPostingsFunc" -> "github.com/prometheus/prometheus/tsdb.IndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.concreteSeriesIterator" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.concreteSeriesIterator" -> "github.com/prometheus/prometheus/storage/remote.concreteSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.mockBReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.mockBReader" -> "github.com/prometheus/prometheus/tsdb.IndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.multipleAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.multipleAppender" -> "github.com/prometheus/prometheus/storage.Appender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.multipleAppender" -> "github.com/prometheus/prometheus/tsdb.BlockWriter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.APIConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.APIConfig" -> "github.com/prometheus/prometheus/config.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.APIConfig" -> "github.com/prometheus/prometheus/web/api/testhelpers.TargetRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.APIConfig" -> "github.com/prometheus/prometheus/storage.ExemplarQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.APIConfig" -> "github.com/prometheus/prometheus/web/api/testhelpers.RulesRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.APIConfig" -> "github.com/prometheus/prometheus/promql.QueryEngine" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.APIConfig" -> "github.com/prometheus/prometheus/storage.SampleAndChunkQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.ReadyScrapeManager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.ReadyScrapeManager" -> "github.com/prometheus/prometheus/scrape.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.notReadyReadStorage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.notReadyReadStorage" -> "github.com/prometheus/prometheus/web.LocalStorage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.bucketLimitAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.bucketLimitAppender" -> "github.com/prometheus/prometheus/storage.Appender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.bucketLimitAppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.bucketLimitAppenderV2" -> "github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.mockQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.mockQuerier" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/common/config.HTTPClientOption" [  weight=0 ];
+
+	"github.com/prometheus/common/config.HTTPClientOption" -> "github.com/prometheus/common/config.httpClientOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.sample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.sample" -> "github.com/prometheus/prometheus/model/exemplar.Exemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.sample" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Options" -> "github.com/prometheus/prometheus/tsdb.SeriesLifecycleCallback" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Options" -> "github.com/prometheus/prometheus/tsdb.NewCompactorFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Options" -> "github.com/prometheus/prometheus/tsdb.BlockQuerierFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Options" -> "github.com/prometheus/prometheus/tsdb.BlockChunkQuerierFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Options" -> "github.com/prometheus/prometheus/tsdb.BlocksToDeleteFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ChunkSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ChunkSeriesSet" -> "github.com/prometheus/prometheus/storage.ChunkSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.RatioSampler" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.RatioSampler" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.RatioSampler" -> "github.com/prometheus/prometheus/promql.Sample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.querierAdapter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.querierAdapter" -> "github.com/prometheus/prometheus/storage.genericQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/xds.HTTPResourceClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/xds.HTTPResourceClientConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertmanagerConfigs" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.testDiscoverer" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.testDiscoverer" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.wblSubsetProcessorInputItem" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.wblSubsetProcessorInputItem" -> "github.com/prometheus/prometheus/tsdb.memSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.API" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.API" -> "github.com/prometheus/prometheus/config.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.API" -> "github.com/prometheus/prometheus/web/api/v1.TargetRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.API" -> "github.com/prometheus/prometheus/storage.ExemplarQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.API" -> "github.com/prometheus/prometheus/web/api/v1.RulesRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.API" -> "github.com/prometheus/prometheus/promql/parser.Parser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.API" -> "github.com/prometheus/prometheus/promql.QueryEngine" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.API" -> "github.com/prometheus/prometheus/storage.SampleAndChunkQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.EC2SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.EC2SDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.EC2SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.indexEntry" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.indexEntry" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.concreteSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.concreteSeries" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.appendCase" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.appendCase" -> "github.com/prometheus/prometheus/tsdb.benchAppendFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.HeadOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.HeadOptions" -> "github.com/prometheus/prometheus/tsdb.SeriesLifecycleCallback" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/uyuni.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/uyuni.SDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/uyuni.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/relabel.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.baseTimestampTracker" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.baseTimestampTracker" -> "github.com/prometheus/prometheus/storage/remote.WriteStorage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/moby.DockerSwarmSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/moby.DockerSwarmSDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/refresh.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/refresh.Options" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Matcher" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Matcher" -> "github.com/prometheus/common/model.LabelName" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.evaluator" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.evaluator" -> "github.com/prometheus/prometheus/storage.Querier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.mockdiscoveryProvider" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.mockdiscoveryProvider" -> "github.com/prometheus/prometheus/discovery.update" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelValue" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.unitTestFile" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.unitTestFile" -> "github.com/prometheus/prometheus/cmd/promtool.testGroup" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.fanoutAppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.fanoutAppenderV2" -> "github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/azure.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/azure.Discovery" -> "github.com/prometheus/prometheus/discovery/azure.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/azure.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/kubernetes.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/kubernetes.SDConfig" -> "github.com/prometheus/common/config.URL" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/kubernetes.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/vultr.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/vultr.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.TargetRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.TargetRetriever" -> "github.com/prometheus/prometheus/scrape.Target" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.TargetRetriever" -> "github.com/prometheus/prometheus/config.ScrapeConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/moby.refresher" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/moby.refresher" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Silence" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Silence" -> "github.com/prometheus/common/model.Matcher" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ExemplarQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ExemplarQuerier" -> "github.com/prometheus/prometheus/model/exemplar.QueryResult" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.rulesRetrieverAdapter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.rulesRetrieverAdapter" -> "github.com/prometheus/prometheus/web/api/testhelpers.RulesRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.dbAppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.dbAppenderV2" -> "github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.dbAppenderV2" -> "github.com/prometheus/prometheus/tsdb.DB" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Alerts" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Alerts" -> "github.com/prometheus/common/model.Alert" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.seriesHashmap" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.seriesHashmap" -> "github.com/prometheus/prometheus/tsdb.memSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/exemplar.Exemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/exemplar.Exemplar" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.appenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.appenderV2" -> "github.com/prometheus/prometheus/util/teststorage.baseAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.appenderV2" -> "github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.SeriesSetFormatter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.SeriesSetFormatter" -> "github.com/prometheus/prometheus/storage.SeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/openstack.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/openstack.SDConfig" -> "github.com/prometheus/common/config.TLSConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/openstack.SDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlockQuerierFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlockQuerierFunc" -> "github.com/prometheus/prometheus/tsdb.BlockReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlockQuerierFunc" -> "github.com/prometheus/prometheus/storage.Querier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.testDBOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.testDBOptions" -> "github.com/prometheus/prometheus/tsdb.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.testDBOpt" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.testDBOpt" -> "github.com/prometheus/prometheus/tsdb.testDBOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.stripeSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.stripeSeries" -> "github.com/prometheus/prometheus/tsdb.SeriesLifecycleCallback" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.stripeSeries" -> "github.com/prometheus/prometheus/tsdb.seriesHashmap" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.stripeSeries" -> "github.com/prometheus/prometheus/tsdb.memSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ChunkEncodingConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headAppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headAppenderV2" -> "github.com/prometheus/prometheus/tsdb.headAppenderBase" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.AlertingRule" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.AlertingRule" -> "github.com/prometheus/prometheus/web/api/v1.Alert" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.AlertingRule" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Options" -> "github.com/prometheus/common/config.HTTPClientOption" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.chunkSetToSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.chunkSetToSeriesSet" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.chunkSetToSeriesSet" -> "github.com/prometheus/prometheus/storage.ChunkSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/prometheus.readyStorage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/prometheus.readyStorage" -> "github.com/prometheus/prometheus/storage.Storage" [  weight=0 ];
+
+	"github.com/prometheus/client_golang/exp/api/remote.writeStorage" [  weight=0 ];
+
+	"github.com/prometheus/client_golang/exp/api/remote.writeStorage" -> "github.com/prometheus/client_golang/exp/api/remote.WriteMessageType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ChunkSeriesEntry" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ChunkSeriesEntry" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.AppenderV2" -> "github.com/prometheus/prometheus/storage.AOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.AppenderV2" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/relabel.Action" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.Discoverer" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.Discoverer" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoopOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoopOptions" -> "github.com/prometheus/prometheus/scrape.scrapeCache" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoopOptions" -> "github.com/prometheus/prometheus/scrape.Target" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoopOptions" -> "github.com/prometheus/prometheus/scrape.scrapePool" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.seriesSetAdapter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.seriesSetAdapter" -> "github.com/prometheus/prometheus/storage.genericSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/stackit.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/stackit.SDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/stackit.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/relabel.Regexp" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.compactChunkIterator" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.compactChunkIterator" -> "github.com/prometheus/prometheus/storage.VerticalSeriesMergeFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.seriesByLabel" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.seriesByLabel" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.LightsailSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.LightsailSDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.LightsailSDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.EC2Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.EC2Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.EC2Discovery" -> "github.com/prometheus/prometheus/discovery/aws.EC2SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.QueueManager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.QueueManager" -> "github.com/prometheus/prometheus/model/relabel.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.QueueManager" -> "github.com/prometheus/prometheus/tsdb/wlog.Watcher" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.QueueManager" -> "github.com/prometheus/prometheus/storage/remote.shards" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.QueueManager" -> "github.com/prometheus/prometheus/config.QueueConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.QueueManager" -> "github.com/prometheus/client_golang/exp/api/remote.WriteMessageType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.QueueManager" -> "github.com/prometheus/prometheus/config.MetadataConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.QueueManager" -> "github.com/prometheus/prometheus/storage/remote.MetadataWatcher" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.QueueManager" -> "github.com/prometheus/prometheus/model/labels.Builder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.QueueManager" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.selectedAppendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.selectedAppendable" -> "github.com/prometheus/prometheus/scrape.compatAppendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeConfigOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeConfigOptions" -> "github.com/prometheus/prometheus/config.ScrapeProtocol" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.RelabelStepsResponse" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.RelabelStepsResponse" -> "github.com/prometheus/prometheus/web/api/v1.RelabelStep" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.AlertingRule" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.AlertingRule" -> "github.com/prometheus/prometheus/rules.Rule" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.AlertingRule" -> "github.com/prometheus/prometheus/rules.Alert" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.AlertingRule" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericChunkSeriesSetAdapter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericChunkSeriesSetAdapter" -> "github.com/prometheus/prometheus/storage.ChunkSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.series" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.mockIndexWriter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.mockIndexWriter" -> "github.com/prometheus/prometheus/tsdb.series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.otlpInstrumentedAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.otlpInstrumentedAppender" -> "github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.MetadataConfig" [  weight=0 ];
+
+	"github.com/prometheus/common/config.oauth2RoundTripper" [  weight=0 ];
+
+	"github.com/prometheus/common/config.oauth2RoundTripper" -> "github.com/prometheus/common/config.httpClientOptions" [  weight=0 ];
+
+	"github.com/prometheus/common/config.oauth2RoundTripper" -> "github.com/prometheus/common/config.OAuth2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.ActiveSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.ActiveSeries" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericMergeSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericMergeSeriesSet" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericMergeSeriesSet" -> "github.com/prometheus/prometheus/storage.genericSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericMergeSeriesSet" -> "github.com/prometheus/prometheus/storage.genericSeriesSetHeap" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericMergeSeriesSet" -> "github.com/prometheus/prometheus/storage.genericSeriesMergeFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/file.testRunner" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/file.testRunner" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.MockQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.MockQuerier" -> "github.com/prometheus/prometheus/storage.SeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/common/config.Authorization" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.initAppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.initAppenderV2" -> "github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.initAppenderV2" -> "github.com/prometheus/prometheus/tsdb.Head" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/puppetdb.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/puppetdb.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/wlog.writeToMock" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/wlog.writeToMock" -> "github.com/prometheus/prometheus/tsdb/record.RefSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/wlog.writeToMock" -> "github.com/prometheus/prometheus/tsdb/record.RefExemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/triton.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/triton.SDConfig" -> "github.com/prometheus/common/config.TLSConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoopAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoopAppender" -> "github.com/prometheus/prometheus/scrape.scrapeLoop" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoopAppender" -> "github.com/prometheus/prometheus/storage.Appender" [  weight=0 ];
+
+	"github.com/prometheus/common/config.TLSConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.Options" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.Options" -> "github.com/prometheus/prometheus/model/relabel.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ChunkQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ChunkQueryable" -> "github.com/prometheus/prometheus/storage.ChunkQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.mockCompactorFailing" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.mockCompactorFailing" -> "github.com/prometheus/prometheus/tsdb.Block" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Sample" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Sample" -> "github.com/prometheus/common/model.LabelSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.errorTestQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.errorTestQuerier" -> "github.com/prometheus/prometheus/storage.SeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.RelabelStep" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.RelabelStep" -> "github.com/prometheus/prometheus/model/relabel.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.RelabelStep" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.alertmanagerLabels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/notifier.alertmanagerLabels" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.backfillSample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.backfillSample" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.searchQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.searchQuerier" -> "github.com/prometheus/prometheus/storage.mockQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlockPopulator" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlockPopulator" -> "github.com/prometheus/prometheus/tsdb.IndexWriter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlockPopulator" -> "github.com/prometheus/prometheus/tsdb.BlockReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlockPopulator" -> "github.com/prometheus/prometheus/tsdb.IndexReaderPostingsFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlockPopulator" -> "github.com/prometheus/prometheus/storage.VerticalChunkSeriesMergeFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.chunkSeriesByLabel" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.chunkSeriesByLabel" -> "github.com/prometheus/prometheus/storage.ChunkSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.LazyLoader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.LazyLoader" -> "github.com/prometheus/prometheus/storage.Storage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.LazyLoader" -> "github.com/prometheus/prometheus/promql.Engine" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.LazyLoader" -> "github.com/prometheus/prometheus/promql/promqltest.loadCmd" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.RuleDependencyController" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.RuleDependencyController" -> "github.com/prometheus/prometheus/rules.Rule" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.EvalNodeHelper" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.EvalNodeHelper" -> "github.com/prometheus/prometheus/model/labels.Builder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.EvalNodeHelper" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.EvalNodeHelper" -> "github.com/prometheus/prometheus/promql.metricWithBuckets" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.EvalNodeHelper" -> "github.com/prometheus/prometheus/promql.Sample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.EvalNodeHelper" -> "github.com/prometheus/prometheus/promql.Vector" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/prometheus.reloader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/prometheus.reloader" -> "github.com/prometheus/prometheus/config.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/prometheus.readyScrapeManager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/prometheus.readyScrapeManager" -> "github.com/prometheus/prometheus/scrape.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.Option" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.Option" -> "github.com/prometheus/prometheus/tsdb.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.VectorSelector" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.VectorSelector" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.VectorSelector" -> "github.com/prometheus/prometheus/storage.SeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.evalCmd" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.evalCmd" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Appender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Appender" -> "github.com/prometheus/prometheus/storage.MetadataUpdater" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Appender" -> "github.com/prometheus/prometheus/storage.StartTimestampAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Appender" -> "github.com/prometheus/prometheus/storage.ExemplarAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Appender" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Appender" -> "github.com/prometheus/prometheus/storage.HistogramAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.SelectedSeriesHead" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.SelectedSeriesHead" -> "github.com/prometheus/prometheus/tsdb.RangeHead" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericSeriesMergeFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericSeriesMergeFunc" -> "github.com/prometheus/prometheus/storage.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.QueryableFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.QueryableFunc" -> "github.com/prometheus/prometheus/storage.Querier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.MSKDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.MSKDiscovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.MSKDiscovery" -> "github.com/prometheus/prometheus/discovery/aws.MSKSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Vector" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Vector" -> "github.com/prometheus/common/model.Sample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.ruleImporterConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.ruleImporterConfig" -> "github.com/prometheus/common/model.ValidationScheme" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.chunkedSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.chunkedSeriesSet" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.IndexWriter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.IndexWriter" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.VerticalChunkSeriesMergeFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.VerticalChunkSeriesMergeFunc" -> "github.com/prometheus/prometheus/storage.ChunkSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/index.mockIndex" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/index.mockIndex" -> "github.com/prometheus/prometheus/tsdb/index.series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/otlptranslator/prometheusremotewrite.cachedScopeLabels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/otlptranslator/prometheusremotewrite.cachedScopeLabels" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeCache" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeCache" -> "github.com/prometheus/prometheus/scrape.scrapeMetrics" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeCache" -> "github.com/prometheus/prometheus/scrape.cacheEntry" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Rule" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Rule" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Rule" -> "github.com/prometheus/prometheus/rules.QueryFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Rule" -> "github.com/prometheus/prometheus/promql.Vector" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/scaleway.instanceDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/scaleway.instanceDiscovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.TargetDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.TargetDiscovery" -> "github.com/prometheus/prometheus/web/api/v1.Target" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.TargetDiscovery" -> "github.com/prometheus/prometheus/web/api/v1.DroppedTarget" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.OAuthConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.metricMetadata" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.metricMetadata" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.GroupLoader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.GroupLoader" -> "github.com/prometheus/common/model.ValidationScheme" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockedRemoteClient" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockedRemoteClient" -> "github.com/prometheus/prometheus/model/labels.ScratchBuilder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoop" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoop" -> "github.com/prometheus/common/model.ValidationScheme" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoop" -> "github.com/prometheus/prometheus/model/relabel.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoop" -> "github.com/prometheus/prometheus/scrape.scrapeMetrics" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoop" -> "github.com/prometheus/prometheus/scrape.scrapeCache" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoop" -> "github.com/prometheus/prometheus/storage.Appendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoop" -> "github.com/prometheus/prometheus/storage.AppendableV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoop" -> "github.com/prometheus/prometheus/scrape.labelsMutator" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/xds.resourceParser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/xds.resourceParser" -> "github.com/prometheus/common/model.LabelSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.Vector" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.Vector" -> "github.com/prometheus/prometheus/promql.Sample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.NewAPIParams" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.NewAPIParams" -> "github.com/prometheus/prometheus/storage.ExemplarQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.NewAPIParams" -> "github.com/prometheus/prometheus/web/api/testhelpers.RulesRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.NewAPIParams" -> "github.com/prometheus/prometheus/promql.QueryEngine" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.NewAPIParams" -> "github.com/prometheus/prometheus/storage.SampleAndChunkQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.NewAPIParams" -> "github.com/prometheus/prometheus/config.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.NewAPIParams" -> "github.com/prometheus/prometheus/web/api/testhelpers.TargetRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.SampleAndChunkQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.SampleAndChunkQueryable" -> "github.com/prometheus/prometheus/storage.Queryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.SampleAndChunkQueryable" -> "github.com/prometheus/prometheus/storage.ChunkQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.GlobalConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/prometheus.flagConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/prometheus.flagConfig" -> "github.com/prometheus/prometheus/scrape.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/prometheus.flagConfig" -> "github.com/prometheus/prometheus/web.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/prometheus.flagConfig" -> "github.com/prometheus/prometheus/notifier.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.RuleConcurrencyController" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.RuleConcurrencyController" -> "github.com/prometheus/prometheus/rules.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.RuleConcurrencyController" -> "github.com/prometheus/prometheus/rules.Rule" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.parsedSample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.parsedSample" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.OpenMetricsParser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.OpenMetricsParser" -> "github.com/prometheus/prometheus/model/labels.ScratchBuilder" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.dbAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.dbAppender" -> "github.com/prometheus/prometheus/tsdb.DB" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.dbAppender" -> "github.com/prometheus/prometheus/storage.Appender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.ClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.ClientConfig" -> "github.com/prometheus/sigv4.SigV4Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.ClientConfig" -> "github.com/prometheus/client_golang/exp/api/remote.WriteMessageType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.ClientConfig" -> "github.com/prometheus/common/config.URL" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.ClientConfig" -> "github.com/prometheus/prometheus/storage/remote/azuread.AzureADConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.ClientConfig" -> "github.com/prometheus/prometheus/storage/remote/googleiam.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.ClientConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.MetadataUpdater" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.MetadataUpdater" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.ElasticacheDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.ElasticacheDiscovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.ElasticacheDiscovery" -> "github.com/prometheus/prometheus/discovery/aws.ElasticacheSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeTargetRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeTargetRetriever" -> "github.com/prometheus/prometheus/scrape.Target" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeTargetRetriever" -> "github.com/prometheus/prometheus/config.ScrapeConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Targets" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.Targets" -> "github.com/prometheus/prometheus/scrape.Target" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.update" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.update" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.appendableFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.appendableFunc" -> "github.com/prometheus/prometheus/storage.Appender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/scaleway.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/scaleway.SDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/scaleway.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/common/config.Header" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ExemplarsConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.RecordingRule" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.RecordingRule" -> "github.com/prometheus/prometheus/rules.Rule" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.RecordingRule" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/stackit.iaasDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/stackit.iaasDiscovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.histogramStatsSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.histogramStatsSeries" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/marathon.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/marathon.Discovery" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/marathon.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/common/model.SampleStream" [  weight=0 ];
+
+	"github.com/prometheus/common/model.SampleStream" -> "github.com/prometheus/common/model.LabelSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/kubernetes.k8sDiscoveryTest" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/kubernetes.k8sDiscoveryTest" -> "github.com/prometheus/prometheus/discovery.Discoverer" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/kubernetes.k8sDiscoveryTest" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.circularBufferEntry" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.circularBufferEntry" -> "github.com/prometheus/prometheus/model/exemplar.Exemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.circularBufferEntry" -> "github.com/prometheus/prometheus/tsdb.indexEntry" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/exemplar.QueryResult" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/exemplar.QueryResult" -> "github.com/prometheus/prometheus/model/exemplar.Exemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/exemplar.QueryResult" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.MetadataMetricsCollector" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.MetadataMetricsCollector" -> "github.com/prometheus/prometheus/scrape.TargetsGatherer" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/scaleway.baremetalDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/scaleway.baremetalDiscovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.yyParserImpl" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.yyParserImpl" -> "github.com/prometheus/prometheus/promql/parser.yySymType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.seriesSetToChunkSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.seriesSetToChunkSet" -> "github.com/prometheus/prometheus/storage.SeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/outscale.vmDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/outscale.vmDiscovery" -> "github.com/prometheus/prometheus/discovery/outscale.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/ovhcloud.vpsDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/ovhcloud.vpsDiscovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/ovhcloud.vpsDiscovery" -> "github.com/prometheus/prometheus/discovery/ovhcloud.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.WorkloadIdentityConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/stackit.refresher" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/stackit.refresher" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.MSKSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.MSKSDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.MSKSDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/nomad.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/nomad.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeQueryable" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Querier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Querier" -> "github.com/prometheus/prometheus/storage.SeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Group" -> "github.com/prometheus/prometheus/rules.ManagerOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Group" -> "github.com/prometheus/prometheus/rules.GroupEvalIterationFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Group" -> "github.com/prometheus/prometheus/rules.Rule" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Group" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.TestStorage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.TestStorage" -> "github.com/prometheus/prometheus/tsdb.DB" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.errorSearchQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.errorSearchQuerier" -> "github.com/prometheus/prometheus/web/api/v1.errorTestQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.fanoutAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.fanoutAppender" -> "github.com/prometheus/prometheus/storage.Appender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeRulesRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeRulesRetriever" -> "github.com/prometheus/prometheus/rules.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeConfigs" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.OOOCompactionHeadIndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.OOOCompactionHeadIndexReader" -> "github.com/prometheus/prometheus/tsdb.OOOCompactionHead" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockQuerier" -> "github.com/prometheus/prometheus/tsdb.blockBaseQuerier" [  weight=0 ];
+
+	"github.com/prometheus/common/config.ProxyHeader" [  weight=0 ];
+
+	"github.com/prometheus/common/config.ProxyHeader" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/uyuni.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/uyuni.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.rulesLintConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.rulesLintConfig" -> "github.com/prometheus/common/model.ValidationScheme" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.RecordingRule" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.RecordingRule" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/oci.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/oci.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/scaleway.refresher" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/scaleway.refresher" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockQuerierTestCase" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockQuerierTestCase" -> "github.com/prometheus/prometheus/storage.SeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockQuerierTestCase" -> "github.com/prometheus/prometheus/storage.ChunkSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/otlptranslator.TranslationStrategyOption" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Sender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.Sender" -> "github.com/prometheus/prometheus/notifier.Alert" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.fakeManager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.fakeManager" -> "github.com/prometheus/prometheus/scrape.Target" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/xds.fetchDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/xds.fetchDiscovery" -> "github.com/prometheus/prometheus/discovery/xds.resourceParser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.printer" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.printer" -> "github.com/prometheus/common/model.LabelValues" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.printer" -> "github.com/prometheus/common/model.LabelSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/eureka.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/eureka.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.concreteSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.concreteSeriesSet" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoopAppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoopAppenderV2" -> "github.com/prometheus/prometheus/scrape.scrapeLoop" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoopAppenderV2" -> "github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TSDBConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.readHandler" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.readHandler" -> "github.com/prometheus/prometheus/storage.SampleAndChunkQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.readHandler" -> "github.com/prometheus/prometheus/config.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.loadCmd" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.loadCmd" -> "github.com/prometheus/prometheus/model/exemplar.Exemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.loadCmd" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.loadCmd" -> "github.com/prometheus/prometheus/promql/promqltest.sampleST" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/wlog.segmentReadFn" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/wlog.segmentReadFn" -> "github.com/prometheus/prometheus/tsdb/wlog.Watcher" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.Parser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.Parser" -> "github.com/prometheus/prometheus/model/exemplar.Exemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.Parser" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/otlptranslator/prometheusremotewrite.PrometheusConverter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/otlptranslator/prometheusremotewrite.PrometheusConverter" -> "github.com/prometheus/prometheus/model/labels.Builder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/otlptranslator/prometheusremotewrite.PrometheusConverter" -> "github.com/prometheus/prometheus/model/labels.ScratchBuilder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/otlptranslator/prometheusremotewrite.PrometheusConverter" -> "github.com/prometheus/prometheus/storage/remote/otlptranslator/prometheusremotewrite.cachedResourceLabels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/otlptranslator/prometheusremotewrite.PrometheusConverter" -> "github.com/prometheus/prometheus/storage/remote/otlptranslator/prometheusremotewrite.cachedScopeLabels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/otlptranslator/prometheusremotewrite.PrometheusConverter" -> "github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockChunkQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockChunkQuerier" -> "github.com/prometheus/prometheus/tsdb.blockBaseQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.targetRetrieverAdapter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.targetRetrieverAdapter" -> "github.com/prometheus/prometheus/web/api/testhelpers.TargetRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/ionos.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/ionos.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.MockQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.MockQueryable" -> "github.com/prometheus/prometheus/storage.Querier" [  weight=0 ];
+
+	"github.com/prometheus/client_golang/exp/api/remote.MessageTypes" [  weight=0 ];
+
+	"github.com/prometheus/client_golang/exp/api/remote.MessageTypes" -> "github.com/prometheus/client_golang/exp/api/remote.WriteMessageType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.singleSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.singleSeriesSet" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ChunkQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ChunkQuerier" -> "github.com/prometheus/prometheus/storage.ChunkSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/puppetdb.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/puppetdb.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.HeadAndOOOChunkReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.HeadAndOOOChunkReader" -> "github.com/prometheus/prometheus/tsdb.headChunkReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.HeadAndOOOChunkReader" -> "github.com/prometheus/prometheus/tsdb.Head" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericSeriesSet" -> "github.com/prometheus/prometheus/storage.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/hetzner.robotDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/hetzner.robotDiscovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.targetScraper" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.targetScraper" -> "github.com/prometheus/prometheus/scrape.Target" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.targetScraper" -> "github.com/prometheus/prometheus/scrape.scrapeMetrics" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.chunkSnapshotRecord" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.chunkSnapshotRecord" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.timestampTrackerV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.timestampTrackerV2" -> "github.com/prometheus/prometheus/storage/remote.baseTimestampTracker" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.chunkSeriesSetAdapter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.chunkSeriesSetAdapter" -> "github.com/prometheus/prometheus/storage.genericSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.Alert" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.Alert" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.DB" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.DB" -> "github.com/prometheus/prometheus/tsdb/agent.deletedRefMeta" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.DB" -> "github.com/prometheus/prometheus/tsdb/record.RefSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.DB" -> "github.com/prometheus/prometheus/storage/remote.Storage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.DB" -> "github.com/prometheus/prometheus/tsdb/agent.stripeSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.query" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.query" -> "github.com/prometheus/prometheus/promql.Engine" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.query" -> "github.com/prometheus/prometheus/promql.Matrix" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.query" -> "github.com/prometheus/prometheus/storage.Queryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.RulesRetriever" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.RulesRetriever" -> "github.com/prometheus/prometheus/rules.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.RulesRetriever" -> "github.com/prometheus/prometheus/rules.AlertingRule" [  weight=0 ];
+
+	"github.com/prometheus/common/config.headersRoundTripper" [  weight=0 ];
+
+	"github.com/prometheus/common/config.headersRoundTripper" -> "github.com/prometheus/common/config.Headers" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.Provider" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.Provider" -> "github.com/prometheus/prometheus/discovery.Discoverer" [  weight=0 ];
+
+	"github.com/prometheus/common/config.httpClientOptions" [  weight=0 ];
+
+	"github.com/prometheus/common/config.httpClientOptions" -> "github.com/prometheus/common/config.NewTLSConfigFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Options" -> "github.com/prometheus/prometheus/storage.ExemplarQueryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Options" -> "github.com/prometheus/prometheus/storage.Storage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Options" -> "github.com/prometheus/client_golang/exp/api/remote.MessageTypes" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Options" -> "github.com/prometheus/prometheus/notifier.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Options" -> "github.com/prometheus/prometheus/promql/parser.Parser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Options" -> "github.com/prometheus/prometheus/rules.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Options" -> "github.com/prometheus/prometheus/web.LocalStorage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Options" -> "github.com/prometheus/prometheus/promql.Engine" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.Options" -> "github.com/prometheus/prometheus/scrape.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage_test.mockStorage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage_test.mockStorage" -> "github.com/prometheus/prometheus/storage.Appendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage_test.mockStorage" -> "github.com/prometheus/prometheus/storage.Storage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage_test.mockStorage" -> "github.com/prometheus/prometheus/storage.AppendableV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.Parser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.Parser" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlocksToDeleteFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlocksToDeleteFunc" -> "github.com/prometheus/prometheus/tsdb.Block" [  weight=0 ];
+
+	"github.com/prometheus/common/config.BasicAuth" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericSeriesSetAdapter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.genericSeriesSetAdapter" -> "github.com/prometheus/prometheus/storage.SeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.QueryEngine" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.QueryEngine" -> "github.com/prometheus/prometheus/storage.Queryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.ECSSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.ECSSDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.ECSSDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/outscale.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/outscale.SDConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/outscale.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeChunkQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeChunkQuerier" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeHistogramSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeHistogramSeries" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.initAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.initAppender" -> "github.com/prometheus/prometheus/tsdb.Head" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.initAppender" -> "github.com/prometheus/prometheus/storage.Appender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockTombstoneReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockTombstoneReader" -> "github.com/prometheus/prometheus/tsdb.Block" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Matrix" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Matrix" -> "github.com/prometheus/common/model.SampleStream" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.cacheEntry" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.cacheEntry" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Series" -> "github.com/prometheus/prometheus/storage.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.PromParser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/textparse.PromParser" -> "github.com/prometheus/prometheus/model/labels.ScratchBuilder" [  weight=0 ];
+
+	"github.com/prometheus/common/config.SecretManagerOption" [  weight=0 ];
+
+	"github.com/prometheus/common/config.SecretManagerOption" -> "github.com/prometheus/common/config.HTTPClientOption" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.LimitedAppenderV1" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.LimitedAppenderV1" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tracing.Manager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tracing.Manager" -> "github.com/prometheus/prometheus/config.TracingConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.maxSchemaAppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.maxSchemaAppenderV2" -> "github.com/prometheus/prometheus/storage.AppenderV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.HeadAndOOOChunkQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.HeadAndOOOChunkQuerier" -> "github.com/prometheus/prometheus/tsdb.Head" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.HeadAndOOOChunkQuerier" -> "github.com/prometheus/prometheus/tsdb.IndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.HeadAndOOOChunkQuerier" -> "github.com/prometheus/prometheus/storage.ChunkQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.exemplarWithSeriesRef" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.exemplarWithSeriesRef" -> "github.com/prometheus/prometheus/model/exemplar.Exemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.rulesRetrieverMock" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.rulesRetrieverMock" -> "github.com/prometheus/prometheus/rules.AlertingRule" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.rulesRetrieverMock" -> "github.com/prometheus/prometheus/rules.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/digitalocean.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/digitalocean.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.AzureADConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.chunkSeriesMergerAdapter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.chunkSeriesMergerAdapter" -> "github.com/prometheus/prometheus/storage.VerticalChunkSeriesMergeFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Block" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.Block" -> "github.com/prometheus/prometheus/tsdb.IndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headAppender" -> "github.com/prometheus/prometheus/tsdb.headAppenderBase" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoopAppendAdapter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapeLoopAppendAdapter" -> "github.com/prometheus/prometheus/model/labels.Builder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/moby.DockerDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/moby.DockerDiscovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.querier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.querier" -> "github.com/prometheus/prometheus/storage/remote.ReadClient" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.querier" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/template.QueryFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/template.QueryFunc" -> "github.com/prometheus/prometheus/promql.Vector" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.memSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/agent.memSeries" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.mockIndex" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.mockIndex" -> "github.com/prometheus/prometheus/tsdb.series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.seriesData" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.seriesData" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.compatAppendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.compatAppendable" -> "github.com/prometheus/prometheus/storage.Appendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/util/teststorage.compatAppendable" -> "github.com/prometheus/prometheus/storage.AppendableV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.ManagerOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.ManagerOptions" -> "github.com/prometheus/prometheus/rules.RuleDependencyController" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.ManagerOptions" -> "github.com/prometheus/prometheus/rules.GroupLoader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.ManagerOptions" -> "github.com/prometheus/prometheus/rules.QueryFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.ManagerOptions" -> "github.com/prometheus/prometheus/rules.NotifyFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.ManagerOptions" -> "github.com/prometheus/common/model.ValidationScheme" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.ManagerOptions" -> "github.com/prometheus/prometheus/promql/parser.Parser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.ManagerOptions" -> "github.com/prometheus/prometheus/storage.Queryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.ManagerOptions" -> "github.com/prometheus/prometheus/storage.Appendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.ManagerOptions" -> "github.com/prometheus/prometheus/rules.RuleConcurrencyController" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.CertificateConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/ovhcloud.refresher" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/ovhcloud.refresher" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/common/model.ValidationScheme" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.NewCompactorFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.NewCompactorFunc" -> "github.com/prometheus/prometheus/tsdb.Compactor" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.NewCompactorFunc" -> "github.com/prometheus/prometheus/tsdb.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RuntimeConfig" [  weight=0 ];
+
+	"github.com/prometheus/client_golang/exp/api/remote.writeHandler" [  weight=0 ];
+
+	"github.com/prometheus/client_golang/exp/api/remote.writeHandler" -> "github.com/prometheus/client_golang/exp/api/remote.writeStorage" [  weight=0 ];
+
+	"github.com/prometheus/client_golang/exp/api/remote.writeHandler" -> "github.com/prometheus/client_golang/exp/api/remote.MessageTypes" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockChunkSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.blockChunkSeriesSet" -> "github.com/prometheus/prometheus/tsdb.blockBaseSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.OTLPConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ChunkSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.ChunkSeries" -> "github.com/prometheus/prometheus/storage.Labels" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Alert" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Alert" -> "github.com/prometheus/common/model.LabelSet" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelValues" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelValues" -> "github.com/prometheus/common/model.LabelValue" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Queryable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.Queryable" -> "github.com/prometheus/prometheus/storage.Querier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/linode.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/linode.Discovery" -> "github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/linode.Discovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.yyParser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/parser.yyParser" -> "github.com/prometheus/prometheus/promql/parser.yyLexer" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlockReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.BlockReader" -> "github.com/prometheus/prometheus/tsdb.IndexReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapePool" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapePool" -> "github.com/prometheus/prometheus/scrape.scrapeMetrics" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapePool" -> "github.com/prometheus/prometheus/scrape.loop" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapePool" -> "github.com/prometheus/prometheus/scrape.Target" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapePool" -> "github.com/prometheus/prometheus/storage.Appendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapePool" -> "github.com/prometheus/prometheus/storage.AppendableV2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapePool" -> "github.com/prometheus/prometheus/scrape.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapePool" -> "github.com/prometheus/prometheus/scrape.scrapeLoopOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/scrape.scrapePool" -> "github.com/prometheus/prometheus/config.ScrapeConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.DiscovererOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.DiscovererOptions" -> "github.com/prometheus/common/config.HTTPClientOption" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.walSubsetProcessor" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.walSubsetProcessor" -> "github.com/prometheus/prometheus/tsdb.walSubsetProcessorInputItem" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/prometheus.rwProtoMsgFlagParser" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/prometheus.rwProtoMsgFlagParser" -> "github.com/prometheus/client_golang/exp/api/remote.MessageTypes" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeChunkSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/testhelpers.FakeChunkSeriesSet" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.sequentialSearchQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.sequentialSearchQuerier" -> "github.com/prometheus/prometheus/web/api/v1.errorTestQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/documentation/examples/remote_storage/remote_storage_adapter.writer" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/documentation/examples/remote_storage/remote_storage_adapter.writer" -> "github.com/prometheus/common/model.Samples" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.timeSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.timeSeries" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.shards" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.shards" -> "github.com/prometheus/prometheus/storage/remote.QueueManager" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.shards" -> "github.com/prometheus/prometheus/storage/remote.queue" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/googleiam.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/hetzner.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/hetzner.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.StartTimestampAppender" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.StartTimestampAppender" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.ReadClient" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.ReadClient" -> "github.com/prometheus/prometheus/storage.SeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.TestWriteClient" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.TestWriteClient" -> "github.com/prometheus/client_golang/exp/api/remote.WriteMessageType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.mockChunkSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.mockChunkSeriesSet" -> "github.com/prometheus/prometheus/storage.ChunkSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.RDSDiscovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.RDSDiscovery" -> "github.com/prometheus/prometheus/discovery/refresh.Discovery" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/aws.RDSDiscovery" -> "github.com/prometheus/prometheus/discovery/aws.RDSSDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/index.series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/index.series" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.safeHeadChunk" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.safeHeadChunk" -> "github.com/prometheus/prometheus/tsdb.memSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.chunkQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.chunkQuerier" -> "github.com/prometheus/prometheus/storage/remote.querier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/vultr.SDConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/vultr.SDConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockAppendable" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockAppendable" -> "github.com/prometheus/prometheus/storage/remote.mockMetadata" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockAppendable" -> "github.com/prometheus/prometheus/storage/remote.mockSample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockAppendable" -> "github.com/prometheus/prometheus/storage/remote.mockExemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.mockAppendable" -> "github.com/prometheus/prometheus/storage/remote.mockHistogram" [  weight=0 ];
+
+	"github.com/prometheus/common/config.NewTLSConfigFunc" [  weight=0 ];
+
+	"github.com/prometheus/common/config.NewTLSConfigFunc" -> "github.com/prometheus/common/config.TLSConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headViewFactory" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headViewFactory" -> "github.com/prometheus/prometheus/tsdb.BlockReader" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.headViewFactory" -> "github.com/prometheus/prometheus/tsdb.Head" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.memSeries" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.memSeries" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.fixedSearchQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web/api/v1.fixedSearchQuerier" -> "github.com/prometheus/prometheus/web/api/v1.errorTestQuerier" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/wlog.Watcher" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/wlog.Watcher" -> "github.com/prometheus/prometheus/tsdb/record.BuffersPool" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb/wlog.Watcher" -> "github.com/prometheus/prometheus/tsdb/wlog.WriteTo" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.recCase" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.recCase" -> "github.com/prometheus/prometheus/model/labels.ScratchBuilder" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote.recCase" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.DB" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.DB" -> "github.com/prometheus/prometheus/tsdb.BlockQuerierFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.DB" -> "github.com/prometheus/prometheus/tsdb.BlockChunkQuerierFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.DB" -> "github.com/prometheus/prometheus/tsdb.BlocksToDeleteFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.DB" -> "github.com/prometheus/prometheus/tsdb.Block" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.DB" -> "github.com/prometheus/prometheus/tsdb.Head" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.DB" -> "github.com/prometheus/prometheus/tsdb.Options" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.DB" -> "github.com/prometheus/prometheus/tsdb.Compactor" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertingConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.NotifyFunc" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/rules.NotifyFunc" -> "github.com/prometheus/prometheus/rules.Alert" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.dbAdapter" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.dbAdapter" -> "github.com/prometheus/prometheus/tsdb.DB" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.AOptions" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage.AOptions" -> "github.com/prometheus/prometheus/model/exemplar.Exemplar" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.Sample" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql.Sample" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.mockSeriesSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/tsdb.mockSeriesSet" -> "github.com/prometheus/prometheus/storage.Series" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.test" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.test" -> "github.com/prometheus/prometheus/storage.Storage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.LocalStorage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/web.LocalStorage" -> "github.com/prometheus/prometheus/storage.Storage" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.labelsAndAnnotations" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/cmd/promtool.labelsAndAnnotations" -> "github.com/prometheus/prometheus/cmd/promtool.labelAndAnnotation" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.tempHistogramWrapper" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/promql/promqltest.tempHistogramWrapper" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+}
