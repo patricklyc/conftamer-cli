@@ -264,7 +264,8 @@ Report:
 - real-data and CLI smoke-test availability;
 - compatibility impact and residual risks;
 - warnings or incomplete behavior; and
-- a concise proposed commit message.
+- a concise proposed commit message with a subject and body after every
+  implementation task.
 
 Do not claim completion from an earlier run. Do not edit sibling repositories,
 commit, push, or expand into producer work unless explicitly requested.
