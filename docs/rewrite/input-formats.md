@@ -7,7 +7,7 @@ normalization policy. Stable target models and matching decisions live in
 
 ## Evidence policy
 
-The files under [`examples/`](../examples/) are the executable source of truth
+The files under [`examples/`](../../examples/) are the executable source of truth
 for currently accepted producer behavior. Prose summarizes those files; it
 does not replace them. When prose and an example disagree, inspect the producer
 and update both the example and this document before changing a parser.
@@ -32,7 +32,7 @@ Producer-only meanings below were checked against these read-only revisions:
 
 | Checkout and revision | Relevant source contracts |
 | --- | --- |
-| `../conftamer` at `010683952e74dd0103c8b97b333d860ba9519d52` | `pkg/apimessages/http/http.go:GetMessageInfo` captures method, path, and User-Agent with `MaxStringLen: 10`; `parsetests/parse.go:(*AllTaint).Dump` writes the variable-width CSV |
+| `../conftamer` at `010683952e74dd0103c8b97b333d860ba9519d52` | `contexttrack/go-inlibrary.patch` defines and serializes the five event kinds; `contexttrack/prometheus-common-route.patch` emits external route matches; `pkg/apimessages/http/http.go:GetMessageInfo` captures method, path, and User-Agent with `MaxStringLen: 10`; `parsetests/parse.go:(*AllTaint).Dump` writes the variable-width CSV |
 | `../run-prmtrk/golang.org-x-tools` at `27eb7264a2b4e89466594ae95821963e1b320907` | `gopls/internal/cmd/conftamer/dlv/main.go:HandleMessageSend` associates recognized CType stack frames with sends; `dlv/params.go:ParamKeys` derives keys; `conftamer/output.go:Marshal` and `Serialize` write JSON plus optional DOT |
 
 These revisions identify the implementations inspected for this rewrite; the
@@ -54,10 +54,16 @@ changing field meanings.
 | `examples/paramtrack/static/*.log` | gopls log | Reference only; not parsed |
 | `examples/paramtrack/runs/*/*.log` | ParamTrack/Delve log | Reference only; not parsed |
 
-See [`examples/README.md`](../examples/README.md) and the
-[ParamTrack artifact catalog](../examples/paramtrack/README.md) for capture
+See [`examples/README.md`](../../examples/README.md) and the
+[ParamTrack artifact catalog](../../examples/paramtrack/README.md) for capture
 provenance and usage. Generated PMGraph, AppGraph, and GraphML output does not
 belong in the example input directories.
+
+The older files directly under `examples/paramtrack/` are checked-in,
+byte-identical aliases of the organized `static/` and `runs/` artifacts. They
+are not additional producer shapes or independent fixtures. New integration
+work uses the cataloged organized paths; task 11 removes the aliases with the
+other stale example surfaces.
 
 ## ContextTrack JSONL
 
@@ -109,6 +115,35 @@ until semantic projection.
 correlation ID. ContextTrack does not currently emit a stable correlation ID or
 producer sequence. `api_id` identifies an API/package association for an event;
 it is not the module ID of the complete graph.
+
+### Raw validation contract
+
+**Current policy retained by the target:** each nonblank line must decode to a
+JSON object with string `kind`, integer `pid`, object `message`, and object
+`context`. `goroutine_id`, `thread_id`, and source `line` are optional integers;
+`file` is an optional string. Unknown envelope and nested fields are retained.
+`context.source`, `context.type`, `context.context_id`, and `context.error` are
+optional strings, so an event can be valid without a usable context group.
+
+After dispatch by the exact `kind`, these fields are required:
+
+| Kind | Required `message` fields | Optional fields used by the adapter |
+| --- | --- | --- |
+| `Request sent` | string `req.Method`, string `req.URL.Path` | string `req.URL.Host`, string `req.URL.RawQuery`, string `api_id`; optional `request_id` object containing string `method`, `host`, and `path` |
+| `Request received` | string `req.Method`, string `req.URL.Path` | string `req.URL.Host`, string `req.URL.RawQuery`, string `api_id`, string `handler` |
+| `Request routed` | string `req.Method`, string `req.URL.Path`, string `pattern` | unknown route-hook fields |
+| `Response sent` | string `req.Method`, string `req.URL.Path`, decimal-string or integer `code` | unknown response-hook fields |
+| `Response received` | decimal-string or integer `resp.StatusCode` | string `req.Method`, string `req.URL.Path`, string `api_id` |
+
+The observed serializer writes status values as decimal strings; the raw adapter
+accepts base-10 JSON strings or JSON integers and projects them to an integer
+before PMGraph validation. Booleans, floats, nondecimal values, a missing
+required field, a non-object nested structure, and unsupported event kinds
+produce a line diagnostic and skip that line. An empty routed `pattern` is also
+unusable: diagnose and ignore that route hook so an inbound request can use its
+concrete-path fallback. Semantic incompleteness allowed by this matrix is
+handled later; for example, a hostless Request sent remains a valid raw event
+but cannot produce a Send Request node.
 
 ### Reader contract
 
@@ -240,17 +275,22 @@ compared.
 
 - require the exact five-field header;
 - treat a wrong header or unreadable CSV as a file-level error;
-- preserve source line numbers;
-- diagnose malformed rows locally and continue with independent rows;
+- preserve the starting physical source line for each logical CSV row, including
+  quoted rows that span more than one physical line;
+- require at least the four identity cells `API`, `Verb`, `Resource`, and
+  `CType`; diagnose a shorter row locally and continue with independent rows;
+- interpret a four-cell row as a valid no-key row and cells five onward as the
+  repeated parameter-key tail, regardless of row width;
 - diagnose an empty `Verb` or `CType` as unusable;
 - retain an empty `API` as evidence;
 - permit empty `Resource` and normalize it to `/` only for joining;
-- mark `Verb` or `Resource` values at least 10 characters long, or containing a
-  debugger truncation marker, as `paramtrack.possibly_truncated_message` and do
-  not use them for a Send join;
+- because the producer exposes no truncation flag, conservatively mark `Verb`
+  or `Resource` values whose Python string length is at least 10 as
+  `paramtrack.possibly_truncated_message` and do not use them for a Send join;
 - permit no-key rows but create no Parameter nodes or edges from them;
-- diagnose and omit empty key cells;
-- deduplicate keys within a row and sort canonical output; and
+- diagnose and omit empty key cells without discarding other keys in the row;
+- deduplicate equal keys within a row, merge equal semantic rows across the
+  file, and sort canonical output; and
 - do not rely on upstream data-row order, filenames, or run-directory names for
   identity.
 
@@ -300,8 +340,12 @@ physical line:
 ```
 
 Parse the complete byte stream as one JSON document; newline count has no
-meaning. Unknown top-level fields are accepted for forward compatibility and
-excluded from normalized semantics.
+meaning.
+
+**Target raw validation:** the root must be an object containing array `Edges`,
+array `Vertices`, and object `List`. Unknown top-level fields are accepted for
+forward compatibility and excluded from normalized semantics. A missing field
+or wrong container type is a file-level contract error.
 
 ### Vertices
 
@@ -319,14 +363,18 @@ A representative vertex is:
 }
 ```
 
-Observed properties:
+**Observed input:**
 
 - `Names` is nonempty; the first name is the current node hash/ID;
 - additional names are aliases combined into the same node;
 - `Methods` is a list and may be empty;
-- `Tags` is an object or `null`;
-- methods may remain fully qualified while node names are module-shortened; and
-- unknown vertex fields do not participate in normalized CType identity.
+- `Tags` is an object or `null`; and
+- methods may remain fully qualified while node names are module-shortened.
+
+**Target raw validation:** every vertex is an object with a nonempty `Names`
+array of nonempty strings, a `Methods` array of nonempty strings, and `Tags`
+either `null` or an object whose keys and values are strings. Unknown vertex
+fields are accepted but do not participate in normalized CType identity.
 
 ### Edges
 
@@ -346,20 +394,28 @@ A representative edge is:
 }
 ```
 
-Observed properties:
+**Observed input and current serializer:**
 
 - source and target are represented vertex IDs;
 - current edges include `Attributes`, `Weight`, and `Data`;
 - `Attributes: {}` and `Weight: 0` are generic graph-library defaults without
   observed CType domain meaning;
-- `Data` is `null` or a list of ordered AST paths;
+- the serializer permits `Data` to be `null` or a list of ordered AST paths;
 - each path is a string list, an empty list, or `null`; and
 - several paths stay grouped on one edge rather than becoming invented
   parallel edges.
 
-**Target normalization:** top-level `Data: null` means no paths and a null path
-element means an empty path. Unknown edge/property fields and generic defaults
-are excluded from semantic identity.
+The checked-in graphs contain list-valued `Data`; null normalization is grounded
+in the inspected serializer rather than claimed as a fixture occurrence.
+
+**Target raw validation:** every edge is an object with nonempty string `Source`
+and `Target` and an object `Properties`. `Properties.Data` is required and must
+be `null` or an array whose elements are `null` or arrays of strings. Unknown
+edge/property fields, including `Attributes` and `Weight`, are accepted.
+
+**Target normalization:** `Data: null` means no paths and a null path element
+means an empty path. Segment order and empty paths are preserved. Unknown
+fields and generic defaults are excluded from semantic identity.
 
 ### Name mapping (`List`)
 
@@ -373,12 +429,16 @@ are excluded from semantic identity.
 
 For a full US or Accessors output, entries describe represented vertices. An
 upstream queried subgraph may retain extra mappings from the source graph.
-Validation therefore requires:
+
+**Target raw validation:** every `List` key and value is a nonempty string.
+Unknown fields elsewhere do not weaken this represented-name contract.
+Target normalization and validation require:
 
 - every represented vertex name maps to that vertex's first name;
 - every edge endpoint is the first name of an existing vertex;
 - a represented alias resolves to only one vertex;
-- extra unresolved `List` entries are allowed;
+- extra unresolved `List` entries are accepted at input and omitted from the
+  normalized represented-name mapping;
 - ParamTrack CTypes are valid only when their target vertex is represented;
 - duplicate `(Source, Target)` records are rejected; and
 - US and Accessors are allowed to have different node sets.

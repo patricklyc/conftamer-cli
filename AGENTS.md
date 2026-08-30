@@ -1,309 +1,270 @@
 # tool34 Agent Guide
 
-## Purpose and scope
+## Purpose and authority
 
-tool34 builds directed configuration and message-flow graphs for ConfTamer. It
-currently supports two intentionally separate workflows:
+tool34 is being rewritten as ConfTamer's graph compiler and explorer. It starts
+at files emitted by ContextTrack, ParamTrack, and gopls and ends at canonical,
+queryable graphs and visualization GraphML.
 
-1. **ContextTrack JSONL to PMGraph JSON** — the primary workflow and target for
-   new trace integrations.
-2. **Legacy edge CSV to `igraph`/GraphML** — retained for compatibility with the
-   original prototype.
+The normative rewrite documents are:
 
-The sibling repository `../conftamer`, especially `../conftamer/contexttrack`,
-and `ConfTamer_HotNets_2026.pdf` are upstream references. Treat them as
-read-only unless the user explicitly requests changes there.
+- `docs/rewrite/architecture.md`: target-owned models, behavior, and APIs;
+- `docs/rewrite/input-formats.md`: observed producer formats and provenance; and
+- `docs/rewrite/implementation-plan.md`: ordered work and checkpoints.
 
-## Architecture and data flow
+Follow the implementation plan in order. During the transition, existing source
+may still implement PMGraph v1 and legacy commands; do not preserve those
+surfaces when the current plan task explicitly replaces them. Update contracts
+before implementation when verified producer evidence contradicts them.
 
-The ContextTrack pipeline is organized by conversion stage:
+Sibling repositories and `ConfTamer_HotNets_2026.pdf` are read-only references.
+Do not edit them unless the user explicitly expands the scope.
+
+## Scope and boundaries
+
+The target tool owns:
+
+- permissive parsing of untrusted ContextTrack JSONL;
+- parsing of targeted ParamTrack parameter CSV;
+- parsing and normalization of verified gopls CType graph transports;
+- conservative message matching and parameter enrichment;
+- deterministic PMGraph v2 and AppGraph v1 documents;
+- stitching, igraph analysis, queries, and visualization GraphML;
+- diagnostics, CLI orchestration, tests, examples, documentation, and packaging.
+
+It does not own producer execution, test discovery, Delve control,
+instrumentation, parameter-key inference, CType inference, hierarchy/log
+conversion, or upstream artifact production. Source adapters consume files; they
+do not wrap producers.
+
+The targeted ParamTrack CSV is a headered, variable-width upstream format. It is
+unrelated to tool34's old headerless edge CSV. The rewrite retains the former
+and removes the latter; never share their models or broaden the legacy parser.
+
+## Target data flow
 
 ```text
 ContextTrack JSONL
-    -> contexttrack/events.py
-    -> contexttrack/routes.py + contexttrack/responses.py
-    -> contexttrack/conversion.py
-    -> pmgraph.py
+    -> contexttrack models + matching + semantic message fragment
+
+ParamTrack CSV + Unmarshaler/Accessors CType graphs
+    -> CType validation + unique method/path enrichment
+
+message fragment + optional parameter enrichment
+    -> canonical PMGraph v2
+
+at least two PMGraphs
+    -> conservative cross-module matching
+    -> canonical AppGraph v1
+
+PMGraph/AppGraph/CTypeGraph
+    -> python-igraph query and visualization GraphML
 ```
 
-- `src/conftamer/main.py`: thin Typer CLI orchestration and warning display.
-- `src/conftamer/pmgraph.py`: PMGraph node/edge models, validation,
-  deterministic IDs, deduplication, ordering, and serialization.
-- `src/conftamer/csv_graph.py`: all legacy CSV models, parsing, `igraph`
-  construction, and subgraph selection. Keep this workflow self-contained.
-- `src/conftamer/contexttrack/events.py`: permissive Pydantic models for
-  upstream events, JSONL validation, source-line tracking, warnings, and
-  grouping by `(pid, context_id)`.
-- `src/conftamer/contexttrack/routes.py`: route-to-request matching and nested
-  route-pattern reconstruction.
-- `src/conftamer/contexttrack/responses.py`: conservative request/response
-  correlation, duplicate-hook handling, and redirect fallback.
-- `src/conftamer/contexttrack/conversion.py`: public conversion orchestration,
-  event-to-PMGraph node conversion, normalization, and context-derived edge
-  assembly.
-- `src/conftamer/contexttrack/__init__.py`: supported public ContextTrack
-  exports, including `parse_contexttrack`.
-- `tests/test_contexttrack_events.py`: input validation, reading, and grouping.
-- `tests/test_contexttrack_routes.py`: route matching and reconstruction.
-- `tests/test_contexttrack_responses.py`: response-correlation behavior.
-- `tests/test_contexttrack_conversion.py`: end-to-end PMGraph conversion.
-- `tests/test_pmgraph.py`: PMGraph shapes, invariants, and determinism.
-- `pyproject.toml`: Python version, dependencies, and `conftamer` entry point.
+Raw input models must not leak into canonical graph models. CType nodes remain
+in `CTypeGraph`; partial message hooks do not become incomplete PM nodes;
+parameter keys are consumed, not recalculated; and canonical JSON never depends
+on igraph serialization.
 
-Files under `data/` are ignored local samples and may be absent in another
-checkout. Tests must create their own inputs rather than depend on those files.
+## Target source layout
+
+Production code belongs under these domain boundaries:
+
+```text
+src/conftamer/
+├── cli.py
+├── diagnostics.py
+├── build.py
+├── pmgraph/{__init__.py,models.py,io.py}
+├── contexttrack/{__init__.py,models.py,matching.py,importer.py}
+├── paramtrack/{__init__.py,models.py,importer.py}
+├── ctype_graph/{__init__.py,models.py,io.py}
+├── appgraph/{__init__.py,models.py,matching.py,stitch.py}
+└── analysis/{__init__.py,igraph.py}
+```
+
+Keep orchestration in `cli.py` thin. Put validation and normalization with the
+domain model, transport details in `io.py` or an importer, and matching near the
+domain that owns it. Avoid generic service, repository, plugin, visitor, or
+graph-wrapper layers; compatibility adapters for removed formats; duplicated
+query implementations; and one-function modules without a real boundary.
 
 ## Design priorities
 
 Apply these in order:
 
 1. Correctness and deterministic output.
-2. Readability and simplicity.
-3. Conservative matching over false graph relationships.
-4. Small, focused changes.
-5. Compatibility with the CLI, PMGraph schema, and legacy CSV behavior unless
-   the task explicitly changes them.
+2. Conservative matching over false relationships.
+3. Readability and simplicity.
+4. Small changes scoped to the current ordered task.
+5. Compatibility with target contracts, not superseded rewrite surfaces.
 
-Prefer explicit functions and Pydantic models over generic frameworks. Keep
-code near the transformation it implements, avoid speculative abstractions,
-and preserve the current source and test layout unless a change demonstrably
-improves clarity.
+Prefer explicit functions, dataclasses, and Pydantic models over frameworks or
+speculative abstractions. Do not add dependencies or raise Python's minimum
+version without approval.
 
-## Public behavior and compatibility
+## Input and producer rules
 
-Do not change any of the following without explicit approval:
+Checked-in files under `examples/` are executable source-of-truth integration
+inputs. Unit tests use the smallest explicit representation of an observed
+shape; integration tests exercise the real files directly. Generated PMGraph,
+AppGraph, and GraphML output does not belong in input example directories.
 
-- CLI command names or options:
-  - `conftamer contexttrack INPUT_PATH --module-id MODULE_ID [--output PATH]`
-  - `conftamer graph FILENAME`
-  - `conftamer subgraph FILENAME QUERY`
-- the supported import `from conftamer.contexttrack import parse_contexttrack`;
-- PMGraph `format`, `version`, node shapes, edge shape, or ID derivation;
-- default ContextTrack output path `<input>.pmgraph.json`;
-- GraphML output path `<csv>.graphml` for legacy commands;
-- accepted legacy CSV row shapes; or
-- warning-versus-error behavior for malformed or incomplete ContextTrack data.
+When changing an adapter:
 
-Internal modules such as `routes.py` and `responses.py` are implementation
-boundaries, not independent public APIs. Avoid compatibility shims for removed
-internal layouts unless the user identifies a real external consumer.
+1. read the relevant current producer implementation completely;
+2. follow the path that emits every consumed field;
+3. compare all checked-in examples for that producer;
+4. distinguish observed input, retained downstream policy, target design,
+   paper-derived concepts, and blocked formats; and
+5. stop instead of guessing when evidence conflicts.
 
-Do not add dependencies or raise the Python version without approval. Do not
-rewrite legacy CSV code while implementing ContextTrack behavior.
+Unknown producer fields are accepted at raw boundaries but do not become
+canonical semantics automatically. Preserve source line numbers and nested raw
+structures needed for diagnostics and evidence. A bad independent record should
+normally produce a diagnostic and be omitted; unreadable files and invalid
+file-level contracts are errors.
 
-## ContextTrack input conventions
+CType `.text` JSON is accepted. `.gv` is reference-only. CType GraphML remains
+blocked until real producer US and Accessors GraphML files establish namespaces,
+keys, IDs, defaults, direction, and value encoding. Visualization GraphML is
+never canonical input.
 
-ContextTrack JSONL is untrusted external input:
+## Canonical graph rules
 
-- validate it with Pydantic at the boundary;
-- preserve the nested `message`, `context`, and `request_id` structures while
-  reading and matching;
-- allow and retain unknown upstream fields (`extra="allow"`);
-- preserve original input line numbers for warnings;
-- skip blank lines;
-- continue after malformed lines and report them visibly; and
-- flatten only when constructing PMGraph labels.
+Use frozen, extra-forbidding Pydantic models for target-owned documents. Treat
+semantic IDs, provenance, validation, normalization, evidence merging, and
+ordering in `docs/rewrite/architecture.md` as one contract.
 
-The five supported event kinds are `Request sent`, `Request received`,
-`Request routed`, `Response sent`, and `Response received`. If upstream adds a
-kind or changes field meaning, verify it against the implementation under
-`../conftamer/contexttrack`; do not infer a schema from one sample trace.
+In particular:
 
-Group events by `(pid, context_id)`, not by context ID alone. Events without a
-context ID may still produce a node when independently convertible, but they
-must not produce context-derived edges.
+- preserve the existing compact, sorted-key SHA-256 node hash algorithm;
+- exclude evidence from semantic identity;
+- normalize methods and empty HTTP paths only at the semantic boundary;
+- reject dangling evidence and graph endpoints;
+- merge evidence for semantically identical nodes and edges;
+- retain isolated nodes;
+- sort every canonical collection by its documented key; and
+- write deterministic UTF-8 JSON ending in one newline.
 
-Distinguish identifiers carefully:
+PMGraph edges represent possible influence, not proven causality. Planned
+importers create `Receive -> Send` and `Parameter -> Send Request` edges.
+Behavior is schema-only until a producer contract exists.
 
-- `module_id` identifies the module represented by the complete PMGraph and is
-  supplied by the CLI because ContextTrack does not export it.
-- `api_id` belongs to an individual communication event. A module graph may
-  contain several API IDs, and outbound API IDs must carry through to matched
-  Receive Response nodes.
+AppGraph matching uses HTTP labels only, never host or `api_id` to choose a
+module. Contract only mutually unique cross-module candidates and mark every
+accepted match `unique-http-labels`. Match responses only through an accepted
+request match. Retain unmatched nodes by default.
 
-## Route and response matching conventions
+## ContextTrack conventions
 
-Keep matching conservative and warnings visible.
+ContextTrack JSONL is untrusted and line-oriented. Keep unknown fields, skip
+blank lines, continue after malformed lines with diagnostics, and group
+context-derived inference by `(pid, context_id)`. Events without a usable
+`context.context_id` may produce independently convertible nodes but no context
+edge; the raw `context` object remains required.
 
-### Routes
+Preserve the five supported event kinds and the conservative route, response,
+duplicate-hook, redirect, hostless-send, and context-order behavior specified in
+the rewrite contracts. Prefer visible diagnostics and omitted relationships over
+guesses. `module_id`, ContextTrack `api_id`, and ParamTrack `API` have different
+meanings and must never be conflated.
 
-- Match request methods case-insensitively and paths exactly.
-- Reconstruct nested route chains when a later routed path is a suffix of the
-  previous path, preserving prefixes removed by `StripPrefix`-style routing.
-- If a route hop could continue more than one chain, warn with
-  `ambiguous route chain` and do not guess.
-- If a route chain has no matching inbound request, warn with
-  `route has no request match`.
-- When an inbound request has no matched route, conversion falls back to its
-  concrete request path.
+## ParamTrack and CType conventions
 
-### Responses
+Parse targeted CSV with the standard `csv` module. Require the observed header,
+preserve variable-width quoted rows and physical line evidence, allow no-key
+rows, and validate every CType directly against represented nodes in either the
+Unmarshaler Subgraph or Accessors graph.
 
-- Match responses to unconsumed requests by method and path first.
-- Use goroutine identity only to select a unique candidate, or as a method-only
-  fallback when a received response has no exact endpoint candidate. Redirected
-  requests with changed response paths motivate this fallback, but the matcher
-  does not detect redirects explicitly.
-- Report missing and ambiguous matches instead of choosing arbitrarily when a
-  response contains usable method and path data. Endpoint-less response hooks
-  may be omitted without a warning so a later usable hook can represent them.
-- Current Go instrumentation can emit wire-level and client-level
-  received-response hooks. Suppress a client hook as a duplicate only when the
-  most recent earlier received-response hook in the context was successfully
-  matched and status/method are compatible.
-- A duplicate hook must never consume a newer request.
-- An endpoint-less wire hook may remain unmatched so a later client hook with
-  usable endpoint data can represent the response.
+ParamTrack enrichment is aggregate and caller-asserted. Join only to one unique
+semantic Send Request by normalized method/path. Never compare ParamTrack `API`
+with ContextTrack `api_id`, spread a row across ambiguous hosts, or infer
+per-occurrence causality. Deduplicate semantic parameters and edges while
+retaining evidence from every supporting row.
 
-These are compatibility rules for the current upstream trace shape, not
-features to generalize. If ContextTrack later emits stable correlation IDs,
-full route patterns, or consistently normalized endpoints, simplify or remove
-the corresponding heuristics in `routes.py`, `responses.py`, and
-`conversion.py` rather than preserving obsolete machinery.
+For CType graphs, preserve names and upstream IDs exactly, preserve grouped
+ordered AST paths, retain isolated vertices, discard generic graph-library
+properties from semantic identity, and reject conflicting represented names,
+duplicate endpoints, and missing edge endpoints as documented.
 
-## PMGraph invariants
+## Readability and line budget
 
-Use `src/conftamer/pmgraph.py` as the sole PMGraph representation.
+Production Python under `src/conftamer` has a hard review gate of **3,000
+physical lines** and a target of 2,500. Record the cumulative count at every
+checkpoint:
 
-- IDs generated by `make_node_id` are SHA-256 hashes of canonical JSON
-  containing `module_id` and all semantic node fields. The PMGraph validator
-  accepts any nonempty, unique IDs.
-- HTTP methods are uppercase.
-- Non-optional label strings are nonempty.
-- Empty HTTP paths normalize to `/` at the PMGraph conversion boundary; raw
-  ContextTrack events retain their original value.
-- Status codes are integers in the inclusive range 100–999.
-- Node IDs are unique.
-- Edges are directed `(source, target)` influence relationships.
-- Edge endpoints must exist in the graph.
-- Sources must be Receive or Parameter nodes; targets must be Send nodes.
-- Self-edges are forbidden.
-- `make_pmgraph()` deduplicates nodes and edges, sorts nodes by ID, and sorts
-  edges by `(source, target)`. Direct `PMGraph` validation does not normalize
-  ordering or reject duplicate edges.
-
-For each `(pid, context_id)` group, conversion connects every successfully
-converted Receive occurrence to every later successfully converted Send
-occurrence. Do not create edges from route events or unmatched response hooks.
-
-An outbound request with no host cannot satisfy the PMGraph label schema. Omit
-it with `request endpoint has no host`; do not invent a host. In general, reject
-or report missing and ambiguous information instead of guessing labels.
-
-ContextTrack currently creates message nodes only. Parameter nodes and
-configuration edges are valid PMGraph concepts but are not inferred from trace
-events.
-
-## Legacy CSV conventions
-
-The legacy parser accepts only these headerless row shapes:
-
-```text
-Parameter,<module_id>,<parameter_name>,Send,<module_id>,<api_id>,<request_id>,<response_code>
-Receive,<module_id>,<api_id>,<request_pattern>,<response_code>,Send,<module_id>,<api_id>,<request_id>,<response_code>
+```bash
+find src/conftamer -name '*.py' -print0 | xargs -0 wc -l
 ```
 
-Rows that do not match either structural shape raise
-`ValueError("parsing error")`; invalid typed values surface Pydantic validation
-errors. Preserve stable first-seen vertex ordering and directed edges. The
-legacy node model and GraphML output are not PMGraph and must remain isolated in
-`csv_graph.py`. New formats should convert to PMGraph rather than broaden this
-representation.
+Prefer files below 300 lines, with a 450-line ceiling for model-heavy files, and
+linear functions below 40 lines where practical. Simplify before adding an
+abstraction or crossing a budget. Tests and generated files do not count toward
+the production limit.
 
-## Upstream schema work
+## Test organization and workflow
 
-When comparing or integrating ContextTrack behavior:
+Tests mirror domain packages:
 
-1. Read the relevant implementation and documentation under
-   `../conftamer/contexttrack` completely. Follow code paths that emit each
-   consumed event; do not rely only on examples or the paper.
-2. Distinguish raw runtime hooks from normalized graph nodes. Multiple hooks
-   can describe one logical request or response.
-3. Document how every consumed input field maps to a PMGraph field or matching
-   decision.
-4. Test against the smallest real trace that demonstrates the behavior when
-   such a trace is available.
-5. Prefer visible warnings and omitted edges over potentially false matches.
-6. Check deterministic serialization and schema validation after changes.
-
-Treat the sibling repository and paper as references only. Stop and ask before
-editing them or before expanding the task into upstream instrumentation work.
-
-## Test organization
-
-Keep tests focused and behavior-oriented:
-
-- parsing/model tests belong in `test_contexttrack_events.py`;
-- nested route behavior belongs in `test_contexttrack_routes.py`;
-- request/response matching belongs in `test_contexttrack_responses.py`;
-- node labels, warnings, and graph semantics belong in
-  `test_contexttrack_conversion.py`; and
-- PMGraph schema/determinism belongs in `test_pmgraph.py`.
-
-Keep test setup explicit and close to the behavior under test. Share helpers or
-fixtures only when doing so is clearer than local setup. Keep only distinct
-behavior tests; avoid redundant combinations, speculative impossible inputs,
-and unrelated CSV coverage for ContextTrack changes.
-
-## Development workflow
+- `tests/pmgraph/` for PMGraph models and I/O;
+- `tests/contexttrack/` for reading, matching, and projection;
+- `tests/ctype_graph/` for CType normalization and transport;
+- `tests/paramtrack/` for CSV parsing and enrichment;
+- `tests/appgraph/` for matching and stitching;
+- `tests/analysis/` for igraph projection, query, and GraphML;
+- `tests/test_build.py` and `tests/test_cli.py` for orchestration boundaries.
 
 Before editing:
 
 1. inspect `git status --short --branch` and preserve unrelated changes;
 2. read the complete files involved and trace their callers/tests;
-3. for non-trivial work, state acceptance criteria, proposed design, expected
-   files, and verification commands; and
-4. stop for clarification if an assumption is false, the public behavior must
-   change, or scope expands.
+3. state acceptance criteria, design, expected files, assumptions, risks, and
+   verification commands for non-trivial work; and
+4. stop if a contract must change, a public API change is not already approved,
+   producer evidence conflicts, or scope expands.
 
-After every Python implementation, format the changed files. Format every
-changed TOML file with Tombi:
+For every behavior change, use test-driven development: write the smallest
+failing test, confirm the expected failure, implement minimally, and rerun the
+focused test. Documentation-only contract alignment uses focused artifact and
+link validation instead of manufactured unit tests.
+
+After Python or TOML edits, format changed files:
 
 ```bash
 uvx ruff format <changed-python-files>
 uvx tombi format <changed-toml-files>
 ```
 
-Run focused verification first, then the complete checks. Include the Tombi
-check whenever the change includes TOML files:
+Run focused verification first, then fresh full checks:
 
 ```bash
 uv run pytest -q <relevant-tests>
 uvx ruff format --check src tests
-uvx tombi format --check <changed-toml-files>
+uvx tombi format --check pyproject.toml
 uvx ty check
 uv run pytest -q
+find src/conftamer -name '*.py' -print0 | xargs -0 wc -l
+git diff --check
 ```
 
-If no automated test covers the behavior, run a focused Python or CLI smoke
-test and report that limitation. For CLI changes, verify the affected command
-and help output; for broad CLI changes, run all help pages:
-
-```bash
-uv run conftamer --help
-uv run conftamer contexttrack --help
-uv run conftamer graph --help
-uv run conftamer subgraph --help
-```
-
-For ContextTrack output changes, validate generated JSON through
-`PMGraph.model_validate_json()`. For deterministic-output changes, compare
-serialized output across repeated runs or against a pre-change snapshot.
-
-Before completion, run `git diff --check`, inspect the complete diff including
-untracked files, and confirm no stale imports or documentation references
-remain.
+For CLI changes, run affected commands and help pages. Validate generated
+canonical JSON through its Pydantic model, compare deterministic outputs
+byte-for-byte, and re-read exported GraphML with `ig.Graph.Read_GraphML()`.
+Before completion, inspect the complete diff including untracked files and
+search for stale imports, old commands, and superseded format assumptions.
 
 ## Completion report
 
 Report:
 
 - changed files and their purpose;
-- exact verification commands and results;
-- whether real-data or CLI smoke tests were available;
+- exact verification commands and fresh results;
+- production line count;
+- real-data and CLI smoke-test availability;
 - compatibility impact and residual risks;
-- any warnings or known incomplete behavior; and
+- warnings or incomplete behavior; and
 - a concise proposed commit message.
 
-Do not claim completion from an earlier run. Verification evidence must be
-fresh after the final change.
+Do not claim completion from an earlier run. Do not edit sibling repositories,
+commit, push, or expand into producer work unless explicitly requested.

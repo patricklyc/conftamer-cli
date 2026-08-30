@@ -5,7 +5,7 @@
 
 **Goal:** implement the target described in [Architecture](architecture.md)
 against the producer evidence in [Input formats](input-formats.md) and the real
-files under [`examples/`](../examples/).
+files under [`examples/`](../../examples/).
 
 ## Execution rules
 
@@ -24,20 +24,24 @@ files under [`examples/`](../examples/).
 
 ## 1. Align repository guidance
 
-**Files:** `AGENTS.md`, `docs/architecture.md`, `docs/input-formats.md`,
-`docs/implementation-plan.md`
+**Files:** `AGENTS.md`, `docs/rewrite/architecture.md`,
+`docs/rewrite/input-formats.md`, `docs/rewrite/implementation-plan.md`
 
-- [ ] Rewrite `AGENTS.md` for the graph-compiler architecture and 3,000-line
+- [x] Rewrite `AGENTS.md` for the graph-compiler architecture and 3,000-line
   gate; distinguish targeted ParamTrack CSV from removed edge CSV.
-- [ ] Review the split documents against every checked-in example and current
+- [x] Review the split documents against every checked-in example and current
   upstream serializer.
-- [ ] Confirm target formats define every discriminator, validator, identity
+- [x] Confirm target formats define every discriminator, validator, identity
   payload, evidence rule, and deterministic ordering rule.
-- [ ] Confirm observed fields are never presented as target-owned guarantees.
-- [ ] Add only focused minimal fixtures needed to express real shapes.
-- [ ] Review contracts before touching `src/`.
+- [x] Confirm observed fields are never presented as target-owned guarantees.
+- [x] Confirm the real shapes require no additional focused fixtures.
+- [x] Review contracts before touching `src/`.
 
 **Checkpoint:** `docs: align graph compiler contracts with upstream output`
+
+**Checkpoint record:** 1,016 physical production Python lines; no fixtures
+added; CType GraphML remains blocked because no producer artifacts are checked
+in.
 
 ## 2. Add diagnostics and PMGraph v2
 
@@ -48,7 +52,7 @@ files under [`examples/`](../examples/).
 - [ ] Test every complete node shape, including schema-only Behavior.
 - [ ] Test Parameter-to-Send Request and Receive-to-Send edges.
 - [ ] Test IDs, status bounds, duplicates, endpoints, self-edges, source tables,
-  and dangling evidence.
+  dangling evidence, evidence merging, and canonical collection order.
 - [ ] Add fixed vectors proving semantic node IDs exclude evidence and preserve
   the existing hash algorithm.
 - [ ] Implement immutable models, evidence merging, validation, normalization,
@@ -65,7 +69,7 @@ files under [`examples/`](../examples/).
 - [ ] Migrate distinct reader, route, response, duplicate-hook, redirect, and
   conversion behavior into failing tests.
 - [ ] Cover actual nested fields, unknown fields, input sequence, line numbers,
-  `(pid, context_id)` grouping, handler/query evidence, and absent context.
+  `(pid, context_id)` grouping, handler/query evidence, and absent context IDs.
 - [ ] Test conservative route suffix reconstruction and ambiguity.
 - [ ] Test unresolved usable hooks, silent endpoint-less response hooks, hostless
   sends, and response `api_id` evidence.
@@ -102,7 +106,7 @@ files under [`examples/`](../examples/).
 absent, mark this task deferred, make no parser claim or code change, and
 continue with task 6. A deferred task has no checkpoint commit.
 
-**Files after gate:** `docs/input-formats.md`,
+**Files after gate:** `docs/rewrite/input-formats.md`,
 `src/conftamer/ctype_graph/io.py`, `tests/ctype_graph/test_io.py`
 
 - [ ] Document observed namespaces, keys, IDs, defaults, direction, and value
@@ -179,7 +183,8 @@ continue with task 6. A deferred task has no checkpoint commit.
 - [ ] Prove host and `api_id` do not select a module and every accepted match is
   visibly labeled `unique-http-labels`.
 - [ ] Match responses only through accepted request matches.
-- [ ] Add fixed AppNode IDs; test three-module contraction, edge remapping,
+- [ ] Add fixed AppNode IDs; test valid and invalid match-state combinations,
+  three-module contraction, evidence-bearing edge origins, edge remapping,
   provenance, shuffled input order, and explicit unmatched pruning.
 - [ ] Export and re-read AppGraph GraphML.
 
@@ -204,7 +209,8 @@ continue with task 6. A deferred task has no checkpoint commit.
 ## 11. Remove legacy surfaces and release
 
 **Delete:** `src/conftamer/csv_graph.py`, superseded `main.py`, old tests,
-`examples/legacy/*.csv`, and stale `context/interfaces/` snapshots.
+`examples/legacy/*.csv`, deprecated duplicate files directly under
+`examples/paramtrack/`, and stale `context/interfaces/` snapshots.
 
 **Update:** `README.md`, `docs/technical-reference.md`, `examples/README.md`,
 `.gitignore`, `.github/workflows/release.yml`, and `uv.lock` if required.

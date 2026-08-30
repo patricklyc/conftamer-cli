@@ -121,19 +121,49 @@ Boundary rules:
 
 ## Diagnostics and provenance
 
-Canonical output models are immutable and reject unknown fields:
+Canonical output models reject unknown fields and expose no mutation API:
 
 ```python
+NonEmptyString = Annotated[str, Field(strict=True, min_length=1)]
+SourceID = Annotated[str, Field(pattern=r"^sha256:[0-9a-f]{64}$")]
+NodeID = Annotated[str, Field(pattern=r"^n:[0-9a-f]{64}$")]
+AppNodeID = Annotated[str, Field(pattern=r"^a:[0-9a-f]{64}$")]
+RecordID = Annotated[str, Field(pattern=r"^line:[1-9][0-9]*$")]
+
+
 class CanonicalModel(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 ```
 
+`NonEmptyString` preserves whitespace and Unicode exactly; only the empty
+string and non-string values are invalid. Canonical builders copy input
+mappings into key-sorted, read-only mappings so a caller cannot mutate a
+validated document through an original dictionary.
+
+Recoverable problems are returned as diagnostics. File-level I/O and contract
+failures raise errors instead:
+
+```python
+class Diagnostic(CanonicalModel):
+    source: NonEmptyString | None
+    line: Annotated[int, Field(ge=1)] | None
+    code: NonEmptyString
+    message: NonEmptyString
+```
+
+A diagnostic with a line must also have a source; validation rejects
+`line is not None and source is None`. Diagnostics sort by
+`(source is not None, source or "", line is not None, line or 0, code,
+message)`: build- or stitch-level diagnostics without a source
+come first, followed by source-level diagnostics and then line diagnostics.
+Exact paths are useful in diagnostics but are not canonical graph identity.
+
 Source paths and raw payloads are not serialized into canonical graphs. Each
-input contributes a byte digest:
+PMGraph build input contributes the SHA-256 digest of its exact bytes:
 
 ```python
 class SourceArtifact(CanonicalModel):
-    id: NonEmptyString  # "sha256:" plus the input-byte digest
+    id: SourceID
     kind: Literal[
         "contexttrack-jsonl",
         "paramtrack-csv",
@@ -142,8 +172,8 @@ class SourceArtifact(CanonicalModel):
 
 
 class EvidenceRef(CanonicalModel):
-    source_id: NonEmptyString
-    records: tuple[NonEmptyString, ...]  # for example, ("line:2",)
+    source_id: SourceID
+    records: Annotated[tuple[RecordID, ...], Field(min_length=1)]
     derivation: Literal[
         "observed",
         "context-order",
@@ -153,10 +183,29 @@ class EvidenceRef(CanonicalModel):
     ]
 ```
 
-Evidence is sorted and deduplicated and does not participate in semantic node
-identity. Diagnostics are structured and sort by source, line, code, and
-message. A bad independent record should normally produce a diagnostic and be
-omitted; unreadable files and invalid file-level contracts are errors.
+A PMGraph has at least one source, source IDs are unique, and every node and
+edge has at least one evidence reference. Every `EvidenceRef.source_id` must
+resolve through that graph's source table. AppGraph unions the source tables of
+its PMGraphs and applies the same rule to evidence embedded in members and edge
+origins.
+
+Evidence normalization groups references by `(source_id, derivation)`, unions
+record IDs, sorts `line:N` records by integer `N`, and emits references sorted
+by `(source_id, derivation, records)`. Evidence never participates in semantic
+node, PM edge, or App node identity. Its attachment rules are:
+
+| Derivation | Attached object | Supporting records |
+| --- | --- | --- |
+| `observed` | Any node or edge represented directly by an input rather than inferred by another listed derivation | The input records that directly support the semantic object |
+| `route-inference` | Receive Request or Send Response whose pattern uses a reconstructed route | The message event and every route hop used by that reconstruction |
+| `response-correlation` | Response node completed from a matched request/response pair | The request event and the selected response hook |
+| `context-order` | `Receive -> Send` PM edge | The two concrete event occurrences establishing the order |
+| `paramtrack-unique-method-path` | `Parameter -> Send Request` PM edge | Every accepted ParamTrack row supporting that parameter/endpoint pair |
+
+A derived node retains its direct `observed` evidence in addition to the
+applicable inference reference. A bad independent record normally produces a
+diagnostic and is omitted; unreadable files and invalid file-level contracts
+are errors.
 
 ## Normalized CType graph
 
@@ -184,12 +233,21 @@ class CTypeGraph(CanonicalModel):
 
 Normalization and validation rules:
 
-- preserve upstream node IDs, names, aliases, and module-shortened identifiers;
-- sort nodes, mappings, methods, tags, edges, and AST paths deterministically;
-- retain grouped ordered AST paths on one CType edge;
+- preserve each vertex's first upstream name as its ID and first `names` value;
+- deduplicate and sort remaining aliases and methods; sort tag and
+  `name_to_node` mapping keys lexically;
+- sort nodes by ID and edges by `(source, target)`;
+- preserve segment order within each AST path, deduplicate equal paths, and sort
+  complete paths lexically while retaining them on one CType edge;
 - preserve isolated vertices;
-- reject missing edge endpoints, conflicting represented-name mappings, and
-  duplicate `(source, target)` records; and
+- require every represented name and alias to occur in raw `List` and map to
+  that vertex's first name; do not synthesize missing mappings;
+- retain only additional `List` mappings that resolve to a represented vertex;
+  unresolved extra mappings accepted at the raw boundary do not enter
+  `name_to_node`;
+- reject empty names, missing edge endpoints, missing or conflicting
+  represented-name mappings, duplicate vertex IDs, and duplicate
+  `(source, target)` records; and
 - exclude generic graph-library properties and unknown input fields from
   normalized semantic identity.
 
@@ -214,8 +272,8 @@ StatusCode = Annotated[int, Field(ge=100, le=999)]
 
 
 class PMNodeBase(CanonicalModel):
-    id: NonEmptyString
-    evidence: tuple[EvidenceRef, ...]
+    id: NodeID
+    evidence: Annotated[tuple[EvidenceRef, ...], Field(min_length=1)]
 
 
 class MessageNode(PMNodeBase):
@@ -281,16 +339,16 @@ one or infers behavior boundaries.
 
 ```python
 class PMEdge(CanonicalModel):
-    source: NonEmptyString
-    target: NonEmptyString
-    evidence: tuple[EvidenceRef, ...]
+    source: NodeID
+    target: NodeID
+    evidence: Annotated[tuple[EvidenceRef, ...], Field(min_length=1)]
 
 
 class PMGraph(CanonicalModel):
     format: Literal["conftamer.pmgraph"]
     version: Literal[2]
     module_id: NonEmptyString
-    sources: tuple[SourceArtifact, ...]
+    sources: Annotated[tuple[SourceArtifact, ...], Field(min_length=1)]
     nodes: tuple[PMNode, ...]
     edges: tuple[PMEdge, ...]
 ```
@@ -300,31 +358,65 @@ Parameter or Receive nodes; targets must be Send or Behavior nodes. Planned
 importers create `Parameter -> Send Request` and `Receive -> Send` edges.
 Endpoints must exist, self-edges and duplicate endpoint pairs are forbidden,
 and every evidence source must appear in `sources`. Isolated nodes are valid.
-Builders merge evidence for semantically identical nodes and edges.
+Node IDs and source IDs are unique. Canonical PMGraph validation also rejects
+an ID that does not equal the node's recomputed semantic ID and collections
+that are not in canonical order. Builders merge evidence for semantically
+identical nodes and edges before constructing the validated document.
 
 ### Identity and serialization
 
-`make_node_id` hashes canonical JSON containing exactly `module_id` and every
-semantic node field except `id` and `evidence`, using sorted keys and compact
-separators, and prefixes the SHA-256 digest with `n:`.
+`make_node_id` constructs an object containing `module_id` plus every semantic
+field shown below. It serializes that object with Python `json.dumps` using
+`sort_keys=True`, `separators=(",", ":")`, and the default `ensure_ascii=True`,
+encodes it as UTF-8, hashes it with SHA-256, and prefixes the lowercase digest
+with `n:`. This preserves the PMGraph v1 hash algorithm.
 
-Canonical normalization is:
+| Node shape | Semantic fields in addition to `module_id` |
+| --- | --- |
+| Parameter | `type`, `name` |
+| Behavior | `type`, `name` |
+| Receive Request | `type`, `message`, `api_id`, `method`, `pattern` |
+| Send Request | `type`, `message`, `api_id`, `method`, `host`, `path` |
+| Receive Response | `type`, `message`, `api_id`, `method`, `host`, `path`, `status` |
+| Send Response | `type`, `message`, `api_id`, `method`, `pattern`, `status` |
+
+`id` and `evidence` are never in the payload. Message payloads always include
+`api_id`; absence is encoded as JSON `null`, not by omitting the key. Integer
+status values remain JSON numbers. For example, the Send Request identity
+payload before key sorting is:
+
+```json
+{"module_id":"example.org/frontend","type":"Send","message":"Request","api_id":null,"method":"POST","host":"inventory:8080","path":"/reserve"}
+```
+
+Canonical normalization and ordering are:
 
 - uppercase HTTP methods;
-- `/` for empty HTTP paths;
-- status integers from 100 through 999;
+- `/` for empty concrete HTTP paths, including a concrete path used as a
+  Receive Request or Send Response fallback pattern;
+- status integers from 100 through 999, excluding booleans;
 - omission, with a diagnostic, of a Send Request without a host;
-- optional ContextTrack `api_id` metadata;
-- exact nonempty Parameter names;
-- sources sorted by `(kind, id)`, nodes by ID, edges by `(source, target)`, and
-  evidence by its complete tuple; and
-- JSON output ending in one newline.
+- optional ContextTrack `api_id` metadata represented as a nonempty string or
+  `null`;
+- exact nonempty Parameter and Behavior names;
+- sources sorted by `(kind, id)`, nodes by ID, and edges by `(source, target)`;
+- evidence normalized by the rules in Diagnostics and provenance; and
+- duplicate semantic nodes and endpoint pairs merged by builders, while a
+  canonical document containing duplicates is rejected.
+
+Canonical PMGraph and AppGraph writers serialize validated normalized models as
+UTF-8 JSON with two-space indentation, model field order, and no ASCII escaping,
+then append exactly one newline. All mapping keys are normalized lexically
+before serialization. Loaders validate rather than silently reorder canonical
+documents. Consequently repeated builds from shuffled semantic inputs are
+byte-identical.
 
 ## ContextTrack semantic projection
 
 The adapter preserves nested raw events while reading and flattens only at the
 semantic boundary. Group context-derived inference by `(pid, context_id)`. A
-convertible event without context may create a node but no context edge.
+convertible event without a usable `context.context_id` may create a node but
+no context edge; the raw `context` object itself remains required.
 
 Route and response matching are intentionally conservative downstream
 heuristics:
@@ -369,7 +461,7 @@ For each join-eligible row:
 3. find exact semantic Send Request candidates by method/path;
 4. create Parameter edges only when there is exactly one candidate;
 5. diagnose zero or several candidates and create no edges; and
-6. encode `match_basis="unique-method-path"` as
+6. record the logical `unique-method-path` basis as
    `EvidenceRef.derivation="paramtrack-unique-method-path"` on each resulting
    edge, plus one build-level diagnostic explaining the aggregate,
    caller-asserted association.
@@ -443,7 +535,7 @@ persisted or inferred. Send `host` and `api_id` never select a receiver module.
 Build the complete cross-module candidate graph and contract a pair only when
 both endpoints have degree one. Leave 1:N, N:1, and N:M components uncontracted
 and marked ambiguous. Every accepted contraction uses
-`match_basis="unique-http-labels"` and emits a stitch-level diagnostic that
+`basis="unique-http-labels"` and emits a stitch-level diagnostic that
 uniqueness does not prove network delivery. This conservative policy
 intentionally differs from the paper's many-Send-to-one-Receive matching.
 
@@ -467,7 +559,7 @@ uniqueness again. Responses with no accepted request pair remain
 ```python
 class QualifiedNodeRef(CanonicalModel):
     module_id: NonEmptyString
-    node_id: NonEmptyString
+    node_id: NodeID
 
 
 class MatchInfo(CanonicalModel):
@@ -489,42 +581,93 @@ class QualifiedPMNode(CanonicalModel):
 
 
 class AppNode(CanonicalModel):
-    id: NonEmptyString
-    members: tuple[QualifiedPMNode, ...]
+    id: AppNodeID
+    members: Annotated[tuple[QualifiedPMNode, ...], Field(min_length=1)]
     match: MatchInfo
 
 
 class QualifiedEdgeRef(CanonicalModel):
     module_id: NonEmptyString
-    source: NonEmptyString
-    target: NonEmptyString
+    source: NodeID
+    target: NodeID
+    evidence: Annotated[tuple[EvidenceRef, ...], Field(min_length=1)]
 
 
 class AppEdge(CanonicalModel):
-    source: NonEmptyString
-    target: NonEmptyString
-    origins: tuple[QualifiedEdgeRef, ...]
+    source: AppNodeID
+    target: AppNodeID
+    origins: Annotated[tuple[QualifiedEdgeRef, ...], Field(min_length=1)]
 
 
 class AppGraph(CanonicalModel):
     format: Literal["conftamer.appgraph"]
     version: Literal[1]
-    module_ids: tuple[NonEmptyString, ...]
-    sources: tuple[SourceArtifact, ...]
+    module_ids: Annotated[tuple[NonEmptyString, ...], Field(min_length=2)]
+    sources: Annotated[tuple[SourceArtifact, ...], Field(min_length=1)]
     nodes: tuple[AppNode, ...]
     edges: tuple[AppEdge, ...]
 ```
 
-Only matched records have a basis. Ambiguous records have sorted candidate
-references. Parameter and Behavior AppNodes have one member and
-`not_applicable`; unmatched message nodes have one member; matched nodes have
-complementary Send/Receive members of the same Request/Response kind.
+`MatchInfo` combinations are closed and validated:
+
+- `matched` requires `basis="unique-http-labels"`, no candidate references
+  (the accepted pair is represented by `members`), and exactly two complementary
+  Send/Receive members of the same Request or Response kind;
+- `ambiguous` requires one or more sorted candidate references and no basis;
+  this includes the degree-one side of a 1:N or N:1 component because mutual
+  uniqueness failed;
+- `no_candidate`, `unsupported_pattern`, and `missing_request_match` require no
+  candidates and no basis;
+- `not_applicable` requires no candidates and no basis, is used only by a
+  singleton Parameter or Behavior, and is required for every such singleton;
+  and
+- unmatched message nodes have one member, while matched nodes have two.
+
+Each member's module must occur in `module_ids`, and its semantic node ID must
+validate against that module. A qualified member may occur in only one AppNode.
+Validation reconstructs the complete Request candidate graph from every
+qualified Request member using the matching rules above, independent of the
+stored match claims. For an ambiguous singleton, `candidates` must equal its
+complete, unique, sorted adjacency set; this also enforces reciprocal candidate
+visibility. Every mutually degree-one pair must be represented as one matched
+AppNode, and every matched Request AppNode must correspond to such a recomputed
+pair. `ambiguous` is valid only when that mutual-uniqueness condition fails. A
+`no_candidate` Request has degree zero and is not an unsupported-pattern
+case. `unsupported_pattern` is required only for a singleton Receive Request
+whose pattern contains unsupported syntax and has no exact literal candidate;
+an exact literal candidate participates in the normal candidate graph despite
+the syntax. Candidate references resolve to qualified members in a different
+module with complementary message direction.
+
+Validation then reconstructs Response candidates only through those recomputed
+accepted Request pairs. Every mutually degree-one Response pair must be one
+matched AppNode belonging to the client/server modules of its accepted Request
+pair and satisfying that pair's response labels, and every matched Response
+AppNode must correspond to such a recomputed pair. Ambiguous Response candidates
+likewise equal the complete adjacency set within that request pair and are valid
+only when mutual uniqueness fails; `no_candidate` has degree zero there.
+Conversely, `missing_request_match` is valid only for a singleton Response with
+no accepted Request pair through which response candidacy could be evaluated.
+
+App node IDs and App edge endpoint pairs are unique; App edge endpoints must
+exist and self-edges are forbidden. At stitch time, every origin is verified
+against the named input PMGraph. A standalone AppGraph loader can verify only
+that each qualified origin endpoint resolves to a member, remaps to its
+containing AppEdge endpoint, and carries evidence resolved by the AppGraph
+source table; it does not have the original PMGraph document. Origin evidence
+is retained in either case.
 
 AppNode IDs hash canonical JSON shaped as
 `{"members":[{"module_id":"...","node_id":"..."},...]}`, with members sorted
-by `(module_id, node_id)`, and use the `a:` prefix. PMGraph edges are remapped,
-deduplicated, and sorted. AppEdges retain sorted qualified origin edges.
-Sources are unioned from input PMGraphs, and all embedded evidence must resolve.
+by `(module_id, node_id)`, using the same compact sorted-key UTF-8 SHA-256
+algorithm as PM nodes and the `a:` prefix. Validation recomputes the ID.
+
+AppGraph canonical ordering is: `module_ids` lexically; sources by `(kind, id)`;
+members and candidates by `(module_id, node_id)`; nodes by ID; edges by
+`(source, target)`; and origins by `(module_id, source, target, evidence)`.
+PMGraph edges are remapped, equal endpoint pairs are deduplicated, and all their
+qualified origins are retained. Sources are unioned by ID from input PMGraphs,
+and conflicting source entries or dangling embedded evidence are rejected.
 
 ```python
 @dataclass(frozen=True)
@@ -609,6 +752,12 @@ conftamer export GRAPH.json|GRAPH.text --output GRAPH.graphml
 
 Verified CType `.graphml` joins these input positions only after the producer
 contract gate passes. Visualization GraphML never becomes canonical input.
+Canonical JSON dispatch requires an exact recognized discriminator pair:
+`("conftamer.pmgraph", 2)` or `("conftamer.appgraph", 1)`; an unknown or
+incomplete pair is rejected rather than inferred structurally. CType `.text`
+dispatch uses its verified `Edges`/`Vertices`/`List` producer envelope and is
+never confused with canonical JSON.
+
 Transformation logic stays outside `cli.py`; diagnostics go to stderr, concise
 summaries to stdout, ambiguous queries fail without `--all-matches`, and every
 input is validated before use. No analyzer, runner, or Delve command is added.
