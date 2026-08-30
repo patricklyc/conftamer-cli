@@ -1,15 +1,30 @@
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, TypeAdapter
+
+
+def _parse_status(value: object) -> int:
+    if isinstance(value, bool):
+        raise ValueError(  # noqa: TRY004 - Pydantic converts ValueError to validation
+            "status must be a decimal string or integer"
+        )
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isdecimal() and value.isascii():
+        return int(value)
+    raise ValueError("status must be a decimal string or integer")
+
+
+RawStatus = Annotated[int, BeforeValidator(_parse_status)]
 
 
 class ContextTrackModel(BaseModel):
     model_config = ConfigDict(
         frozen=True,
         extra="allow",
+        strict=True,
         validate_by_name=True,
         validate_by_alias=True,
     )
@@ -35,7 +50,7 @@ class RequestMessage(ContextTrackModel):
     raw_query: str | None = Field(default=None, alias="req.URL.RawQuery")
 
 
-class RoutedMessage(ContextTrackModel):
+class RouteMessage(ContextTrackModel):
     method: str = Field(alias="req.Method")
     path: str = Field(alias="req.URL.Path")
     pattern: str
@@ -44,13 +59,13 @@ class RoutedMessage(ContextTrackModel):
 class SentResponseMessage(ContextTrackModel):
     method: str = Field(alias="req.Method")
     path: str = Field(alias="req.URL.Path")
-    status: int = Field(alias="code")
+    status: RawStatus = Field(alias="code")
 
 
 class ReceivedResponseMessage(ContextTrackModel):
     method: str | None = Field(default=None, alias="req.Method")
     path: str | None = Field(default=None, alias="req.URL.Path")
-    status: int = Field(alias="resp.StatusCode")
+    status: RawStatus = Field(alias="resp.StatusCode")
 
 
 class EventBase(ContextTrackModel):
@@ -76,9 +91,9 @@ class RequestReceivedEvent(EventBase):
     handler: str | None = None
 
 
-class RequestRoutedEvent(EventBase):
+class RouteEvent(EventBase):
     kind: Literal["Request routed"]
-    message: RoutedMessage
+    message: RouteMessage
 
 
 class ResponseSentEvent(EventBase):
@@ -95,12 +110,11 @@ class ResponseReceivedEvent(EventBase):
 ContextTrackEvent = Annotated[
     RequestSentEvent
     | RequestReceivedEvent
-    | RequestRoutedEvent
+    | RouteEvent
     | ResponseSentEvent
     | ResponseReceivedEvent,
     Field(discriminator="kind"),
 ]
-
 EVENT_ADAPTER = TypeAdapter(ContextTrackEvent)
 
 
@@ -109,12 +123,6 @@ class EventRecord:
     sequence: int
     input_line: int
     event: ContextTrackEvent
-
-
-@dataclass(frozen=True)
-class ParseWarning:
-    input_line: int
-    message: str
 
 
 GroupKey = tuple[int, str]
@@ -126,36 +134,10 @@ def group_events(
 ) -> tuple[dict[GroupKey, list[EventRecord]], list[EventRecord]]:
     groups: dict[GroupKey, list[EventRecord]] = {}
     ungrouped = []
-
     for record in records:
         context_id = record.event.context.context_id
-        if context_id is None:
+        if not context_id:
             ungrouped.append(record)
             continue
-
-        key = (record.event.pid, context_id)
-        groups.setdefault(key, []).append(record)
-
+        groups.setdefault((record.event.pid, context_id), []).append(record)
     return groups, ungrouped
-
-
-def read_events(
-    path: str | Path,
-) -> tuple[list[EventRecord], list[ParseWarning]]:
-    records = []
-    warnings = []
-
-    with Path(path).open() as event_file:
-        for input_line, line in enumerate(event_file, start=1):
-            if not line.strip():
-                continue
-
-            try:
-                event = EVENT_ADAPTER.validate_json(line)
-            except ValidationError as error:
-                warnings.append(ParseWarning(input_line, str(error)))
-                continue
-
-            records.append(EventRecord(len(records), input_line, event))
-
-    return records, warnings
