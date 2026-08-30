@@ -161,7 +161,7 @@ two or more PMGraph files
 
 - Raw input models do not leak into PMGraph or AppGraph.
 - CType nodes remain `CTypeGraph` nodes, never PMGraph nodes.
-- Partial ContextTrack hooks remain diagnostics rather than incomplete semantic nodes.
+- Partial ContextTrack hooks do not become incomplete semantic nodes. Hooks with usable but unresolved endpoint data produce diagnostics; endpoint-less received-response hooks may be omitted without warning so a later usable hook can represent the response.
 - Parameter keys are consumed from ParamTrack and are not recalculated.
 - ParamTrack joins only to Send Request nodes because its real CSV omits message type and is produced from HTTP client-send breakpoints.
 - Canonical JSON never depends on igraph serialization.
@@ -337,7 +337,7 @@ These are downstream compatibility heuristics, not correlations guaranteed by Co
 - use goroutine identity only to select a unique candidate or for the current received-response redirect fallback;
 - infer wire/client duplicate hooks from order, status, method, `api_id` presence, and a successful prior match because the producer emits no hook-type field;
 - never let an inferred duplicate consume a newer request; and
-- omit unresolved response hooks from semantic PMGraph nodes while retaining diagnostics, even though upstream's exploratory graph may represent raw unmatched hooks.
+- omit unresolved response hooks from semantic PMGraph nodes; diagnose hooks with usable endpoint data, but allow endpoint-less received-response hooks to be omitted without warning so a later usable client hook can represent the response, even though upstream's exploratory graph may represent raw unmatched hooks.
 
 The redirect fallback is retained specifically for traces where the client-level hook labels a redirected response with the original request path. None of these rules creates an upstream request correlation ID.
 
@@ -349,7 +349,6 @@ The redirect fallback is retained specifically for traces where the client-level
 - Omit a Send Request without a host and report `contexttrack.request_without_host`; this is a PMGraph policy, not an upstream-invalid event. In `all-tests.jsonl`, 5,820 of 7,159 Request-sent hooks have no host and would be omitted.
 - Carry a matched outbound request's `api_id` to its Receive Response node; retain a differing response-hook `api_id` only as evidence.
 - Exclude `req.URL.RawQuery` and `handler` from semantic node identity. Both remain accepted raw fields; nonempty queries and handlers may be retained as evidence.
-- Treat protocol `HTTP` as tool34-derived context rather than an emitted input field.
 - Preserve current tool34 edge assembly: within each `(pid, context_id)` group, connect every successfully converted Receive occurrence to every later successfully converted Send occurrence. These are possible-influence edges, not exact causal correlations.
 
 ---
@@ -423,7 +422,7 @@ The tool must not invent these fields.
 - Treat an empty `Verb` or `CType` as a row-local unusable-record diagnostic and continue with independent rows.
 - Preserve `API` even when empty because it is evidence rather than a join key.
 - Permit an empty `Resource` and normalize it to `/` only for an otherwise join-eligible row.
-- Treat `Verb` or `Resource` values of at least 10 characters, or values containing a debugger truncation marker, as potentially truncated; retain the row as evidence but do not use it for a Send join.
+- Treat `Verb` or `Resource` values of at least 10 characters, or values containing a debugger truncation marker, as potentially truncated; emit `paramtrack.possibly_truncated_message`, retain the row as evidence, and do not use it for a Send join.
 - Permit a row with no parameter-key columns; it creates no Parameter nodes or edges.
 - Diagnose and omit empty parameter-key cells because the current producer can serialize them.
 - If no usable parameter keys remain, retain the row only as source evidence and create no Parameter nodes or edges.
@@ -544,8 +543,8 @@ Each vertex has these known fields demonstrated upstream:
 
 - `Source` and `Target` resolve through `List` to vertices.
 - `Attributes` and `Weight` are generic graph-library properties. Current CType creation does not assign domain meaning to them; the adapter accepts their current `{}` and `0` defaults but excludes them from normalized CType semantics.
-- `Data` is `null` or a list of AST paths; normalize `null` to no paths.
-- Each AST path is an ordered list of strings and may itself be empty.
+- `Data` is `null` or a list of AST paths; normalize top-level `null` to no paths.
+- Each AST path is an ordered list of strings, an empty list, or `null`; normalize a null path element to an empty path.
 - Several AST paths remain grouped on one CType edge; do not split them into invented parallel edges.
 - Unknown edge/property fields are accepted for forward compatibility but do not participate in normalized CType identity.
 
@@ -666,7 +665,11 @@ This section is a tool34-owned target design, not an upstream format. PMGraph v2
 ### 9.1 Provenance
 
 ```python
-class SourceArtifact(BaseModel):
+class CanonicalModel(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class SourceArtifact(CanonicalModel):
     id: NonEmptyString  # "sha256:" plus the input-byte digest
     kind: Literal[
         "contexttrack-jsonl",
@@ -675,7 +678,7 @@ class SourceArtifact(BaseModel):
     ]
 
 
-class EvidenceRef(BaseModel):
+class EvidenceRef(CanonicalModel):
     source_id: NonEmptyString
     records: tuple[NonEmptyString, ...]  # for example, ("line:2",)
     derivation: Literal[
@@ -697,7 +700,7 @@ All nodes contain `id` and `evidence`. Message nodes also contain optional `api_
 StatusCode = Annotated[int, Field(ge=100, le=999)]
 
 
-class PMNodeBase(BaseModel):
+class PMNodeBase(CanonicalModel):
     id: NonEmptyString
     evidence: tuple[EvidenceRef, ...]
 
@@ -755,18 +758,18 @@ PMNode = (
 )
 ```
 
-`BehaviorNode` is paper-derived and schema-only in this release. No current importer creates one, and no `observable-behaviors` capability or inferred boundary classification is added.
+`BehaviorNode` is paper-derived and schema-only in this release. No current importer creates one, and tool34 performs no inferred boundary classification.
 
 ### 9.3 Edges and graph
 
 ```python
-class PMEdge(BaseModel):
+class PMEdge(CanonicalModel):
     source: NonEmptyString
     target: NonEmptyString
     evidence: tuple[EvidenceRef, ...]
 
 
-class PMGraph(BaseModel):
+class PMGraph(CanonicalModel):
     format: Literal["conftamer.pmgraph"]
     version: Literal[2]
     module_id: NonEmptyString
@@ -797,7 +800,7 @@ Normalization remains:
 - a Send Request without a host is omitted with a diagnostic;
 - ContextTrack `api_id` remains optional metadata;
 - Parameter keys remain exact nonempty strings; and
-- nodes sort by ID, edges by `(source, target)`, evidence by its complete tuple, and output ends with one newline.
+- sources sort by `(kind, id)`, nodes by ID, edges by `(source, target)`, evidence by its complete tuple, and output ends with one newline.
 
 The format document must include fixed ID vectors and one complete JSON example for every node shape before importer implementation begins.
 
@@ -826,7 +829,7 @@ Rules:
 
 - ContextTrack events are required.
 - Message-only PMGraphs omit ParamTrack and CType graph inputs.
-- If one ParamTrack/CType input is supplied, the CSV and both graphs are all required.
+- If one ParamTrack/CType input is supplied, the CSV and both graphs are all required. This is an intentional tool34 workflow rule; the CSV itself contains no graph roles or digests that can verify the association.
 - `--unmarshaler` and `--accessors` identify each graph's role during the build.
 - The caller supplies `module_id` only for PMGraph identity.
 - Supplying ParamTrack and ContextTrack together asserts that they describe a compatible corpus; current files cannot verify that association.
@@ -918,12 +921,12 @@ Responses are not matched independently using only status and path.
 ### 12.4 Match records
 
 ```python
-class QualifiedNodeRef(BaseModel):
+class QualifiedNodeRef(CanonicalModel):
     module_id: NonEmptyString
     node_id: NonEmptyString
 
 
-class MatchInfo(BaseModel):
+class MatchInfo(CanonicalModel):
     status: Literal[
         "matched",
         "no_candidate",
@@ -941,12 +944,12 @@ Only `matched` records have a basis. Ambiguous records contain sorted candidate 
 ### 12.5 Contraction model
 
 ```python
-class QualifiedPMNode(BaseModel):
+class QualifiedPMNode(CanonicalModel):
     module_id: NonEmptyString
     node: PMNode
 
 
-class AppNode(BaseModel):
+class AppNode(CanonicalModel):
     id: NonEmptyString
     members: tuple[QualifiedPMNode, ...]
     match: MatchInfo
@@ -957,7 +960,7 @@ Invariants:
 - Parameter and Behavior AppNodes have one member and `not_applicable`.
 - Unmatched message AppNodes have one member.
 - Matched AppNodes have one Send and one Receive member.
-- Matched members have the same protocol and message kind.
+- Matched members have complementary Send/Receive directions and the same Request/Response message kind.
 - AppNode IDs hash canonical JSON shaped exactly as `{"members":[{"module_id":"...","node_id":"..."},...]}` with members sorted by `(module_id, node_id)` and prefix the SHA-256 digest with `a:`.
 - PMGraph edges are remapped through the contraction map, deduplicated, and sorted.
 - Each AppEdge retains sorted qualified source-edge references as provenance.
@@ -973,27 +976,28 @@ Parameter-reachability slicing is a separate non-destructive query operation.
 ## 13. AppGraph Model and I/O
 
 ```python
-class QualifiedEdgeRef(BaseModel):
+class QualifiedEdgeRef(CanonicalModel):
     module_id: NonEmptyString
     source: NonEmptyString
     target: NonEmptyString
 
 
-class AppEdge(BaseModel):
+class AppEdge(CanonicalModel):
     source: NonEmptyString
     target: NonEmptyString
     origins: tuple[QualifiedEdgeRef, ...]
 
 
-class AppGraph(BaseModel):
+class AppGraph(CanonicalModel):
     format: Literal["conftamer.appgraph"]
     version: Literal[1]
     module_ids: tuple[NonEmptyString, ...]
+    sources: tuple[SourceArtifact, ...]
     nodes: tuple[AppNode, ...]
     edges: tuple[AppEdge, ...]
 ```
 
-Validation requires sorted unique module IDs and node IDs, existing endpoints, no self-edges, canonical ordering, and valid member/match-state combinations.
+Stitching unions and sorts the input PMGraphs' `SourceArtifact` records. Validation requires sorted unique module, source, and node IDs; every embedded PMNode evidence reference must resolve through `AppGraph.sources`; edges must have existing endpoints and no self-edge; and member/match-state combinations must be valid.
 
 ```python
 @dataclass(frozen=True)
@@ -1199,7 +1203,7 @@ CLI rules:
 - [ ] Test the actual fields, including `handler` and `req.URL.RawQuery`, and the absence of invented run/occurrence fields.
 - [ ] Test `(pid, context_id)` grouping and internal input sequencing.
 - [ ] Test suffix-based route reconstruction as a downstream heuristic and preserve the resulting pattern without a persisted dialect field.
-- [ ] Test that unresolved response hooks remain diagnostics rather than semantic nodes and that raw hook `api_id` remains source evidence.
+- [ ] Test that unresolved hooks with usable endpoints produce diagnostics, endpoint-less received-response hooks may be omitted silently, and raw hook `api_id` remains source evidence.
 - [ ] Implement JSONL reading and semantic projection in `importer.py`.
 - [ ] Keep route/response inference in `matching.py`.
 - [ ] Validate `examples/contexttrack/prometheus/scrape-ok.jsonl`.
@@ -1216,14 +1220,14 @@ CLI rules:
 - Create: `src/conftamer/ctype_graph/io.py`
 - Create: `tests/ctype_graph/test_io.py`
 
-**Produces:** Normalized CTypeGraph, alias index, and igraph projection.
+**Produces:** Normalized CTypeGraph and represented name index. The igraph projection is added in Task 8.
 
 - [ ] Write minimal failing tests for nodes, aliases, tags, methods, grouped AST paths, and edge endpoints.
 - [ ] Parse one-line JSON regardless of newline count.
 - [ ] Accept unknown input fields without adding them to semantic identity.
 - [ ] Validate represented `List` entries against vertex names and edge endpoints while permitting unresolved superset entries.
 - [ ] Test that module-shortened and external-looking strings are preserved exactly as serialized, without claiming their original source names.
-- [ ] Normalize `Data: null` to no AST paths and treat default `Attributes`/`Weight` as nonsemantic graph-library metadata.
+- [ ] Normalize both `Data: null` and null path elements such as `Data: [null]`; treat default `Attributes`/`Weight` as nonsemantic graph-library metadata.
 - [ ] Reject duplicate `(Source, Target)` records deterministically.
 - [ ] Parse the real US example and assert 57 vertices, 90 edges, 58 `List` entries, and 1 nonidentity alias.
 - [ ] Parse the real Accessors example and assert 582 vertices, 822 edges, 595 `List` entries, and 13 nonidentity aliases.
@@ -1322,12 +1326,14 @@ CLI rules:
 - Create: `src/conftamer/appgraph/models.py`
 - Create: `src/conftamer/appgraph/matching.py`
 - Create: `src/conftamer/appgraph/stitch.py`
+- Modify: `src/conftamer/analysis/igraph.py`
 - Create: `tests/appgraph/test_models.py`
 - Create: `tests/appgraph/test_matching.py`
 - Create: `tests/appgraph/test_stitch.py`
+- Modify: `tests/analysis/test_igraph.py`
 
 - [ ] Reject fewer than two PMGraphs and duplicate module IDs.
-- [ ] Derive the sorted AppGraph `module_ids` directly from the PMGraphs.
+- [ ] Derive sorted AppGraph `module_ids` and the deduplicated source table directly from the PMGraphs, and validate every embedded evidence reference.
 - [ ] Test exact paths, trailing-slash subtrees, `{name}`, `:name`, and terminal `*name` matching.
 - [ ] Test that method/host-prefixed, `{name...}`, `{$}`, and mixed or unknown patterns remain unsupported unless literally equal.
 - [ ] Test 1:1, 1:N, N:1, N:M, same-module, and no-candidate request cases.
@@ -1338,7 +1344,7 @@ CLI rules:
 - [ ] Test responses only after accepted request matches.
 - [ ] Test fixed AppNode ID vectors, contraction across at least three PMGraphs, edge remapping, provenance, and input-order determinism.
 - [ ] Test explicit unmatched pruning and idempotence as a deliberate deviation from the paper's default pruning.
-- [ ] Export and re-read AppGraph GraphML.
+- [ ] Extend the igraph adapter for AppGraph, then export and re-read AppGraph GraphML.
 - [ ] Confirm cumulative production code remains below 3,000 lines.
 - [ ] Commit as `feat: stitch multiple PMGraphs into AppGraphs`.
 
@@ -1367,7 +1373,6 @@ CLI rules:
 **Files to delete:**
 - `src/conftamer/csv_graph.py`
 - `src/conftamer/main.py` after `cli.py` becomes the entry point
-- superseded ContextTrack modules
 - `tests/test_csv_graph.py`
 - `tests/test_main.py` after distinct behavior moves to `tests/test_cli.py`
 - superseded PMGraph/ContextTrack tests
