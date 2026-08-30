@@ -49,15 +49,15 @@ in.
 `src/conftamer/pmgraph/{__init__.py,models.py,io.py}`,
 `tests/pmgraph/{test_models.py,test_io.py}`
 
-- [ ] Test every complete node shape, including schema-only Behavior.
-- [ ] Test Parameter-to-Send Request and Receive-to-Send edges.
-- [ ] Test IDs, status bounds, duplicates, endpoints, self-edges, source tables,
+- [x] Test every complete node shape, including schema-only Behavior.
+- [x] Test Parameter-to-Send Request and Receive-to-Send edges.
+- [x] Test IDs, status bounds, duplicates, endpoints, self-edges, source tables,
   dangling evidence, evidence merging, and canonical collection order.
-- [ ] Add fixed vectors proving semantic node IDs exclude evidence and preserve
+- [x] Add fixed vectors proving semantic node IDs exclude evidence and preserve
   the existing hash algorithm.
-- [ ] Implement immutable models, evidence merging, validation, normalization,
+- [x] Implement immutable models, evidence merging, validation, normalization,
   and deterministic newline-terminated JSON.
-- [ ] Prove byte-identical output from shuffled semantic inputs.
+- [x] Prove byte-identical output from shuffled semantic inputs.
 
 **Checkpoint:** `feat: define canonical PMGraph v2`
 
@@ -66,18 +66,18 @@ in.
 **Files:** `src/conftamer/contexttrack/{models.py,matching.py,importer.py}`,
 `src/conftamer/contexttrack/__init__.py`, `tests/contexttrack/`
 
-- [ ] Migrate distinct reader, route, response, duplicate-hook, redirect, and
+- [x] Migrate distinct reader, route, response, duplicate-hook, redirect, and
   conversion behavior into failing tests.
-- [ ] Cover actual nested fields, unknown fields, input sequence, line numbers,
+- [x] Cover actual nested fields, unknown fields, input sequence, line numbers,
   `(pid, context_id)` grouping, handler/query evidence, and absent context IDs.
-- [ ] Test conservative route suffix reconstruction and ambiguity.
-- [ ] Test unresolved usable hooks, silent endpoint-less response hooks, hostless
+- [x] Test conservative route suffix reconstruction and ambiguity.
+- [x] Test unresolved usable hooks, silent endpoint-less response hooks, hostless
   sends, and response `api_id` evidence.
-- [ ] Implement permissive input models, JSONL reading, matching, and semantic
+- [x] Implement permissive input models, JSONL reading, matching, and semantic
   projection without flattening raw events early.
-- [ ] Run `scrape-ok.jsonl`; confirm the documented hostless-send count against
+- [x] Run `scrape-ok.jsonl`; confirm the documented hostless-send count against
   `all-tests.jsonl`.
-- [ ] Remove superseded ContextTrack modules only after replacement tests pass.
+- [x] Remove superseded ContextTrack modules only after replacement tests pass.
 
 **Checkpoint:** `feat: import ContextTrack events`
 
