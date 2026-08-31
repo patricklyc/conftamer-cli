@@ -5,6 +5,7 @@ from typing import Literal
 
 import igraph as ig
 
+from conftamer.appgraph import AppGraph, AppNode
 from conftamer.ctype_graph import CTypeGraph
 from conftamer.pmgraph import (
     BehaviorNode,
@@ -34,10 +35,17 @@ _PM_ATTRIBUTES = (
 )
 
 
-def to_igraph(document: PMGraph) -> ig.Graph:
+GraphDocument = PMGraph | AppGraph
+
+
+def to_igraph(document: GraphDocument) -> ig.Graph:
     graph = ig.Graph(n=len(document.nodes), directed=True)
-    for index, node in enumerate(document.nodes):
-        graph.vs[index].update_attributes(_pm_attributes(document.module_id, node))
+    if isinstance(document, AppGraph):
+        for index, node in enumerate(document.nodes):
+            graph.vs[index].update_attributes(_app_attributes(node))
+    else:
+        for index, node in enumerate(document.nodes):
+            graph.vs[index].update_attributes(_pm_attributes(document.module_id, node))
     indices = {node.id: index for index, node in enumerate(document.nodes)}
     graph.add_edges(
         (indices[edge.source], indices[edge.target]) for edge in document.edges
@@ -115,6 +123,30 @@ def influence_subgraph(
 
 def write_graphml(graph: ig.Graph, path: str | Path) -> None:
     graph.write_graphml(str(path))
+
+
+def _app_attributes(node: AppNode) -> dict[str, str]:
+    attributes = dict.fromkeys(_PM_ATTRIBUTES, "")
+    members = node.members
+    attributes.update(
+        name=node.id,
+        canonical_id=node.id,
+        label=" ↔ ".join(_pm_label(member.node) for member in members),
+        node_type="/".join(sorted({member.node.type for member in members})),
+        module_ids=_canonical_json(sorted({member.module_id for member in members})),
+        match_status=node.match.status,
+        members_json=_canonical_json(
+            [member.model_dump(mode="json") for member in members]
+        ),
+    )
+    for name in ("message", "api_id", "method", "host", "path", "pattern", "status"):
+        values = {
+            str(value)
+            for member in members
+            if (value := member.node.model_dump().get(name)) is not None
+        }
+        attributes[name] = values.pop() if len(values) == 1 else ""
+    return attributes
 
 
 def _pm_attributes(module_id: str, node: PMNode) -> dict[str, str]:

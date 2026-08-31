@@ -11,6 +11,7 @@ from conftamer.analysis import (
     to_igraph,
     write_graphml,
 )
+from conftamer.appgraph import stitch_pmgraphs
 from conftamer.ctype_graph import CTypeEdge, CTypeGraph, CTypeNode
 from conftamer.diagnostics import EvidenceRef, SourceArtifact
 from conftamer.pmgraph import (
@@ -373,6 +374,117 @@ def test_pmgraph_graphml_round_trip(tmp_path):
     assert loaded.vs["name"] == projected.vs["name"]
     assert loaded.vs["module_ids"] == projected.vs["module_ids"]
     assert loaded.vs["status"] == projected.vs["status"]
+    assert loaded.get_edgelist() == projected.get_edgelist()
+
+
+def test_appgraph_projection_exposes_members_matches_and_direction(tmp_path):
+    client, server = "example.org/client", "example.org/server"
+    client_source = SourceArtifact(id=f"sha256:{'b' * 64}", kind="contexttrack-jsonl")
+    server_source = SourceArtifact(id=f"sha256:{'c' * 64}", kind="contexttrack-jsonl")
+
+    def node(module, source, fields):
+        refs = [
+            EvidenceRef(source_id=source.id, records=("line:1",), derivation="observed")
+        ]
+        if fields.get("message") == "Response":
+            refs.append(
+                EvidenceRef(
+                    source_id=source.id,
+                    records=("line:1",),
+                    derivation="response-correlation",
+                )
+            )
+        return NODE_ADAPTER.validate_python(
+            {"id": make_node_id(module, fields), "evidence": tuple(refs), **fields}
+        )
+
+    request = node(
+        client,
+        client_source,
+        {
+            "type": "Send",
+            "message": "Request",
+            "api_id": None,
+            "method": "GET",
+            "host": "ignored.example",
+            "path": "/items/1",
+        },
+    )
+    setting = node(client, client_source, {"type": "Parameter", "name": "timeout"})
+    receive = node(
+        server,
+        server_source,
+        {
+            "type": "Receive",
+            "message": "Request",
+            "api_id": None,
+            "method": "GET",
+            "pattern": "/items/{id}",
+        },
+    )
+    response = node(
+        server,
+        server_source,
+        {
+            "type": "Send",
+            "message": "Response",
+            "api_id": None,
+            "method": "GET",
+            "pattern": "/items/{id}",
+            "status": 200,
+        },
+    )
+    document = stitch_pmgraphs(
+        [
+            make_pmgraph(
+                module_id=client,
+                sources=(client_source,),
+                nodes=(request, setting),
+                edges=(),
+            ),
+            make_pmgraph(
+                module_id=server,
+                sources=(server_source,),
+                nodes=(receive, response),
+                edges=(
+                    PMEdge(
+                        source=receive.id, target=response.id, evidence=receive.evidence
+                    ),
+                ),
+            ),
+        ]
+    ).graph
+
+    projected = to_igraph(document)
+
+    assert projected.is_directed()
+    assert projected.vs["name"] == [node.id for node in document.nodes]
+    assert projected.get_edgelist() == [
+        (
+            projected.vs.find(name=document.edges[0].source).index,
+            projected.vs.find(name=document.edges[0].target).index,
+        )
+    ]
+    matched_node = next(
+        node for node in document.nodes if node.match.status == "matched"
+    )
+    matched = projected.vs.find(name=matched_node.id).attributes()
+    assert matched["module_ids"] == '["example.org/client","example.org/server"]'
+    assert matched["match_status"] == "matched"
+    assert matched["node_type"] == "Receive/Send"
+    assert matched["method"] == "GET"
+    assert matched["host"] == "ignored.example"
+    assert matched["path"] == "/items/1"
+    assert matched["pattern"] == "/items/{id}"
+    assert json.loads(matched["members_json"]) == [
+        member.model_dump(mode="json") for member in matched_node.members
+    ]
+
+    path = tmp_path / "appgraph.graphml"
+    write_graphml(projected, path)
+    loaded = ig.Graph.Read_GraphML(str(path))
+    assert loaded.vs["name"] == projected.vs["name"]
+    assert loaded.vs["members_json"] == projected.vs["members_json"]
     assert loaded.get_edgelist() == projected.get_edgelist()
 
 

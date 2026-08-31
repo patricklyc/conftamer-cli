@@ -1,4 +1,5 @@
 from conftamer.analysis.igraph import (
+    GraphDocument,
     ctype_to_igraph,
     find_vertices,
     influence_subgraph,
@@ -7,6 +8,7 @@ from conftamer.analysis.igraph import (
 )
 
 __all__ = [
+    "GraphDocument",
     "ctype_to_igraph",
     "find_vertices",
     "influence_subgraph",
