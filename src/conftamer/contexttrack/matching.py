@@ -102,17 +102,43 @@ def _match_route_chains(
         if endpoint in unresolved:
             continue
         candidates = [request for request in requests if _endpoint(request) == endpoint]
-        if not candidates:
+        if len(candidates) != 1:
+            code = (
+                "contexttrack.route_without_request"
+                if not candidates
+                else "contexttrack.ambiguous_route_request"
+            )
+            message = (
+                "route has no matching received request"
+                if not candidates
+                else "route has several matching received requests"
+            )
+            issues.append(MatchIssue(chain[0].input_line, code, message))
+            continue
+        request = candidates[0]
+        if request.sequence > chain[0].sequence:
             issues.append(
                 MatchIssue(
                     chain[0].input_line,
                     "contexttrack.route_without_request",
-                    "route has no matching received request",
+                    "route precedes its matching received request",
                 )
             )
             continue
-        match = RouteMatch(_full_pattern(chain), tuple(chain))
-        matches.update((request.sequence, match) for request in candidates)
+        if any(
+            request.sequence < other.sequence <= chain[-1].sequence
+            for other in requests
+            if other.sequence != request.sequence
+        ):
+            issues.append(
+                MatchIssue(
+                    chain[0].input_line,
+                    "contexttrack.ambiguous_route_request",
+                    "route chain crosses another received request",
+                )
+            )
+            continue
+        matches[request.sequence] = RouteMatch(_full_pattern(chain), tuple(chain))
 
 
 def match_responses(

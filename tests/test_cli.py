@@ -392,6 +392,42 @@ def test_stitch_can_drop_unmatched_message_nodes(tmp_path):
     assert graph.nodes[0].match.status == "matched"
 
 
+@pytest.mark.parametrize("command", ("query", "export"))
+@pytest.mark.parametrize("suffix", (".json", ""))
+def test_ctype_dispatch_accepts_json_content_independent_of_suffix(
+    tmp_path, command, suffix
+):
+    input_path = write_ctype(tmp_path / f"types{suffix}")
+    output = tmp_path / f"{command}.graphml"
+    arguments = [command, str(input_path)]
+    if command == "query":
+        arguments.append("/b")
+    arguments.extend(("--output", str(output)))
+
+    result = invoke(*arguments)
+
+    assert result.exit_code == 0, result.output
+    assert ig.Graph.Read_GraphML(str(output)).vcount() == 3
+
+
+@pytest.mark.parametrize(
+    ("suffix", "message"),
+    [
+        (".gv", "Graphviz CType input is not supported"),
+        (".graphml", "GraphML input is not supported"),
+    ],
+)
+def test_ctype_dispatch_preserves_blocked_suffix_rejection(tmp_path, suffix, message):
+    input_path = write_ctype(tmp_path / f"types{suffix}")
+    output = tmp_path / "output.graphml"
+
+    result = invoke("export", str(input_path), "--output", str(output))
+
+    assert result.exit_code != 0
+    assert message in result.output
+    assert not output.exists()
+
+
 @pytest.mark.parametrize("kind", ("pmgraph", "appgraph", "ctype"))
 def test_export_accepts_canonical_and_verified_ctype_inputs(tmp_path, kind):
     input_path, _, expected_nodes = write_graph_inputs(tmp_path)[kind]
@@ -487,6 +523,13 @@ def test_query_requires_all_matches_for_ambiguity(tmp_path):
         {"format": "conftamer.pmgraph", "version": 1},
         {"format": "conftamer.pmgraph"},
         {"version": 2},
+        {
+            "format": "conftamer.unknown",
+            "version": 1,
+            "Edges": [],
+            "Vertices": [],
+            "List": {},
+        },
     ],
 )
 def test_export_rejects_unknown_or_incomplete_canonical_discriminators(

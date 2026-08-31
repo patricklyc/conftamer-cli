@@ -316,6 +316,16 @@ def test_find_vertices_prefers_exact_canonical_names():
     assert find_vertices(graph, f"  {parameter['name']}  ") == (parameter.index,)
 
 
+def test_find_vertices_preserves_whitespace_for_raw_exact_names():
+    graph = ig.Graph(n=3, directed=True)
+    graph.vs["name"] = [" /Type ", "/Type", "   "]
+    graph.vs["label"] = ["spaced", "plain", "whitespace"]
+
+    assert find_vertices(graph, " /Type ") == (0,)
+    assert find_vertices(graph, "/Type") == (1,)
+    assert find_vertices(graph, "   ") == (2,)
+
+
 def test_find_vertices_matches_case_insensitive_substrings_and_reports_ambiguity():
     graph = to_igraph(pmgraph())
 

@@ -77,13 +77,17 @@ def ctype_to_igraph(document: CTypeGraph) -> ig.Graph:
 
 
 def find_vertices(graph: ig.Graph, query: str) -> tuple[int, ...]:
+    if not query:
+        raise ValueError("search query must not be empty")
+
+    exact = _exact_names(graph, query)
+    if exact:
+        return exact
+
     search = query.strip()
     if not search:
         raise ValueError("search query must not be empty")
-
-    exact = tuple(
-        vertex.index for vertex in graph.vs if vertex.attributes().get("name") == search
-    )
+    exact = _exact_names(graph, search)
     if exact:
         return exact
 
@@ -96,6 +100,12 @@ def find_vertices(graph: ig.Graph, query: str) -> tuple[int, ...]:
             for value in vertex.attributes().values()
             if value is not None
         )
+    )
+
+
+def _exact_names(graph: ig.Graph, query: str) -> tuple[int, ...]:
+    return tuple(
+        vertex.index for vertex in graph.vs if vertex.attributes().get("name") == query
     )
 
 

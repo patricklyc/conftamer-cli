@@ -43,7 +43,8 @@ CTypeGraph, and GraphML is never used as canonical persistence.
 
 - ContextTrack JSONL containing the five supported HTTP event kinds;
 - targeted, headered, variable-width ParamTrack parameter CSV;
-- gopls CType `.text` JSON for the Unmarshaler and Accessors graphs;
+- gopls CType JSON for the Unmarshaler and Accessors graphs, normally emitted
+  with a `.text` suffix;
 - canonical PMGraph v2 JSON; and
 - canonical AppGraph v1 JSON.
 
@@ -117,10 +118,11 @@ conftamer query GRAPH.json|GRAPH.text QUERY
     --output RESULT.graphml
 ```
 
-The input may be PMGraph v2, AppGraph v1, or verified CType `.text` JSON. An
-exact canonical vertex name takes precedence over case-insensitive substring
-search across projected attributes. No match is an error. Multiple matches are
-an error unless `--all-matches` is supplied.
+The input may be PMGraph v2, AppGraph v1, or verified CType JSON. CType
+dispatch accepts `.text` or JSON-leading content and validates the producer
+envelope. An exact canonical vertex name takes precedence over case-insensitive
+substring search across projected attributes. No match is an error. Multiple
+matches are an error unless `--all-matches` is supplied.
 
 The output is the induced GraphML subgraph containing selected vertices and
 their requested transitive reachability. `both` is the default direction.
@@ -131,9 +133,10 @@ their requested transitive reachability. `both` is the default direction.
 conftamer export GRAPH.json|GRAPH.text --output GRAPH.graphml
 ```
 
-`export` projects the complete validated graph to GraphML. PMGraph and AppGraph
-use canonical IDs as vertex names. CType edges preserve each grouped ordered
-AST path in the `ast_paths_json` attribute.
+`export` accepts the same graph inputs as `query` and projects the complete
+validated graph to GraphML. PMGraph and AppGraph use canonical IDs as vertex
+names. CType edges preserve each grouped ordered AST path in the
+`ast_paths_json` attribute.
 
 ## Diagnostics and provenance
 
@@ -233,8 +236,8 @@ ordering and identity; they do not silently repair noncanonical documents.
 - Ambiguous route, response, parameter, and cross-module matches are diagnosed
   or retained rather than guessed.
 - Behavior nodes are schema-only because no producer contract creates them.
-- CType GraphML input is blocked; `.text` JSON is the only accepted CType
-  machine transport.
+- CType GraphML input is blocked; the observed CType JSON transport is accepted
+  from `.text` or JSON-leading content, while `.gv` remains unsupported.
 - Stitching does not model deployment manifests, replicas, or many-to-one
   contraction.
 - Canonical PMGraph/AppGraph JSON cannot be reconstructed from visualization

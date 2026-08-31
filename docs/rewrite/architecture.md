@@ -91,7 +91,7 @@ ParamTrack parameters.csv
     -> Parameter nodes and Parameter -> Send Request edges
 
 US / Accessors
-    accepted: *.text JSON
+    accepted: *.text or JSON-leading CType JSON
     blocked:  *.graphml until the producer-contract gate passes
         -> one normalized CTypeGraph per input
         -> CType name index and direct exploration
@@ -754,9 +754,10 @@ Verified CType `.graphml` joins these input positions only after the producer
 contract gate passes. Visualization GraphML never becomes canonical input.
 Canonical JSON dispatch requires an exact recognized discriminator pair:
 `("conftamer.pmgraph", 2)` or `("conftamer.appgraph", 1)`; an unknown or
-incomplete pair is rejected rather than inferred structurally. CType `.text`
-dispatch uses its verified `Edges`/`Vertices`/`List` producer envelope and is
-never confused with canonical JSON.
+incomplete pair is rejected rather than inferred structurally. CType dispatch
+accepts `.text` or JSON-leading content using its verified
+`Edges`/`Vertices`/`List` producer envelope and is never confused with canonical
+JSON.
 
 Transformation logic stays outside `cli.py`; diagnostics go to stderr, concise
 summaries to stdout, ambiguous queries fail without `--all-matches`, and every

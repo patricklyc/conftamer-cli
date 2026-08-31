@@ -135,6 +135,91 @@ def test_routes_keep_the_innermost_pattern_for_equal_observed_paths():
     assert issues == []
 
 
+def test_routes_do_not_cross_associate_repeated_request_endpoints():
+    first_request = record(
+        0,
+        base("Request received", {"req.Method": "GET", "req.URL.Path": "/same"}),
+    )
+    first_route = record(
+        1,
+        base(
+            "Request routed",
+            {"req.Method": "GET", "req.URL.Path": "/same", "pattern": "/first"},
+        ),
+    )
+    second_request = record(
+        2,
+        base("Request received", {"req.Method": "GET", "req.URL.Path": "/same"}),
+    )
+    second_route = record(
+        3,
+        base(
+            "Request routed",
+            {"req.Method": "GET", "req.URL.Path": "/same", "pattern": "/second"},
+        ),
+    )
+    groups, _ = group_events([first_request, first_route, second_request, second_route])
+
+    matches, issues = match_routes(groups)
+
+    assert matches == {}
+    assert [issue.code for issue in issues] == ["contexttrack.ambiguous_route_request"]
+
+
+def test_routes_do_not_match_a_request_observed_after_the_route():
+    route = record(
+        0,
+        base(
+            "Request routed",
+            {"req.Method": "GET", "req.URL.Path": "/items", "pattern": "/items"},
+        ),
+    )
+    request = record(
+        1,
+        base("Request received", {"req.Method": "GET", "req.URL.Path": "/items"}),
+    )
+    groups, _ = group_events([route, request])
+
+    matches, issues = match_routes(groups)
+
+    assert matches == {}
+    assert [issue.code for issue in issues] == ["contexttrack.route_without_request"]
+
+
+def test_route_chains_do_not_cross_another_received_request():
+    request = record(
+        0,
+        base(
+            "Request received",
+            {"req.Method": "GET", "req.URL.Path": "/api/items"},
+        ),
+    )
+    outer = record(
+        1,
+        base(
+            "Request routed",
+            {"req.Method": "GET", "req.URL.Path": "/api/items", "pattern": "/api/"},
+        ),
+    )
+    other_request = record(
+        2,
+        base("Request received", {"req.Method": "GET", "req.URL.Path": "/other"}),
+    )
+    inner = record(
+        3,
+        base(
+            "Request routed",
+            {"req.Method": "GET", "req.URL.Path": "/items", "pattern": "/items"},
+        ),
+    )
+    groups, _ = group_events([request, outer, other_request, inner])
+
+    matches, issues = match_routes(groups)
+
+    assert matches == {}
+    assert [issue.code for issue in issues] == ["contexttrack.ambiguous_route_request"]
+
+
 def test_routes_do_not_use_chains_with_an_ambiguous_suffix_continuation():
     first_request = record(
         0,

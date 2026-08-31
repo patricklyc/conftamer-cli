@@ -242,11 +242,12 @@ def test_parameter_nodes_are_reused_across_distinct_unique_message_joins(tmp_pat
     assert evidence_records(result.nodes[0], "observed") == ("line:2", "line:3")
 
 
-def test_zero_and_several_send_candidates_are_diagnosed_once_per_message(tmp_path):
+def test_zero_and_several_send_candidates_are_diagnosed_for_each_row(tmp_path):
     path = write_csv(
         tmp_path,
         HEADER
-        + "api,GET,/missing,/Type,no-candidate\n"
+        + "api,GET,/missing,/Type,no-candidate-a\n"
+        + "other-api,GET,/missing,/Type,no-candidate-b\n"
         + "api,POST,/same,/Type,ambiguous-a\n"
         + "different-api,POST,/same,/Type,ambiguous-b\n",
     )
@@ -261,10 +262,12 @@ def test_zero_and_several_send_candidates_are_diagnosed_once_per_message(tmp_pat
     assert result.edges == ()
     assert [(item.line, item.code) for item in result.diagnostics] == [
         (2, "paramtrack.no_send_candidate"),
-        (3, "paramtrack.ambiguous_send_candidate"),
+        (3, "paramtrack.no_send_candidate"),
+        (4, "paramtrack.ambiguous_send_candidate"),
+        (5, "paramtrack.ambiguous_send_candidate"),
     ]
-    assert "0" in result.diagnostics[0].message
-    assert "2" in result.diagnostics[1].message
+    assert all("0" in item.message for item in result.diagnostics[:2])
+    assert all("2" in item.message for item in result.diagnostics[2:])
 
 
 def test_reordering_rows_preserves_semantics_and_updates_provenance(tmp_path):

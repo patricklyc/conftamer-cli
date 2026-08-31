@@ -359,6 +359,5 @@ def test_manager_build_omits_parameters_for_47_ambiguous_sends():
         for edge in result.graph.edges
         for reference in edge.evidence
     )
-    assert len(ambiguity) == 1
-    assert ambiguity[0].line == 2
-    assert "47 semantic Send candidates" in ambiguity[0].message
+    assert [item.line for item in ambiguity] == [2, 3, 4, 5]
+    assert all("47 semantic Send candidates" in item.message for item in ambiguity)

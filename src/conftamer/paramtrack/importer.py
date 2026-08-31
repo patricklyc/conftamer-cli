@@ -202,8 +202,11 @@ def _join_records(
     for message_key, records in sorted(records_by_message.items()):
         candidates = tuple(sends_by_message.get(message_key, {}).values())
         if len(candidates) != 1:
-            diagnostics.append(
-                _match_diagnostic(source_name, message_key, records, len(candidates))
+            diagnostics.extend(
+                _match_diagnostic(
+                    source_name, message_key, record.input_line, len(candidates)
+                )
+                for record in records
             )
             continue
         request = candidates[0]
@@ -250,7 +253,7 @@ def _join_records(
 def _match_diagnostic(
     source_name: str,
     key: ParamMessageKey,
-    records: list[ParamTrackRecord],
+    input_line: int,
     candidate_count: int,
 ) -> Diagnostic:
     code = (
@@ -260,7 +263,7 @@ def _match_diagnostic(
     )
     return _diagnostic(
         source_name,
-        min(record.input_line for record in records),
+        input_line,
         code,
         f"{key.method} {key.path} has {candidate_count} semantic Send candidates",
     )

@@ -126,11 +126,7 @@ def _load_graph(path: Path) -> GraphInput:
         return load_appgraph(path)
     if "format" in document or "version" in document:
         raise ValueError(f"unrecognized graph document discriminator {discriminator!r}")
-    if path.suffix.lower() == ".text" and {
-        "Edges",
-        "Vertices",
-        "List",
-    }.issubset(document):
+    if {"Edges", "Vertices", "List"}.issubset(document):
         return load_ctype_graph(path)
     raise ValueError("input is not canonical graph JSON or a verified CType transport")
 
