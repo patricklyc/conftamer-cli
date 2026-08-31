@@ -86,16 +86,16 @@ in.
 **Files:** `src/conftamer/ctype_graph/{__init__.py,models.py,io.py}`,
 `tests/ctype_graph/test_io.py`
 
-- [ ] Test vertices, aliases, methods, nullable tags, grouped AST paths, null
+- [x] Test vertices, aliases, methods, nullable tags, grouped AST paths, null
   normalization, endpoints, duplicate edges, and extra `List` mappings.
-- [ ] Parse a complete one-line JSON document independent of newline count.
-- [ ] Preserve names exactly; exclude unknown fields and generic properties from
+- [x] Parse a complete one-line JSON document independent of newline count.
+- [x] Preserve names exactly; exclude unknown fields and generic properties from
   semantic identity.
-- [ ] Reject `.gv` explicitly.
-- [ ] Assert real US counts: 57 vertices, 90 edges, 58 mappings, 1 alias.
-- [ ] Assert real Accessors counts: 582 vertices, 822 edges, 595 mappings,
+- [x] Reject `.gv` explicitly.
+- [x] Assert real US counts: 57 vertices, 90 edges, 58 mappings, 1 alias.
+- [x] Assert real Accessors counts: 582 vertices, 822 edges, 595 mappings,
   13 aliases.
-- [ ] Prove all four manager CTypes resolve only through Accessors.
+- [x] Prove all four manager CTypes resolve only through Accessors.
 
 **Checkpoint:** `feat: parse gopls CType graph output`
 
@@ -109,14 +109,18 @@ continue with task 6. A deferred task has no checkpoint commit.
 **Files after gate:** `docs/rewrite/input-formats.md`,
 `src/conftamer/ctype_graph/io.py`, `tests/ctype_graph/test_io.py`
 
-- [ ] Document observed namespaces, keys, IDs, defaults, direction, and value
-  encodings.
-- [ ] Test grouped AST paths, isolated nodes, aliases/name mappings, and unknown
-  attributes according to the real files.
-- [ ] Implement content/extension dispatch with no caller-supplied graph metadata.
-- [ ] Prove equivalent `.text` and GraphML normalize identically.
+- [x] Check for both prerequisite producer GraphML files; both are absent, so
+  defer this task.
+- [x] Make no parser claim or code change and continue with task 6.
+- [ ] **Blocked:** document observed namespaces, keys, IDs, defaults, direction,
+  and value encodings.
+- [ ] **Blocked:** test grouped AST paths, isolated nodes, aliases/name mappings,
+  and unknown attributes according to the real files.
+- [ ] **Blocked:** implement content/extension dispatch with no caller-supplied
+  graph metadata.
+- [ ] **Blocked:** prove equivalent `.text` and GraphML normalize identically.
 
-**Checkpoint:** `feat: accept verified gopls CType GraphML`
+**Checkpoint:** deferred; no commit
 
 ## 6. Import and join ParamTrack CSV
 
