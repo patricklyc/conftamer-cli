@@ -88,10 +88,10 @@ jobs:
             artifact: linux-x86_64
             executable: conftamer
             runner_arch: X64
-          - os: macos-13
-            artifact: macos-x86_64
+          - os: macos-14
+            artifact: macos-arm64
             executable: conftamer
-            runner_arch: X64
+            runner_arch: ARM64
           - os: windows-2022
             artifact: windows-x86_64
             executable: conftamer.exe
