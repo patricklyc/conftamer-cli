@@ -35,7 +35,12 @@ class _RawDocument(_RawModel):
 
 def load_ctype_graph(path: str | Path) -> CTypeGraph:
     input_path = Path(path)
-    text = input_path.read_text(encoding="utf-8")
+    return _load_ctype_graph_bytes(input_path, input_path.read_bytes())
+
+
+def _load_ctype_graph_bytes(path: str | Path, data: bytes) -> CTypeGraph:
+    input_path = Path(path)
+    text = data.decode("utf-8")
     _validate_transport(input_path, text)
     raw = _RawDocument.model_validate_json(text)
     return _normalize(raw)
