@@ -43,23 +43,9 @@ from conftamer.pmgraph import (
 
 
 @dataclass(frozen=True)
-class ContextTrackWarning:
-    input_line: int
-    message: str
-
-
-@dataclass(frozen=True)
 class ContextTrackResult:
     graph: PMGraph
     diagnostics: tuple[Diagnostic, ...]
-
-    @property
-    def warnings(self) -> tuple[ContextTrackWarning, ...]:
-        return tuple(
-            ContextTrackWarning(item.line, item.message)
-            for item in self.diagnostics
-            if item.line is not None
-        )
 
 
 @dataclass(frozen=True)
@@ -121,14 +107,6 @@ def import_contexttrack(
         edges=_context_edges(occurrences, source.id),
     )
     return ContextTrackResult(graph, sort_diagnostics(diagnostics))
-
-
-def parse_contexttrack(
-    path: str | Path,
-    *,
-    module_id: str,
-) -> ContextTrackResult:
-    return import_contexttrack(path, module_id=module_id)
 
 
 def _read_records(

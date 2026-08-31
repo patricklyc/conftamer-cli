@@ -1,2 +1,0 @@
-Parameter,orgA/A,config_a,Send,orgA/A,orgB,GET 127.0.0.1 /namespaces/ns1/pods,200
-Receive,orgB/B,orgB,GET /*/pods,200,Send,orgB/B,orgC,GET 127.0.0.1 /namespaces/ns1/pods,200

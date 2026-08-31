@@ -172,3 +172,7 @@ def _user_errors() -> Iterator[None]:
 def _exit_with_error(message: str) -> Never:
     typer.echo(f"error: {message}", err=True)
     raise typer.Exit(code=1)
+
+
+if __name__ == "__main__":
+    app()

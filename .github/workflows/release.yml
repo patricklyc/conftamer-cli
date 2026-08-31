@@ -87,12 +87,15 @@ jobs:
           - os: ubuntu-22.04
             artifact: linux-x86_64
             executable: conftamer
-          - os: macos-14
+            runner_arch: X64
+          - os: macos-14-xlarge
             artifact: macos-arm64
             executable: conftamer
+            runner_arch: ARM64
           - os: windows-2022
             artifact: windows-x86_64
             executable: conftamer.exe
+            runner_arch: X64
 
     runs-on: ${{ matrix.os }}
     permissions:
@@ -115,6 +118,14 @@ jobs:
       - name: Install locked build dependencies
         run: uv sync --locked --no-dev --group build
 
+      - name: Verify release architecture
+        shell: bash
+        run: |
+          if [[ "$RUNNER_ARCH" != "${{ matrix.runner_arch }}" ]]; then
+            echo "Expected ${{ matrix.runner_arch }}, got $RUNNER_ARCH" >&2
+            exit 1
+          fi
+
       - name: Build one-file executable
         shell: bash
         run: |
@@ -125,44 +136,80 @@ jobs:
             --name conftamer \
             --paths src \
             --exclude-module tkinter \
-            src/conftamer/main.py
+            src/conftamer/cli.py
 
       - name: Smoke-test packaged CLI
         shell: bash
         run: |
           executable="./dist/${{ matrix.executable }}"
           "$executable" --help
-          "$executable" contexttrack --help
-          "$executable" graph --help
-          "$executable" subgraph --help
+          "$executable" build --help
+          "$executable" stitch --help
+          "$executable" query --help
+          "$executable" export --help
 
           mkdir -p smoke
-          cat > smoke/events.jsonl <<'EOF'
-          {"kind":"Request received","pid":1,"message":{"req.Method":"GET","req.URL.Path":"/health"},"context":{"context_id":"smoke"}}
+          cat > smoke/client.jsonl <<'EOF'
+          {"kind":"Request sent","pid":1,"message":{"req.Method":"GET","req.URL.Host":"server:8080","req.URL.Path":"/health"},"context":{"context_id":"client"}}
           EOF
-          "$executable" contexttrack \
-            smoke/events.jsonl \
-            --module-id example.org/smoke \
-            --output smoke/result.pmgraph.json
-          test -s smoke/result.pmgraph.json
+          cat > smoke/server.jsonl <<'EOF'
+          {"kind":"Request received","pid":2,"message":{"req.Method":"GET","req.URL.Path":"/health"},"context":{"context_id":"server"}}
+          EOF
+
+          "$executable" build \
+            --module-id example.org/client \
+            --events smoke/client.jsonl \
+            --output smoke/client.pmgraph.json
+          "$executable" build \
+            --module-id example.org/server \
+            --events smoke/server.jsonl \
+            --output smoke/server.pmgraph.json
+          "$executable" build \
+            --module-id github.com/prometheus/prometheus \
+            --events examples/contexttrack/prometheus/scrape-ok.jsonl \
+            --paramtrack-csv examples/paramtrack/runs/target-scraper-all/parameters.csv \
+            --unmarshaler examples/paramtrack/static/unmarshaler_subgraph.text \
+            --accessors examples/paramtrack/static/accessors.text \
+            --output smoke/enriched.pmgraph.json
+
+          "$executable" stitch \
+            smoke/client.pmgraph.json \
+            smoke/server.pmgraph.json \
+            --output smoke/application.appgraph.json
+          "$executable" query \
+            examples/paramtrack/static/accessors.text \
+            scrape.targetScraper \
+            --output smoke/ctype-query.graphml
+          "$executable" query \
+            smoke/enriched.pmgraph.json \
+            global.external_labels.data \
+            --direction descendants \
+            --output smoke/parameter-query.graphml
+          "$executable" export \
+            smoke/application.appgraph.json \
+            --output smoke/application.graphml
 
           uv run --no-sync python - <<'PY'
-          from pathlib import Path
+          import igraph as ig
 
-          from conftamer.pmgraph import PMGraph
+          from conftamer.appgraph import load_appgraph
+          from conftamer.pmgraph import load_pmgraph
 
-          PMGraph.model_validate_json(Path("smoke/result.pmgraph.json").read_text())
+          client = load_pmgraph("smoke/client.pmgraph.json")
+          server = load_pmgraph("smoke/server.pmgraph.json")
+          enriched = load_pmgraph("smoke/enriched.pmgraph.json")
+          application = load_appgraph("smoke/application.appgraph.json")
+          assert client.nodes and server.nodes and application.nodes
+          assert len(enriched.edges) == 109
+
+          for path in (
+              "smoke/ctype-query.graphml",
+              "smoke/parameter-query.graphml",
+              "smoke/application.graphml",
+          ):
+              graph = ig.Graph.Read_GraphML(path)
+              assert graph.vcount() > 0
           PY
-
-          cat > smoke/edges.csv <<'EOF'
-          Parameter,example.org/service,port,Send,example.org/service,example.org/api,GET /health,200
-          Receive,example.org/service,example.org/api,/health,200,Send,example.org/service,example.org/api,GET /status,200
-          EOF
-          "$executable" graph smoke/edges.csv
-          test -s smoke/edges.csv.graphml
-          rm smoke/edges.csv.graphml
-          "$executable" subgraph smoke/edges.csv port
-          test -s smoke/edges.csv.graphml
 
       - name: Name release executable
         shell: bash

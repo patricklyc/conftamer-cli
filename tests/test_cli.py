@@ -1,6 +1,8 @@
 import hashlib
 import importlib
 import json
+import subprocess
+import sys
 import tomllib
 from pathlib import Path
 
@@ -222,6 +224,18 @@ def test_installed_entry_point_targets_replacement_app():
     project = tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text())
 
     assert project["project"]["scripts"]["conftamer"] == "conftamer.cli:app"
+
+
+def test_replacement_cli_runs_as_a_packaging_entry_script():
+    result = subprocess.run(
+        [sys.executable, str(PROJECT_ROOT / "src/conftamer/cli.py"), "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "build" in result.stdout
 
 
 def test_build_writes_canonical_pmgraph_and_separates_diagnostics(tmp_path):

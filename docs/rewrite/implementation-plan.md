@@ -127,17 +127,17 @@ continue with task 6. A deferred task has no checkpoint commit.
 **Files:** `src/conftamer/paramtrack/{__init__.py,models.py,importer.py}`,
 `tests/paramtrack/test_importer.py`
 
-- [ ] Test the exact header, variable-width/quoted rows, no-key rows, empty key
+- [x] Test the exact header, variable-width/quoted rows, no-key rows, empty key
   cells, duplicate keys, malformed rows, and row-order-independent semantic
   IDs/edge endpoints with accurate reordered provenance.
-- [ ] Test empty Resource normalization, potentially truncated labels, preserved
+- [x] Test empty Resource normalization, potentially truncated labels, preserved
   API evidence, and exact leading-slash CType validation through either graph.
-- [ ] Test overlapping keys across several CTypes and merged line evidence.
-- [ ] Test one, zero, and several semantic method/path Send candidates; never
+- [x] Test overlapping keys across several CTypes and merged line evidence.
+- [x] Test one, zero, and several semantic method/path Send candidates; never
   compare ParamTrack `API` with ContextTrack `api_id`.
-- [ ] Assert target-scraper has 108 keys and manager rows have 133, 120, 201,
+- [x] Assert target-scraper has 108 keys and manager rows have 133, 120, 201,
   and 108 keys with a 226-key union.
-- [ ] Export `import_paramtrack` as a file importer, not a producer wrapper.
+- [x] Export `import_paramtrack` as a file importer, not a producer wrapper.
 
 **Checkpoint:** `feat: import targeted ParamTrack CSV`
 
@@ -145,16 +145,16 @@ continue with task 6. A deferred task has no checkpoint commit.
 
 **Files:** `src/conftamer/build.py`, `tests/test_build.py`
 
-- [ ] Test message-only builds and all-or-none ParamTrack/CType options.
-- [ ] Test module identity, source digests, evidence union, the caller-association
+- [x] Test message-only builds and all-or-none ParamTrack/CType options.
+- [x] Test module identity, source digests, evidence union, the caller-association
   diagnostic, and `unique-method-path` evidence.
-- [ ] Prove deterministic output under shuffled semantic inputs.
-- [ ] Run the target-scraper integration and assert 108 edges to one `GET /` Send.
-- [ ] Join manager CSV to a minimal unique `GET /metrics` trace and assert 226
+- [x] Prove deterministic output under shuffled semantic inputs.
+- [x] Run the target-scraper integration and assert 108 edges to one `GET /` Send.
+- [x] Join manager CSV to a minimal unique `GET /metrics` trace and assert 226
   deduplicated edges with all source lines.
-- [ ] Pair manager CSV with `all-tests.jsonl`; assert 47 candidates, an ambiguity
+- [x] Pair manager CSV with `all-tests.jsonl`; assert 47 candidates, an ambiguity
   diagnostic, and zero manager Parameter edges.
-- [ ] Validate serialized output through PMGraph v2.
+- [x] Validate serialized output through PMGraph v2.
 
 **Checkpoint:** `feat: build PMGraphs from upstream artifacts`
 
@@ -163,13 +163,13 @@ continue with task 6. A deferred task has no checkpoint commit.
 **Files:** `src/conftamer/analysis/{__init__.py,igraph.py}`,
 `tests/analysis/test_igraph.py`
 
-- [ ] Test isolated nodes, canonical names, direction, and semantic attributes.
-- [ ] Test exact/substring search, ambiguity, ancestors, descendants, and
+- [x] Test isolated nodes, canonical names, direction, and semantic attributes.
+- [x] Test exact/substring search, ambiguity, ancestors, descendants, and
   induced subgraphs.
-- [ ] Test optional-value sanitization and canonical nested JSON attributes.
-- [ ] Project PMGraph and CTypeGraph without merging their domain models.
-- [ ] Preserve grouped CType paths in `ast_paths_json`.
-- [ ] Export and re-read every tested GraphML with igraph.
+- [x] Test optional-value sanitization and canonical nested JSON attributes.
+- [x] Project PMGraph and CTypeGraph without merging their domain models.
+- [x] Preserve grouped CType paths in `ast_paths_json`.
+- [x] Export and re-read every tested GraphML with igraph.
 
 **Checkpoint:** `feat: analyze and export graphs with igraph`
 
@@ -179,18 +179,18 @@ continue with task 6. A deferred task has no checkpoint commit.
 `src/conftamer/analysis/igraph.py`, `tests/appgraph/`,
 `tests/analysis/test_igraph.py`
 
-- [ ] Reject fewer than two PMGraphs and duplicate module IDs; union source
+- [x] Reject fewer than two PMGraphs and duplicate module IDs; union source
   tables and validate all embedded evidence.
-- [ ] Test exact paths, trailing subtrees, `{name}`, `:name`, and terminal
+- [x] Test exact paths, trailing subtrees, `{name}`, `:name`, and terminal
   `*name`; reject unsupported syntax unless literal.
-- [ ] Test 1:1, 1:N, N:1, N:M, same-module, and no-candidate cases.
-- [ ] Prove host and `api_id` do not select a module and every accepted match is
+- [x] Test 1:1, 1:N, N:1, N:M, same-module, and no-candidate cases.
+- [x] Prove host and `api_id` do not select a module and every accepted match is
   visibly labeled `unique-http-labels`.
-- [ ] Match responses only through accepted request matches.
-- [ ] Add fixed AppNode IDs; test valid and invalid match-state combinations,
+- [x] Match responses only through accepted request matches.
+- [x] Add fixed AppNode IDs; test valid and invalid match-state combinations,
   three-module contraction, evidence-bearing edge origins, edge remapping,
   provenance, shuffled input order, and explicit unmatched pruning.
-- [ ] Export and re-read AppGraph GraphML.
+- [x] Export and re-read AppGraph GraphML.
 
 **Checkpoint:** `feat: stitch multiple PMGraphs into AppGraphs`
 
@@ -199,14 +199,14 @@ continue with task 6. A deferred task has no checkpoint commit.
 **Files:** `src/conftamer/cli.py`, `src/conftamer/__init__.py`,
 `pyproject.toml`, `tests/test_cli.py`
 
-- [ ] Write help and command smoke tests for `build`, `stitch`, `query`, and
+- [x] Write help and command smoke tests for `build`, `stitch`, `query`, and
   `export`; verify no analyzer, runner, or Delve command exists.
-- [ ] Keep orchestration thin; diagnostics use stderr and summaries use stdout.
-- [ ] Enforce all-or-none enrichment options and at least two stitch inputs.
-- [ ] Accept canonical JSON and verified CType transports in query/export without
+- [x] Keep orchestration thin; diagnostics use stderr and summaries use stdout.
+- [x] Enforce all-or-none enrichment options and at least two stitch inputs.
+- [x] Accept canonical JSON and verified CType transports in query/export without
   extra graph metadata.
-- [ ] Prove stitch output is input-order independent.
-- [ ] Change the entry point to `conftamer.cli:app` and format Python/TOML.
+- [x] Prove stitch output is input-order independent.
+- [x] Change the entry point to `conftamer.cli:app` and format Python/TOML.
 
 **Checkpoint:** `feat: replace CLI with graph compiler workflows`
 
@@ -219,17 +219,18 @@ continue with task 6. A deferred task has no checkpoint commit.
 **Update:** `README.md`, `docs/technical-reference.md`, `examples/README.md`,
 `.gitignore`, `.github/workflows/release.yml`, and `uv.lock` if required.
 
-- [ ] Delete old code only after all replacement tests pass.
-- [ ] Remove old commands, PMGraph v1, and `parse_contexttrack` exports while
+- [x] Delete old code only after all replacement tests pass.
+- [x] Remove old commands, PMGraph v1, and `parse_contexttrack` exports while
   retaining standard-library CSV use for ParamTrack.
-- [ ] Replace legacy examples and release smoke tests with build, enrichment,
+- [x] Replace legacy examples and release smoke tests with build, enrichment,
   CType query, multi-PMGraph stitch, query, and export workflows.
-- [ ] Make `docs/technical-reference.md` the current-release user/API guide;
+- [x] Make `docs/technical-reference.md` the current-release user/API guide;
   link to these contracts instead of repeating architecture or input schemas.
-- [ ] Document `.gv`, hierarchy, and producer logs as reference-only.
-- [ ] Search for stale imports, legacy CSV assumptions, invented GraphML fields,
+- [x] Document `.gv`, hierarchy, and producer logs as reference-only.
+- [x] Search for stale imports, legacy CSV assumptions, invented GraphML fields,
   split CType AST paths, exact ParamTrack correlation, and old CLI names.
-- [ ] Confirm final production code is at most 3,000 physical lines.
+- [x] Record the final production count: 3,119 physical lines under the
+  user-approved line-limit waiver for task 11.
 
 **Checkpoint:** `refactor: remove legacy CSV and PMGraph v1 workflows`
 

@@ -3,7 +3,8 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 
-from conftamer.contexttrack import import_contexttrack, parse_contexttrack
+import conftamer.contexttrack as contexttrack
+from conftamer.contexttrack import import_contexttrack
 from conftamer.pmgraph import (
     ReceiveRequestNode,
     ReceiveResponseNode,
@@ -268,15 +269,8 @@ def test_semantically_invalid_completed_hook_is_diagnosed(tmp_path):
     ]
 
 
-def test_legacy_parse_entry_point_retains_warning_view(tmp_path):
-    path = write_events(tmp_path, ["{bad json"])
-
-    result = parse_contexttrack(path, module_id=MODULE)
-
-    assert result.graph.nodes == ()
-    assert [(item.input_line, item.message) for item in result.warnings] == [
-        (1, result.diagnostics[0].message)
-    ]
+def test_parse_contexttrack_is_not_exported():
+    assert not hasattr(contexttrack, "parse_contexttrack")
 
 
 def test_scrape_ok_real_trace_imports_to_four_nodes_and_one_edge():

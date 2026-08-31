@@ -1,272 +1,267 @@
-# Technical reference
+# ConfTamer technical reference
 
-This document describes ConfTamer's conversion behavior, PMGraph format,
-programmatic API, limitations, and development workflow. For installation and
-command-line usage, see the [README](../README.md).
+This is the current-release command-line and Python API guide. Start with the
+[README](../README.md) for installation and short examples.
 
-The ContextTrack-to-PMGraph workflow is the primary implementation. The legacy
-CSV commands are retained for compatibility with the earlier prototype.
+Normative details intentionally live in two focused contracts:
 
-## ContextTrack conversion
+- [Target architecture](rewrite/architecture.md) defines canonical PMGraph v2,
+  AppGraph v1, matching, provenance, deterministic serialization, igraph
+  projection, and CLI behavior.
+- [Input formats and provenance](rewrite/input-formats.md) records observed
+  ContextTrack, ParamTrack, and gopls producer formats.
 
-### Conversion pipeline
+This guide links to those contracts instead of duplicating their schemas.
 
-The implementation follows this data flow:
+## Processing model
 
 ```text
 ContextTrack JSONL
-    -> validate and group events
-    -> reconstruct routes and correlate responses
-    -> convert events to PMGraph nodes
-    -> connect, deduplicate, sort, and serialize the graph
+    -> message nodes and conservative context influence
+
+ParamTrack CSV + Unmarshaler/Accessors CType .text graphs
+    -> validated aggregate Parameter enrichment
+
+message graph + optional enrichment
+    -> canonical PMGraph v2
+
+two or more PMGraphs
+    -> conservative cross-module matching
+    -> canonical AppGraph v1
+
+PMGraph, AppGraph, or CTypeGraph
+    -> python-igraph query/export
+    -> visualization GraphML
 ```
 
-1. **Read and validate.** Each nonblank line is validated as one of the five
-   supported ContextTrack event kinds. Unknown fields are preserved so newer
-   upstream fields do not destroy the nested `message`, `context`, or
-   `request_id` structures.
-2. **Group.** Valid events are grouped by `(pid, context_id)`. The process ID is
-   part of the key because context IDs are not assumed to be globally unique.
-3. **Match metadata.** Route events are matched to inbound requests, and
-   response events are correlated with the appropriate inbound or outbound
-   request.
-4. **Convert.** Convertible request events and successfully matched response
-   events become PMGraph message nodes. Flattening happens only at this
-   boundary; the validated ContextTrack models remain nested.
-5. **Connect.** Within each context group, every successfully converted
-   `Receive` occurrence influences every later `Send` occurrence.
-6. **Normalize output.** Duplicate nodes and edges are removed, then nodes and
-   edges are sorted deterministically before JSON serialization.
+Raw producer models do not enter canonical graph models. CType nodes remain in
+CTypeGraph, and GraphML is never used as canonical persistence.
 
-Events map to PMGraph nodes as follows:
+## Input and output boundaries
 
-- `Request received` becomes Receive Request, labeled with its method and
-  matched route pattern or request path.
-- `Request sent` becomes Send Request, labeled with its method, host, and path
-  from `request_id` when present, otherwise from `message`.
-- `Response received` becomes Receive Response, labeled from its matched
-  outbound request and response status.
-- `Response sent` becomes Send Response, labeled from its matched inbound
-  request and response status.
-- `Request routed` does not become a node. It supplies metadata for Receive
-  Request and Send Response labels.
+### Machine inputs
 
-### Route and response matching
+- ContextTrack JSONL containing the five supported HTTP event kinds;
+- targeted, headered, variable-width ParamTrack parameter CSV;
+- gopls CType `.text` JSON for the Unmarshaler and Accessors graphs;
+- canonical PMGraph v2 JSON; and
+- canonical AppGraph v1 JSON.
 
-ContextTrack can emit several route records while a request passes through
-nested routers. The converter reconstructs the full route pattern, including
-prefixes removed by `StripPrefix`-style middleware. It refuses to choose when a
-nested route can extend more than one active route chain. If no route can be
-matched, the inbound request still uses its concrete request path as a
-conservative fallback.
+The targeted ParamTrack CSV is unrelated to the removed prototype's headerless
+edge CSV. It continues to use Python's standard `csv` module.
 
-Responses with method and path data are matched to requests by exact method
-and path first. When several requests share an endpoint, a unique goroutine
-match can disambiguate them. If a received response has no exact endpoint
-candidate, matching may fall back to method and goroutine; redirected requests
-whose response hook reports a changed path are the motivating case, but the
-trace does not identify redirects explicitly.
+### Reference-only artifacts
 
-The Go HTTP instrumentation may report both a wire-level and a client-level
-hook for one received response. A later client hook is treated as a duplicate
-only when the most recent earlier received-response hook in the same context
-was matched and their status and method are compatible. This prevents a
-duplicate hook from consuming a newer request. Response hooks without method or
-path cannot be matched independently and may be omitted without a warning or
-node so that a later hook with usable endpoint data can represent the response.
+CType `.gv` files are Graphviz views, hierarchy files are human-readable
+ParamTrack derivatives, and gopls/ParamTrack/Delve logs are producer records.
+They are retained for inspection but are not ConfTamer machine inputs.
 
-### Labels and normalization
+Producer CType GraphML is also unsupported until real producer files establish
+its namespaces, keys, IDs, direction, defaults, and collection encoding.
+GraphML emitted by ConfTamer is visualization output only.
 
-`module_id` and `api_id` have different meanings:
+See [Input formats and provenance](rewrite/input-formats.md) for exact observed
+file contracts and rejection policy.
 
-- `module_id` names the module represented by the entire PMGraph.
-- `api_id` identifies the API or organization associated with an individual
-  communication event.
+## Command-line interface
 
-A single module graph may therefore contain several API IDs. An outbound
-request's `api_id` is preserved and copied to its matched Receive Response
-node.
+The installed entry point is `conftamer.cli:app`. All commands are
+noninteractive, require explicit output paths, print diagnostics to standard
+error, and print concise summaries to standard output.
 
-PMGraph requires nonempty HTTP labels. Empty request paths are normalized to
-`/`. An outbound request with no host cannot be labeled safely, so it is
-omitted with `request endpoint has no host` rather than assigned a guessed
-host.
-
-### Warnings and incomplete traces
-
-Warnings have this form:
+### `build`
 
 ```text
-warning: line 42: missing request match
+conftamer build --module-id MODULE --events EVENTS.jsonl
+    [--paramtrack-csv PARAMETERS.csv
+     --unmarshaler UNMARSHALER.text
+     --accessors ACCESSORS.text]
+    --output MODULE.pmgraph.json
 ```
 
-The converter can report:
+`--module-id` identifies the module represented by the complete trace. A
+message-only build omits all enrichment options. An enriched build requires all
+three options together and assigns the CType graph roles explicitly.
 
-- malformed or unsupported JSONL events;
-- events without a context ID;
-- ambiguous nested route chains;
-- routes without a matching inbound request;
-- missing or ambiguous request/response matches when the response contains
-  usable endpoint data;
-- endpoints that cannot satisfy the PMGraph schema.
+Supplying the inputs together is the caller's assertion that they describe a
+compatible corpus. ConfTamer cannot verify a shared run identity. ParamTrack
+rows join only to one unique semantic Send Request selected by normalized
+method/path; ParamTrack `API` is never compared with ContextTrack `api_id`.
 
-Warnings are sorted by input line. A convertible request event without a
-context ID can still contribute a node, but it cannot contribute a
-context-derived edge. The command writes the usable portion of the graph while
-reporting omitted or unmatched data.
+The output is deterministic, validated PMGraph v2 JSON ending in one newline.
 
-## PMGraph format
+### `stitch`
 
-PMGraph is schema-validated, immutable Pydantic data serialized as JSON. A
-graph has a fixed format marker and version. This abbreviated example is
-internally valid; converter-generated IDs replace the descriptive suffixes
-with SHA-256 digests:
-
-```json
-{
-  "format": "conftamer.pmgraph",
-  "version": 1,
-  "module_id": "example.org/service",
-  "nodes": [
-    {
-      "id": "n:receive-request",
-      "type": "Receive",
-      "message": "Request",
-      "api_id": "example.org/service",
-      "method": "GET",
-      "pattern": "/items/{id}"
-    },
-    {
-      "id": "n:send-request",
-      "type": "Send",
-      "message": "Request",
-      "api_id": "example.org/inventory",
-      "method": "POST",
-      "host": "inventory:8080",
-      "path": "/reserve"
-    }
-  ],
-  "edges": [
-    {
-      "source": "n:receive-request",
-      "target": "n:send-request"
-    }
-  ]
-}
+```text
+conftamer stitch MODULE_A.pmgraph.json MODULE_B.pmgraph.json
+    [MORE.pmgraph.json ...]
+    --output APPLICATION.appgraph.json
+    [--drop-unmatched]
 ```
 
-Supported node shapes are:
+At least two PMGraphs with distinct module IDs are required. Matching uses HTTP
+labels only: host and `api_id` do not select a destination module. A candidate
+pair is contracted only when both sides are mutually unique. Responses can
+match only through an accepted request match.
 
-| Node | Required label fields |
-| --- | --- |
-| Parameter | `name` |
-| Receive Request | `api_id`, `method`, `pattern` |
-| Send Request | `api_id`, `method`, `host`, `path` |
-| Receive Response | `api_id`, `method`, `host`, `path`, `status` |
-| Send Response | `api_id`, `method`, `pattern`, `status` |
+Unmatched nodes remain visible by default. `--drop-unmatched` removes singleton
+unmatched message nodes and incident edges while retaining Parameters,
+Behaviors, and matched communications.
 
-`api_id` may be `null`; the other label strings must be nonempty. HTTP methods
-are normalized to uppercase, and status codes must be integers from 100 through
-999.
+### `query`
 
-Every edge must reference existing nodes. Its source must be a `Receive` or
-`Parameter` node, its target must be a `Send` node, and self-edges are rejected.
-ContextTrack currently produces message nodes only; it does not produce
-Parameter nodes or configuration edges.
+```text
+conftamer query GRAPH.json|GRAPH.text QUERY
+    [--direction ancestors|descendants|both]
+    [--all-matches]
+    --output RESULT.graphml
+```
 
-The converter generates node IDs from the module ID and the node's semantic
-fields using canonical JSON and SHA-256. The graph builder sorts and
-deduplicates nodes and edges, so converter output is deterministic for the same
-normalized input. The PMGraph validator itself accepts any nonempty, unique
-node IDs.
+The input may be PMGraph v2, AppGraph v1, or verified CType `.text` JSON. An
+exact canonical vertex name takes precedence over case-insensitive substring
+search across projected attributes. No match is an error. Multiple matches are
+an error unless `--all-matches` is supplied.
 
-## Programmatic use
+The output is the induced GraphML subgraph containing selected vertices and
+their requested transitive reachability. `both` is the default direction.
 
-The supported ContextTrack entry point is exported from
-`conftamer.contexttrack`:
+### `export`
+
+```text
+conftamer export GRAPH.json|GRAPH.text --output GRAPH.graphml
+```
+
+`export` projects the complete validated graph to GraphML. PMGraph and AppGraph
+use canonical IDs as vertex names. CType edges preserve each grouped ordered
+AST path in the `ast_paths_json` attribute.
+
+## Diagnostics and provenance
+
+Independent malformed ContextTrack or ParamTrack records normally produce a
+diagnostic and are omitted; unreadable files and invalid file-level contracts
+are errors. Diagnostics have a stable code, message, optional source path, and
+optional physical line. Build- or stitch-level diagnostics have no source.
+
+Each canonical source records the SHA-256 digest of the exact input bytes.
+Nodes and edges carry compact evidence references such as physical input lines
+and derivation kinds. Evidence is merged but does not participate in semantic
+node identity. See [Diagnostics and provenance](rewrite/architecture.md#diagnostics-and-provenance)
+for the complete contract.
+
+PMGraph edges represent possible influence, not proof of causality. AppGraph
+matches are heuristic and visibly marked `unique-http-labels`.
+
+## Python API
+
+The high-level build boundary mirrors the CLI:
 
 ```python
-from conftamer.contexttrack import parse_contexttrack
+from conftamer.build import build_pmgraph
+from conftamer.pmgraph import write_pmgraph
 
-result = parse_contexttrack(
-    "events.jsonl",
+result = build_pmgraph(
     module_id="example.org/service",
+    events="events.jsonl",
+)
+write_pmgraph(result.graph, "service.pmgraph.json")
+
+for diagnostic in result.diagnostics:
+    print(diagnostic.code, diagnostic.message)
+```
+
+Add `paramtrack_csv`, `unmarshaler`, and `accessors` together for enrichment.
+The direct ContextTrack adapter is `conftamer.contexttrack.import_contexttrack`.
+
+Canonical PMGraph I/O and models are exported by `conftamer.pmgraph`:
+
+```python
+from conftamer.pmgraph import load_pmgraph, write_pmgraph
+
+graph = load_pmgraph("service.pmgraph.json")
+write_pmgraph(graph, "copy.pmgraph.json")
+```
+
+CType loading and projection:
+
+```python
+from conftamer.analysis import ctype_to_igraph
+from conftamer.ctype_graph import load_ctype_graph
+
+ctype = load_ctype_graph("accessors.text")
+projected = ctype_to_igraph(ctype)
+```
+
+AppGraph stitching and I/O:
+
+```python
+from conftamer.appgraph import (
+    load_appgraph,
+    stitch_pmgraph_files,
+    write_appgraph,
 )
 
-print(result.graph)
-for warning in result.warnings:
-    print(warning.input_line, warning.message)
+result = stitch_pmgraph_files(["frontend.pmgraph.json", "backend.pmgraph.json"])
+write_appgraph(result.graph, "application.appgraph.json")
+application = load_appgraph("application.appgraph.json")
 ```
 
-`result.graph` is a validated `PMGraph`; `result.warnings` is an input-line
-ordered tuple of warnings.
+Programmatic analysis uses the same implementation as the CLI:
 
-## Legacy CSV implementation
+```python
+from conftamer.analysis import (
+    find_vertices,
+    influence_subgraph,
+    to_igraph,
+    write_graphml,
+)
 
-The legacy CSV graph model and its GraphML output are separate from the PMGraph
-schema. Structurally invalid rows raise `ValueError("parsing error")`; invalid
-field values, such as a non-integer response code, surface Pydantic validation
-errors. New input formats should target PMGraph rather than extend the CSV
-representation.
-
-The `subgraph` command interprets a trimmed integer query as a zero-based vertex
-ID. Other queries use a trimmed, case-insensitive substring search over all
-populated node attribute values. The command uses a unique search match
-automatically and displays a numbered list of full node attributes when several
-vertices match. Invalid IDs, blank or unmatched queries, and ambiguous searches
-without a usable selection exit without writing GraphML.
-
-See the [README](../README.md#convert-legacy-csv-to-graphml) for accepted row
-shapes and command-line usage.
-
-## Limitations
-
-- A ContextTrack input should contain events for the module supplied through
-  `--module-id`; the converter cannot verify module ownership from the trace.
-- Context-derived edges are evidence of possible influence, not proof of
-  causality.
-- Response correlation is conservative because current traces do not contain a
-  stable request/response correlation ID.
-- Ambiguous routes and responses are reported rather than guessed.
-- ContextTrack does not currently describe configuration Parameter nodes.
-
-## Development
-
-The implementation is organized by conversion stage:
-
-```text
-src/conftamer/
-├── main.py                    # CLI orchestration
-├── pmgraph.py                 # PMGraph schema, validation, IDs, serialization
-├── csv_graph.py               # complete legacy CSV/igraph workflow
-└── contexttrack/
-    ├── events.py              # input models, JSONL reading, grouping
-    ├── routes.py              # route matching and reconstruction
-    ├── responses.py           # response correlation
-    └── conversion.py          # event-to-PMGraph conversion and graph assembly
+projected = to_igraph(application)
+matches = find_vertices(projected, "timeout")
+selected = influence_subgraph(projected, matches, direction="both")
+write_graphml(selected, "timeout.graphml")
 ```
 
-ContextTrack tests are split by the same behaviors in
-`tests/test_contexttrack_*.py`.
+Canonical model and function signatures are defined in the
+[architecture contract](rewrite/architecture.md). Loaders validate canonical
+ordering and identity; they do not silently repair noncanonical documents.
 
-Run formatting, type diagnostics, and tests with:
+## Current limitations
+
+- ContextTrack input does not prove ownership by the supplied module ID.
+- ParamTrack enrichment has no shared occurrence or run identity with
+  ContextTrack and is therefore aggregate and caller-asserted.
+- Ambiguous route, response, parameter, and cross-module matches are diagnosed
+  or retained rather than guessed.
+- Behavior nodes are schema-only because no producer contract creates them.
+- CType GraphML input is blocked; `.text` JSON is the only accepted CType
+  machine transport.
+- Stitching does not model deployment manifests, replicas, or many-to-one
+  contraction.
+- Canonical PMGraph/AppGraph JSON cannot be reconstructed from visualization
+  GraphML.
+
+## Development and verification
+
+Production modules are organized by domain under `src/conftamer/`; tests mirror
+those packages under `tests/`. Checked-in files under `examples/` are executable
+integration inputs rather than generated-output directories.
+
+Run the complete checks with:
 
 ```bash
 uvx ruff format --check src tests
+uvx tombi format --check pyproject.toml
 uvx ty check
 uv run pytest -q
-```
 
-For CLI changes, also run:
-
-```bash
 uv run conftamer --help
-uv run conftamer contexttrack --help
-uv run conftamer graph --help
-uv run conftamer subgraph --help
+uv run conftamer build --help
+uv run conftamer stitch --help
+uv run conftamer query --help
+uv run conftamer export --help
 ```
 
 ## License
 
 ConfTamer is licensed under the GNU General Public License, version 2 only.
-See [LICENSE](../LICENSE) for the complete terms.
+See [LICENSE](../LICENSE).

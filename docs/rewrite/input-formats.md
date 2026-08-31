@@ -59,11 +59,11 @@ See [`examples/README.md`](../../examples/README.md) and the
 provenance and usage. Generated PMGraph, AppGraph, and GraphML output does not
 belong in the example input directories.
 
-The older files directly under `examples/paramtrack/` are checked-in,
-byte-identical aliases of the organized `static/` and `runs/` artifacts. They
-are not additional producer shapes or independent fixtures. New integration
-work uses the cataloged organized paths; task 11 removes the aliases with the
-other stale example surfaces.
+Older files directly under `examples/paramtrack/` were byte-identical aliases
+of the organized `static/` and `runs/` artifacts, not additional producer
+shapes or independent fixtures. They were removed with the other stale example
+surfaces; the cataloged organized paths remain the checked-in artifacts used by
+integration work.
 
 ## ContextTrack JSONL
 
