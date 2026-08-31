@@ -3,8 +3,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from conftamer.diagnostics import NonEmptyString
 from conftamer.ctype_graph.models import CTypeEdge, CTypeGraph, CTypeNode
+from conftamer.diagnostics import NonEmptyString
 
 
 class _RawModel(BaseModel):
