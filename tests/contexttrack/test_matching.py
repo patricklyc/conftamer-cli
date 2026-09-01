@@ -331,6 +331,20 @@ def test_duplicate_client_hook_does_not_consume_a_newer_request():
     assert issues == []
 
 
+def test_repeated_duplicate_client_hooks_do_not_consume_a_newer_request():
+    first = sent_request(0)
+    wire = received_response(1)
+    duplicate = received_response(2, api_id="example.org/api")
+    newer = sent_request(3)
+    repeated_duplicate = received_response(4, api_id="example.org/api")
+    groups, _ = group_events([first, wire, duplicate, newer, repeated_duplicate])
+
+    matches, issues = match_responses(groups)
+
+    assert matches.received == {wire.sequence: first}
+    assert issues == []
+
+
 def test_api_hook_for_a_different_path_is_not_suppressed_as_a_duplicate():
     first = sent_request(0, path="/a")
     second = sent_request(1, path="/b")

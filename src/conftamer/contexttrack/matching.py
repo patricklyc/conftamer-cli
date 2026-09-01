@@ -178,8 +178,8 @@ def _match_response(
     issues: list[MatchIssue],
     previous: EventRecord | None,
 ) -> EventRecord:
-    if _is_duplicate(response, previous, matches):
-        return response
+    if previous is not None and _is_duplicate(response, previous, matches):
+        return previous
     if _endpoint(response) is None:
         return response
 
