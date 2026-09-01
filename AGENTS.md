@@ -190,7 +190,7 @@ duplicate endpoints, and missing edge endpoints as documented.
 
 ## Readability and line budget
 
-Production Python under `src/conftamer` has a hard review gate of **3,000
+Production Python under `src/conftamer` has a hard review gate of **3,300
 physical lines** and a target of 2,500. Record the cumulative count at every
 checkpoint:
 
