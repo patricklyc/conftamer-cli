@@ -1,159 +1,154 @@
-# ConfTamer graph conversion tool
+# ConfTamer graph compiler and explorer
 
-ConfTamer turns configuration and message-flow data into directed graphs. Choose
-the workflow that matches your input:
+ConfTamer consumes files emitted by ContextTrack, ParamTrack, and the gopls
+CType analysis. It builds deterministic canonical graphs, conservatively
+stitches module graphs into an application graph, and exports query results as
+GraphML for tools such as [Gephi Lite](https://lite.gephi.org/).
 
-| Input | Command | Output |
+| Workflow | Input | Output |
 | --- | --- | --- |
-| ContextTrack JSONL trace | `conftamer contexttrack` | Deterministic PMGraph JSON |
-| Legacy edge CSV | `conftamer graph` or `conftamer subgraph` | GraphML |
+| `build` | ContextTrack JSONL, optionally ParamTrack CSV and two CType graphs | PMGraph v2 JSON |
+| `stitch` | Two or more PMGraph v2 files | AppGraph v1 JSON |
+| `query` | PMGraph, AppGraph, or CType `.text` | Reachability GraphML |
+| `export` | PMGraph, AppGraph, or CType `.text` | Complete GraphML |
 
-## Install and run ConfTamer
+## Install and run
 
-### Run from a checkout
-
-You need Python 3.13 or newer and [uv](https://docs.astral.sh/uv/). From the
-repository root, install the locked dependencies and check that the command is
-available:
+ConfTamer requires Python 3.13 or newer. From a checkout with
+[uv](https://docs.astral.sh/uv/) installed:
 
 ```bash
 uv sync
 uv run conftamer --help
 ```
 
-The rest of this guide uses `uv run conftamer`. If ConfTamer is already
-installed in your active environment, you can use `conftamer` instead.
+The examples below use `uv run conftamer`. If ConfTamer is installed in the
+active environment, use `conftamer` directly.
 
-### Use a standalone binary from CI/CD
+### Standalone release binaries
 
-A standalone binary from a CI/CD job runs ConfTamer without installing Python,
-uv, or project dependencies:
-
-1. Open the repository's **Actions** tab.
-2. Select the **Release binaries** workflow, then open its latest successful
-   run.
-3. In **Artifacts**, download the archive for your job's platform:
-   - `conftamer-linux-x86_64`
-   - `conftamer-macos-arm64`
-   - `conftamer-windows-x86_64`
-4. Extract the archive.
-5. On Linux or macOS, make the extracted `conftamer-*` file executable:
-
-   ```bash
-   chmod +x conftamer-*
-   ```
-
-6. Run the extracted file directly. Windows binaries have an `.exe` extension.
-
-Workflow artifacts are kept for 14 days, so download the binary before the
-workflow run expires.
-
-## Convert ContextTrack JSONL to PMGraph
-
-Use this workflow when you have a ContextTrack trace. You need:
-
-- a JSONL file with one ContextTrack event on each nonblank line; and
-- a module ID for the module that produced the trace.
-
-Run the conversion:
+The **Release binaries** GitHub Actions workflow publishes Linux x86-64, macOS
+ARM64, and Windows x86-64 artifacts. Download the archive for your platform
+from a successful workflow run, extract it, and make the executable runnable
+on Linux or macOS:
 
 ```bash
-uv run conftamer contexttrack events.jsonl \
-  --module-id example.org/service
+chmod +x conftamer-*
+./conftamer-* --help
 ```
 
-ConfTamer writes the graph next to the input as
-`events.jsonl.pmgraph.json`.
+Workflow artifacts are retained for 14 days. Tagged releases also publish the
+executables and checksums on the repository's Releases page.
 
-ContextTrack traces do not include the module ID, so `--module-id` is required.
-Use the module represented by the complete trace, such as its Go module path.
+## Build a PMGraph
 
-To save the graph somewhere else, add `--output`:
+A message-only build requires a ContextTrack JSONL trace and the module ID
+represented by the trace:
 
 ```bash
-uv run conftamer contexttrack events.jsonl \
-  --module-id example.org/service \
-  --output service.pmgraph.json
+uv run conftamer build \
+  --module-id github.com/prometheus/prometheus \
+  --events examples/contexttrack/prometheus/scrape-ok.jsonl \
+  --output /tmp/prometheus.pmgraph.json
 ```
 
-If a line is malformed or contains an unsupported event, ConfTamer skips that
-line instead of stopping the whole conversion. It prints a warning with the
-original line number to standard error and writes a graph from the events it
-can use.
+ContextTrack does not provide a trustworthy module ID for the complete trace;
+the caller supplies it. Recoverable malformed or unmatched records are omitted
+with diagnostics on standard error. A concise output summary is written to
+standard output.
 
-## Convert legacy CSV to GraphML
+### Add ParamTrack enrichment
 
-Use this workflow for the headerless edge CSV format supported by the original
-ConfTamer prototype.
-
-### Create the full graph
+An enriched build requires all three enrichment options together: one targeted
+ParamTrack CSV and the Unmarshaler and Accessors CType graphs.
 
 ```bash
-uv run conftamer graph edges.csv
+uv run conftamer build \
+  --module-id github.com/prometheus/prometheus \
+  --events examples/contexttrack/prometheus/scrape-ok.jsonl \
+  --paramtrack-csv examples/paramtrack/runs/target-scraper-all/parameters.csv \
+  --unmarshaler examples/paramtrack/static/unmarshaler_subgraph.text \
+  --accessors examples/paramtrack/static/accessors.text \
+  --output /tmp/prometheus-enriched.pmgraph.json
 ```
 
-ConfTamer prints an `igraph` summary and writes `edges.csv.graphml`.
+Enrichment is aggregate and caller-asserted: the current producer files do not
+share a verifiable run identity. ConfTamer validates each CType and creates
+parameter influence edges only when method and path select one unique semantic
+Send Request.
 
-### Create a smaller subgraph
+## Stitch module graphs
 
-Use `subgraph` to choose one vertex. The result keeps that vertex, every
-vertex that can reach it, and every vertex it can reach:
+Stitch two or more PMGraphs whose `module_id` values are distinct:
 
 ```bash
-uv run conftamer subgraph edges.csv config_a
+uv run conftamer stitch \
+  frontend.pmgraph.json \
+  inventory.pmgraph.json \
+  --output application.appgraph.json
 ```
 
-The query can be either:
+ConfTamer contracts only mutually unique cross-module HTTP request/response
+matches. It retains unmatched nodes by default. To remove unmatched message
+nodes from the output, add `--drop-unmatched`.
 
-- a zero-based vertex ID, such as `0`; or
-- a case-insensitive text fragment matched against all node attributes, such
-  as `config_a`.
+## Query a graph
 
-A unique text match is selected automatically. If several nodes match,
-ConfTamer shows their full attributes and asks you to choose one. An invalid ID
-or a query with no matches exits without writing a graph.
-
-The selected subgraph is written to `edges.csv.graphml`, replacing an existing
-file at that path.
-
-
-You can open the generated GraphML file in a graph viewer such as
-[Gephi Lite](https://lite.gephi.org/).
-
-## Try the included examples
-
-The repository includes sample inputs for both workflows.
-
-### ContextTrack example
-
-Convert the small quickstart trace:
+`query` searches exact canonical IDs first, then case-insensitive substrings of
+visualization attributes. Ambiguous searches fail unless `--all-matches` is
+provided.
 
 ```bash
-uv run conftamer contexttrack \
-  examples/contexttrack/prometheus/scrape-ok.jsonl \
-  --module-id github.com/prometheus \
-  --output /tmp/scrape-ok.pmgraph.json
+uv run conftamer query \
+  /tmp/prometheus-enriched.pmgraph.json \
+  global.external_labels.data \
+  --direction descendants \
+  --output /tmp/parameter-influence.graphml
 ```
 
-The resulting graph is `/tmp/scrape-ok.pmgraph.json`.
+`--direction` accepts `ancestors`, `descendants`, or `both` (the default). The
+result contains the matched vertices and the requested transitive reachability
+as an induced subgraph.
 
-### Legacy CSV example
-
-Copy the example to a temporary directory first so the generated GraphML file
-does not appear in your checkout:
+CType `.text` graphs can be queried directly:
 
 ```bash
-cp examples/legacy/minimal.csv /tmp/conftamer-minimal.csv
-uv run conftamer graph /tmp/conftamer-minimal.csv
+uv run conftamer query \
+  examples/paramtrack/static/accessors.text \
+  scrape.targetScraper \
+  --output /tmp/target-scraper-ctype.graphml
 ```
 
-The resulting graph is `/tmp/conftamer-minimal.csv.graphml`.
+## Export a complete graph
 
-See the [example catalog](examples/README.md) for larger inputs, expected
-behavior, provenance notes, and more commands.
+```bash
+uv run conftamer export \
+  application.appgraph.json \
+  --output application.graphml
+```
 
-## Learn more
+GraphML is a visualization projection, not canonical persistence, and is not
+accepted as PMGraph or AppGraph input.
 
-See the [technical reference](docs/technical-reference.md) for detailed
-conversion behavior, the PMGraph schema, Python API usage, limitations, and
-development guidance.
+## Accepted and reference-only files
+
+Current machine inputs are ContextTrack JSONL, targeted ParamTrack CSV, gopls
+CType `.text` JSON, PMGraph v2 JSON, and AppGraph v1 JSON. CType `.gv` files,
+ParamTrack hierarchy files, and producer logs are reference-only. Producer
+CType GraphML remains blocked until real producer artifacts establish its
+transport contract.
+
+See:
+
+- the [example catalog](examples/README.md) for checked-in inputs and commands;
+- the [technical reference](docs/technical-reference.md) for CLI and Python API
+  behavior;
+- the [target architecture](docs/rewrite/architecture.md) for canonical graph,
+  matching, provenance, and serialization contracts; and
+- [input formats and provenance](docs/rewrite/input-formats.md) for observed
+  producer formats and evidence.
+
+## License
+
+ConfTamer is licensed under the GNU General Public License, version 2 only.
+See [LICENSE](LICENSE).

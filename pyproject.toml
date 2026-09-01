@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-conftamer = "conftamer.main:app"
+conftamer = "conftamer.cli:app"
 
 [dependency-groups]
 dev = [

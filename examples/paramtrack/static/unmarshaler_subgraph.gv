@@ -1,0 +1,298 @@
+strict digraph {
+
+
+	"github.com/prometheus/common/config.BasicAuth" [  weight=0 ];
+
+	"github.com/prometheus/common/config.BasicAuth" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.OTLPConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.OTLPConfig" -> "github.com/prometheus/otlptranslator.TranslationStrategyOption" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RuntimeConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteReadConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteReadConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteReadConfig" -> "github.com/prometheus/common/model.LabelSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteReadConfig" -> "github.com/prometheus/common/config.URL" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteReadConfig" -> "github.com/prometheus/common/model.Duration" [  weight=0 ];
+
+	"github.com/prometheus/common/config.URL" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.AzureADConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.AzureADConfig" -> "github.com/prometheus/prometheus/storage/remote/azuread.CertificateConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.AzureADConfig" -> "github.com/prometheus/prometheus/storage/remote/azuread.ManagedIdentityConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.AzureADConfig" -> "github.com/prometheus/prometheus/storage/remote/azuread.WorkloadIdentityConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.AzureADConfig" -> "github.com/prometheus/prometheus/storage/remote/azuread.OAuthConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.AzureADConfig" -> "github.com/prometheus/prometheus/storage/remote/azuread.SDKConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeConfig" -> "github.com/prometheus/prometheus/discovery.Configs" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeConfig" -> "github.com/prometheus/common/model.Duration" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeConfig" -> "github.com/prometheus/prometheus/config.ScrapeProtocol" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeConfig" -> "github.com/prometheus/common/model.ValidationScheme" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeConfig" -> "github.com/prometheus/prometheus/model/relabel.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeConfig" -> "net/url.Values" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeConfig" -> "github.com/alecthomas/units.Base2Bytes" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeConfigs" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeConfigs" -> "github.com/prometheus/prometheus/config.ScrapeConfig" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelValue" [  weight=0 ];
+
+	"github.com/prometheus/common/config.TLSConfig" [  weight=0 ];
+
+	"github.com/prometheus/common/config.TLSConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/common/config.TLSConfig" -> "github.com/prometheus/common/config.TLSVersion" [  weight=0 ];
+
+	"net/url.Values" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.OAuthConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.OAuthConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/relabel.Regexp" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.ManagedIdentityConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.GlobalConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.GlobalConfig" -> "github.com/prometheus/common/model.Duration" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.GlobalConfig" -> "github.com/prometheus/prometheus/config.ScrapeProtocol" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.GlobalConfig" -> "github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.GlobalConfig" -> "github.com/alecthomas/units.Base2Bytes" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.GlobalConfig" -> "github.com/prometheus/common/model.ValidationScheme" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.Configs" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery.Configs" -> "github.com/prometheus/prometheus/discovery.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.MetadataConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.MetadataConfig" -> "github.com/prometheus/common/model.Duration" [  weight=0 ];
+
+	"github.com/prometheus/client_golang/exp/api/remote.WriteMessageType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.QueueConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.QueueConfig" -> "github.com/prometheus/common/model.Duration" [  weight=0 ];
+
+	"github.com/prometheus/otlptranslator.TranslationStrategyOption" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.Config" -> "github.com/prometheus/prometheus/config.StorageConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.Config" -> "github.com/prometheus/prometheus/config.RemoteWriteConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.Config" -> "github.com/prometheus/prometheus/config.OTLPConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.Config" -> "github.com/prometheus/prometheus/config.ScrapeConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.Config" -> "github.com/prometheus/prometheus/config.GlobalConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.Config" -> "github.com/prometheus/prometheus/config.AlertingConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.Config" -> "github.com/prometheus/prometheus/config.TracingConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.Config" -> "github.com/prometheus/prometheus/config.RemoteReadConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.Config" -> "github.com/prometheus/prometheus/config.RuntimeConfig" [  weight=0 ];
+
+	"github.com/prometheus/common/config.Header" [  weight=0 ];
+
+	"github.com/prometheus/common/config.Header" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TSDBRetentionConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TSDBRetentionConfig" -> "github.com/prometheus/common/model.Duration" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TSDBRetentionConfig" -> "github.com/alecthomas/units.Base2Bytes" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertmanagerAPIVersion" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/targetgroup.Group" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/discovery/targetgroup.Group" -> "github.com/prometheus/common/model.LabelSet" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteWriteConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteWriteConfig" -> "github.com/prometheus/prometheus/model/relabel.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteWriteConfig" -> "github.com/prometheus/prometheus/storage/remote/googleiam.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteWriteConfig" -> "github.com/prometheus/common/model.Duration" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteWriteConfig" -> "github.com/prometheus/sigv4.SigV4Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteWriteConfig" -> "github.com/prometheus/common/config.URL" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteWriteConfig" -> "github.com/prometheus/client_golang/exp/api/remote.WriteMessageType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteWriteConfig" -> "github.com/prometheus/prometheus/config.MetadataConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteWriteConfig" -> "github.com/prometheus/prometheus/storage/remote/azuread.AzureADConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteWriteConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.RemoteWriteConfig" -> "github.com/prometheus/prometheus/config.QueueConfig" [  weight=0 ];
+
+	"github.com/prometheus/common/model.Duration" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ChunkEncodingConfig" [  weight=0 ];
+
+	"github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/common/config.HTTPClientConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/common/config.HTTPClientConfig" -> "github.com/prometheus/common/config.TLSConfig" [  weight=0 ];
+
+	"github.com/prometheus/common/config.HTTPClientConfig" -> "github.com/prometheus/common/config.Headers" [  weight=0 ];
+
+	"github.com/prometheus/common/config.HTTPClientConfig" -> "github.com/prometheus/common/config.BasicAuth" [  weight=0 ];
+
+	"github.com/prometheus/common/config.HTTPClientConfig" -> "github.com/prometheus/common/config.Authorization" [  weight=0 ];
+
+	"github.com/prometheus/common/config.HTTPClientConfig" -> "github.com/prometheus/common/config.OAuth2" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TracingConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TracingConfig" -> "github.com/prometheus/prometheus/config.TracingClientType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TracingConfig" -> "github.com/prometheus/common/config.TLSConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TracingConfig" -> "github.com/prometheus/common/model.Duration" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ExemplarsConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/relabel.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/relabel.Config" -> "github.com/prometheus/common/model.LabelNames" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/relabel.Config" -> "github.com/prometheus/prometheus/model/relabel.Regexp" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/relabel.Config" -> "github.com/prometheus/prometheus/model/relabel.Action" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/relabel.Config" -> "github.com/prometheus/common/model.ValidationScheme" [  weight=0 ];
+
+	"github.com/prometheus/common/config.TLSVersion" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.ScrapeProtocol" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelSet" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelSet" -> "github.com/prometheus/common/model.LabelValue" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelSet" -> "github.com/prometheus/common/model.LabelName" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.SDKConfig" [  weight=0 ];
+
+	"github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertmanagerConfigs" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertmanagerConfigs" -> "github.com/prometheus/prometheus/config.AlertmanagerConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertingConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertingConfig" -> "github.com/prometheus/prometheus/model/relabel.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertingConfig" -> "github.com/prometheus/prometheus/config.AlertmanagerConfigs" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TracingClientType" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TSDBConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TSDBConfig" -> "github.com/prometheus/common/model.Duration" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TSDBConfig" -> "github.com/prometheus/prometheus/config.ChunkEncodingConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.TSDBConfig" -> "github.com/prometheus/prometheus/config.TSDBRetentionConfig" [  weight=0 ];
+
+	"github.com/prometheus/common/model.ValidationScheme" [  weight=0 ];
+
+	"github.com/alecthomas/units.Base2Bytes" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelName" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/googleiam.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/labels.Labels" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelNames" [  weight=0 ];
+
+	"github.com/prometheus/common/model.LabelNames" -> "github.com/prometheus/common/model.LabelName" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.WorkloadIdentityConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.StorageConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.StorageConfig" -> "github.com/prometheus/prometheus/config.TSDBConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.StorageConfig" -> "github.com/prometheus/prometheus/config.ExemplarsConfig" [  weight=0 ];
+
+	"github.com/prometheus/sigv4.SigV4Config" [  weight=0 ];
+
+	"github.com/prometheus/sigv4.SigV4Config" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.CertificateConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/storage/remote/azuread.CertificateConfig" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/model/relabel.Action" [  weight=0 ];
+
+	"github.com/prometheus/common/config.Authorization" [  weight=0 ];
+
+	"github.com/prometheus/common/config.Authorization" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/common/config.OAuth2" [  weight=0 ];
+
+	"github.com/prometheus/common/config.OAuth2" -> "github.com/prometheus/common/config.Secret" [  weight=0 ];
+
+	"github.com/prometheus/common/config.OAuth2" -> "github.com/prometheus/common/config.TLSConfig" [  weight=0 ];
+
+	"github.com/prometheus/common/config.Headers" [  weight=0 ];
+
+	"github.com/prometheus/common/config.Headers" -> "github.com/prometheus/common/config.Header" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertmanagerConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertmanagerConfig" -> "github.com/prometheus/common/model.Duration" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertmanagerConfig" -> "github.com/prometheus/prometheus/config.AlertmanagerAPIVersion" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertmanagerConfig" -> "github.com/prometheus/prometheus/model/relabel.Config" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertmanagerConfig" -> "github.com/prometheus/prometheus/discovery.Configs" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertmanagerConfig" -> "github.com/prometheus/common/config.HTTPClientConfig" [  weight=0 ];
+
+	"github.com/prometheus/prometheus/config.AlertmanagerConfig" -> "github.com/prometheus/sigv4.SigV4Config" [  weight=0 ];
+
+}

@@ -1,12 +1,9 @@
-from conftamer.contexttrack.conversion import (
-    ContextTrackResult,
-    parse_contexttrack,
-)
-from conftamer.contexttrack.events import EVENT_ADAPTER, ContextTrackEvent
+from conftamer.contexttrack.importer import ContextTrackResult, import_contexttrack
+from conftamer.contexttrack.models import EVENT_ADAPTER, ContextTrackEvent
 
 __all__ = [
     "EVENT_ADAPTER",
     "ContextTrackEvent",
     "ContextTrackResult",
-    "parse_contexttrack",
+    "import_contexttrack",
 ]

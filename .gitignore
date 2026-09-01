@@ -12,6 +12,7 @@ wheels/
 *.gml
 *.graphml
 *.pmgraph.json
+*.appgraph.json
 *.pdf
 
 # Local captures and scratch inputs. Committed user-facing vectors live in
