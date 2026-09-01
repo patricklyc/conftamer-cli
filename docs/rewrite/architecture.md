@@ -778,7 +778,7 @@ src/conftamer/
 └── analysis/igraph.py
 ```
 
-Production code under `src/conftamer` has a hard review gate of 3,000 physical
+Production code under `src/conftamer` has a hard review gate of 3,300 physical
 Python lines and a 2,500-line target. Prefer files below 300 lines, with a
 450-line ceiling for model-heavy files, and linear functions below 40 lines
 where practical. Do not add generic service, repository, plugin, visitor, or

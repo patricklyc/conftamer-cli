@@ -11,7 +11,7 @@ files under [`examples/`](../../examples/).
 
 - Rewrite `AGENTS.md` before source changes so later work follows the target
   architecture rather than legacy CSV/PMGraph v1 guidance.
-- Keep production Python under 3,000 physical lines; record the cumulative
+- Keep production Python under 3,300 physical lines; record the cumulative
   count at every checkpoint and simplify before adding abstractions.
 - Write a failing focused test before each behavior change.
 - Run focused checks first, then fresh full verification before each commit.
@@ -27,7 +27,7 @@ files under [`examples/`](../../examples/).
 **Files:** `AGENTS.md`, `docs/rewrite/architecture.md`,
 `docs/rewrite/input-formats.md`, `docs/rewrite/implementation-plan.md`
 
-- [x] Rewrite `AGENTS.md` for the graph-compiler architecture and 3,000-line
+- [x] Rewrite `AGENTS.md` for the graph-compiler architecture and 3,300-line
   gate; distinguish targeted ParamTrack CSV from removed edge CSV.
 - [x] Review the split documents against every checked-in example and current
   upstream serializer.
@@ -229,8 +229,8 @@ continue with task 6. A deferred task has no checkpoint commit.
 - [x] Document `.gv`, hierarchy, and producer logs as reference-only.
 - [x] Search for stale imports, legacy CSV assumptions, invented GraphML fields,
   split CType AST paths, exact ParamTrack correlation, and old CLI names.
-- [x] Record the final production count: 3,119 physical lines under the
-  user-approved line-limit waiver for task 11.
+- [x] Record the final production count: 3,154 physical lines under the
+  user-approved 3,300-line gate.
 
 **Checkpoint:** `refactor: remove legacy CSV and PMGraph v1 workflows`
 

@@ -28,7 +28,7 @@ active environment, use `conftamer` directly.
 ### Standalone release binaries
 
 The **Release binaries** GitHub Actions workflow publishes Linux x86-64, macOS
-x86-64, and Windows x86-64 artifacts. Download the archive for your platform
+ARM64, and Windows x86-64 artifacts. Download the archive for your platform
 from a successful workflow run, extract it, and make the executable runnable
 on Linux or macOS:
 
