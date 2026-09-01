@@ -21,6 +21,13 @@ class ParamTrackRecord:
 
 
 @dataclass(frozen=True)
+class ParamTrackReadResult:
+    source: SourceArtifact
+    records: tuple[ParamTrackRecord, ...]
+    diagnostics: tuple[Diagnostic, ...]
+
+
+@dataclass(frozen=True)
 class ParamTrackResult:
     source: SourceArtifact
     records: tuple[ParamTrackRecord, ...]

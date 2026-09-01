@@ -11,6 +11,7 @@ GraphML for tools such as [Gephi Lite](https://lite.gephi.org/).
 | `stitch` | Two or more PMGraph v2 files | AppGraph v1 JSON |
 | `query` | PMGraph, AppGraph, or CType `.text` | Reachability GraphML |
 | `export` | PMGraph, AppGraph, or CType `.text` | Complete GraphML |
+| `debug` | Standalone ParamTrack CSV or verified CType `.text` | Diagnostic GraphML |
 
 ## Install and run
 
@@ -76,6 +77,30 @@ Enrichment is aggregate and caller-asserted: the current producer files do not
 share a verifiable run identity. ConfTamer validates each CType and creates
 parameter influence edges only when method and path select one unique semantic
 Send Request.
+
+## Debug standalone producer artifacts
+
+Export a targeted ParamTrack CSV without ContextTrack or CType inputs:
+
+```bash
+uv run conftamer debug paramtrack \
+  examples/paramtrack/runs/target-scraper-all/parameters.csv \
+  --output /tmp/paramtrack-debug.graphml
+```
+
+This standalone mode retains ParamTrack CType references without validating
+them. Its undirected edges are row-to-CType and row-to-parameter observation
+associations, never PMGraph influence or causality.
+
+A verified CType transport can be projected directly with the existing loader:
+
+```bash
+uv run conftamer debug ctype \
+  examples/paramtrack/static/accessors.text \
+  --output /tmp/accessors-debug.graphml
+```
+
+Both commands write visualization-only GraphML.
 
 ## Stitch module graphs
 

@@ -23,6 +23,7 @@ dependency or raising the Python version requires separate approval.
 This repository owns:
 
 - validation and normalization of the accepted upstream files;
+- standalone visualization of ParamTrack observations and verified CType graphs;
 - conservative ContextTrack route and response inference;
 - validation of ParamTrack CType references against US and Accessors graphs;
 - aggregate matching of ParamTrack rows to unique semantic Send Requests;
@@ -90,6 +91,11 @@ ParamTrack parameters.csv
     -> unique normalized (method, path) Send match
     -> Parameter nodes and Parameter -> Send Request edges
 
+ParamTrack parameters.csv
+    -> standalone CSV records and CSV-local diagnostics
+    -> undirected observation association graph
+    -> visualization GraphML
+
 US / Accessors
     accepted: *.text or JSON-leading CType JSON
     blocked:  *.graphml until the producer-contract gate passes
@@ -116,6 +122,8 @@ Boundary rules:
 - Partial ContextTrack hooks do not become incomplete semantic nodes.
 - Parameter keys are consumed from ParamTrack and are not recalculated.
 - ParamTrack joins only to Send Request nodes.
+- The standalone ParamTrack visualization path performs no CType validation,
+  Send matching, enrichment, or canonical serialization.
 - Canonical JSON never depends on igraph serialization.
 - Gephi GraphML is not accepted as PMGraph or AppGraph input.
 
@@ -443,6 +451,27 @@ identity.
 
 ## ParamTrack enrichment
 
+Standalone CSV reading preserves structurally valid observations and reports
+only CSV-local issues:
+
+```python
+@dataclass(frozen=True)
+class ParamTrackReadResult:
+    source: SourceArtifact
+    records: tuple[ParamTrackRecord, ...]
+    diagnostics: tuple[Diagnostic, ...]
+
+
+def read_paramtrack(path: str | Path) -> ParamTrackReadResult: ...
+```
+
+The local diagnostic set is `paramtrack.invalid_row`,
+`paramtrack.empty_key`, `paramtrack.empty_verb`, `paramtrack.empty_ctype`, and
+`paramtrack.possibly_truncated_message`. CType validation and the
+`paramtrack.unknown_ctype`, `paramtrack.no_send_candidate`, and
+`paramtrack.ambiguous_send_candidate` diagnostics require enrichment context
+and are not part of standalone reading.
+
 ParamTrack observations do not contain a shared ContextTrack run, process,
 host, or occurrence identity. The build indexes distinct semantic
 `SendRequestNode` values by:
@@ -708,11 +737,30 @@ def influence_subgraph(
     *,
     direction: Literal["ancestors", "descendants", "both"],
 ) -> ig.Graph: ...
+
+
+def paramtrack_to_igraph(
+    records: Iterable[ParamTrackRecord],
+) -> ig.Graph: ...
 ```
 
-Create all vertices before edges so isolated nodes survive. Use canonical IDs
-as igraph vertex `name`, preserve canonical order, and never persist igraph
-indices or reconstruct canonical JSON from igraph. Exact IDs take precedence
+The ParamTrack projector creates a deterministic undirected association graph,
+not an influence graph. It inserts row vertices sorted by physical input line,
+then distinct nonempty CTypes and parameter keys in lexical order. Vertex names
+are `row:<physical-line>`, `ctype:<exact CType>`, and
+`parameter:<exact key>`. Every vertex has string-valued `name`, `label`,
+`node_type`, `source_line`, `api`, `verb`, `resource`, `ctype`, and
+`parameter_key` attributes, with `""` for fields that do not apply. Row labels
+are `line N: VERB RESOURCE`; CType and Parameter labels preserve exact values.
+Each nonempty row CType has one Row—CType edge with `relation="ctype"`; each
+lexically ordered, deduplicated nonempty row key has one Row—Parameter edge with
+`relation="parameter"`. Rows with no associations remain isolated. These edges
+assert no influence, causality, CType validity, or Send match. ParamTrack is not
+a `GraphDocument` and this visualization is not canonical serialization.
+
+Create all vertices before edges so isolated nodes survive. For canonical graph
+projectors, use canonical IDs as igraph vertex `name`, preserve canonical order,
+and never persist igraph indices or reconstruct canonical JSON from igraph. Exact IDs take precedence
 over case-insensitive substring search. Query output is the induced subgraph
 of selected vertices and requested transitive reachability.
 
@@ -731,7 +779,8 @@ tests.
 
 ## CLI contract
 
-The replacement CLI has four noninteractive commands:
+The replacement CLI has five noninteractive top-level commands, including a
+nested diagnostic group:
 
 ```text
 conftamer build --module-id MODULE --events EVENTS.jsonl
@@ -748,6 +797,10 @@ conftamer query GRAPH.json|GRAPH.text QUERY
     --output RESULT.graphml
 
 conftamer export GRAPH.json|GRAPH.text --output GRAPH.graphml
+
+conftamer debug paramtrack PARAMETERS.csv --output PARAMETERS.graphml
+
+conftamer debug ctype GRAPH.text --output CTYPE.graphml
 ```
 
 Verified CType `.graphml` joins these input positions only after the producer
@@ -759,9 +812,13 @@ accepts `.text` or JSON-leading content using its verified
 `Edges`/`Vertices`/`List` producer envelope and is never confused with canonical
 JSON.
 
-Transformation logic stays outside `cli.py`; diagnostics go to stderr, concise
-summaries to stdout, ambiguous queries fail without `--all-matches`, and every
-input is validated before use. No analyzer, runner, or Delve command is added.
+`debug paramtrack` reads a standalone targeted CSV and writes the undirected,
+visualization-only observation graph without CType validation or Send matching.
+`debug ctype` reuses the verified CType loader and projector. Neither command
+creates canonical PMGraph or AppGraph semantics. Transformation logic stays
+outside `cli.py`; diagnostics go to stderr, concise summaries to stdout,
+ambiguous queries fail without `--all-matches`, and every applicable input is
+validated before use. No analyzer, runner, or Delve command is added.
 
 ## Target source layout and readability budget
 
@@ -800,8 +857,10 @@ ParamTrack CSV support.
 Initial limitations include no observable Behavior production, no verified
 CType GraphML input, no deployment-aware module identity, no many-to-one
 AppGraph contraction, no replicas of one module ID, and no canonical
-PMGraph/AppGraph GraphML round-trip. Ambiguous associations are diagnosed and
-omitted rather than guessed.
+PMGraph/AppGraph GraphML round-trip. Standalone ParamTrack GraphML retains raw,
+unvalidated CType references and undirected observation associations; it is not
+a canonical or influence format. Ambiguous enrichment associations are
+diagnosed and omitted rather than guessed.
 
 ## Rule of thumb
 

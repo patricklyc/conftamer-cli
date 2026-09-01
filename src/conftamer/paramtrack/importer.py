@@ -13,12 +13,34 @@ from conftamer.diagnostics import (
 )
 from conftamer.paramtrack.models import (
     ParamMessageKey,
+    ParamTrackReadResult,
     ParamTrackRecord,
     ParamTrackResult,
 )
 from conftamer.pmgraph import ParameterNode, PMEdge, SendRequestNode, make_node_id
 
 _HEADER = ["API", "Verb", "Resource", "CType", "Param key"]
+
+
+def read_paramtrack(path: str | Path) -> ParamTrackReadResult:
+    source_path = Path(path)
+    source_name = str(path)
+    data = source_path.read_bytes()
+    source = SourceArtifact(
+        id=f"sha256:{hashlib.sha256(data).hexdigest()}",
+        kind="paramtrack-csv",
+    )
+    records, diagnostics = _read_records(data, source_name)
+    diagnostics.extend(
+        diagnostic
+        for record in records
+        for diagnostic in _local_record_diagnostics(record, source_name)
+    )
+    return ParamTrackReadResult(
+        source=source,
+        records=tuple(records),
+        diagnostics=sort_diagnostics(diagnostics),
+    )
 
 
 def import_paramtrack(
@@ -29,16 +51,11 @@ def import_paramtrack(
     unmarshaler: CTypeGraph,
     accessors: CTypeGraph,
 ) -> ParamTrackResult:
-    source_path = Path(path)
     source_name = str(path)
-    data = source_path.read_bytes()
-    source = SourceArtifact(
-        id=f"sha256:{hashlib.sha256(data).hexdigest()}",
-        kind="paramtrack-csv",
-    )
-    records, diagnostics = _read_records(data, source_name)
+    read_result = read_paramtrack(path)
+    diagnostics = list(read_result.diagnostics)
     eligible = _eligible_records(
-        records,
+        read_result.records,
         source_name,
         unmarshaler,
         accessors,
@@ -47,14 +64,14 @@ def import_paramtrack(
     nodes, edges = _join_records(
         eligible,
         module_id,
-        source,
+        read_result.source,
         source_name,
         send_requests,
         diagnostics,
     )
     return ParamTrackResult(
-        source=source,
-        records=tuple(records),
+        source=read_result.source,
+        records=read_result.records,
         nodes=tuple(sorted(nodes, key=lambda node: node.id)),
         edges=tuple(sorted(edges, key=lambda edge: (edge.source, edge.target))),
         diagnostics=sort_diagnostics(diagnostics),
@@ -127,8 +144,42 @@ def _read_records(
     return records, diagnostics
 
 
+def _local_record_diagnostics(
+    record: ParamTrackRecord, source_name: str
+) -> tuple[Diagnostic, ...]:
+    diagnostics = []
+    if not record.verb:
+        diagnostics.append(
+            _diagnostic(
+                source_name,
+                record.input_line,
+                "paramtrack.empty_verb",
+                "Verb is empty",
+            )
+        )
+    if not record.ctype:
+        diagnostics.append(
+            _diagnostic(
+                source_name,
+                record.input_line,
+                "paramtrack.empty_ctype",
+                "CType is empty",
+            )
+        )
+    if len(record.verb) >= 10 or len(record.resource) >= 10:
+        diagnostics.append(
+            _diagnostic(
+                source_name,
+                record.input_line,
+                "paramtrack.possibly_truncated_message",
+                "Verb or Resource may have been truncated by ParamTrack",
+            )
+        )
+    return tuple(diagnostics)
+
+
 def _eligible_records(
-    records: list[ParamTrackRecord],
+    records: Iterable[ParamTrackRecord],
     source_name: str,
     unmarshaler: CTypeGraph,
     accessors: CTypeGraph,
@@ -137,28 +188,8 @@ def _eligible_records(
     represented = unmarshaler.name_to_node.keys() | accessors.name_to_node.keys()
     eligible: dict[ParamMessageKey, list[ParamTrackRecord]] = {}
     for record in records:
-        usable = True
-        if not record.verb:
-            diagnostics.append(
-                _diagnostic(
-                    source_name,
-                    record.input_line,
-                    "paramtrack.empty_verb",
-                    "Verb is empty",
-                )
-            )
-            usable = False
-        if not record.ctype:
-            diagnostics.append(
-                _diagnostic(
-                    source_name,
-                    record.input_line,
-                    "paramtrack.empty_ctype",
-                    "CType is empty",
-                )
-            )
-            usable = False
-        elif record.ctype not in represented:
+        ctype_known = record.ctype in represented
+        if record.ctype and not ctype_known:
             diagnostics.append(
                 _diagnostic(
                     source_name,
@@ -167,18 +198,13 @@ def _eligible_records(
                     f"CType {record.ctype!r} is not represented",
                 )
             )
-            usable = False
-        if len(record.verb) >= 10 or len(record.resource) >= 10:
-            diagnostics.append(
-                _diagnostic(
-                    source_name,
-                    record.input_line,
-                    "paramtrack.possibly_truncated_message",
-                    "Verb or Resource may have been truncated by ParamTrack",
-                )
-            )
-            usable = False
-        if usable and record.keys:
+        locally_usable = (
+            bool(record.verb)
+            and bool(record.ctype)
+            and len(record.verb) < 10
+            and len(record.resource) < 10
+        )
+        if locally_usable and ctype_known and record.keys:
             key = ParamMessageKey(record.verb.upper(), record.resource or "/")
             eligible.setdefault(key, []).append(record)
     return eligible

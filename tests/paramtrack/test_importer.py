@@ -5,7 +5,7 @@ import pytest
 
 from conftamer.ctype_graph import CTypeGraph, CTypeNode, load_ctype_graph
 from conftamer.diagnostics import EvidenceRef
-from conftamer.paramtrack import import_paramtrack
+from conftamer.paramtrack import import_paramtrack, read_paramtrack
 from conftamer.pmgraph import SendRequestNode, make_node_id
 
 MODULE = "example.org/service"
@@ -122,6 +122,42 @@ def test_rejects_unreadable_or_lexically_malformed_csv(tmp_path):
         import_csv(malformed)
 
 
+def test_reads_paramtrack_without_enrichment_inputs(tmp_path):
+    path = write_csv(
+        tmp_path,
+        HEADER
+        + "api,,/ok,/Type,alpha,,alpha\n"
+        + "api,GET,/123456789,,beta\n"
+        + "too,short,for\n",
+    )
+
+    result = read_paramtrack(path)
+
+    assert result.source.id == (
+        f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
+    )
+    assert [(record.input_line, record.keys) for record in result.records] == [
+        (2, ("alpha",)),
+        (3, ("beta",)),
+    ]
+    assert [(item.line, item.code) for item in result.diagnostics] == [
+        (2, "paramtrack.empty_key"),
+        (2, "paramtrack.empty_verb"),
+        (3, "paramtrack.empty_ctype"),
+        (3, "paramtrack.possibly_truncated_message"),
+        (4, "paramtrack.invalid_row"),
+    ]
+    assert not any(
+        item.code
+        in {
+            "paramtrack.unknown_ctype",
+            "paramtrack.no_send_candidate",
+            "paramtrack.ambiguous_send_candidate",
+        }
+        for item in result.diagnostics
+    )
+
+
 def test_parses_quoted_variable_width_rows_and_tracks_starting_physical_lines(
     tmp_path,
 ):
@@ -185,6 +221,27 @@ def test_invalid_identities_truncation_and_exact_ctype_validation_are_local(
         "paramtrack.possibly_truncated_message",
         "paramtrack.possibly_truncated_message",
         "paramtrack.unknown_ctype",
+    ]
+
+
+def test_enrichment_preserves_unknown_ctype_with_other_local_row_issues(tmp_path):
+    path = write_csv(
+        tmp_path,
+        HEADER
+        + "api,,/ok,/Unknown,empty-verb\n"
+        + "api,GET,/123456789,/Unknown,truncated\n"
+        + "api,,/ok,,empty-both\n",
+    )
+
+    result = import_csv(path)
+
+    assert [(item.line, item.code) for item in result.diagnostics] == [
+        (2, "paramtrack.empty_verb"),
+        (2, "paramtrack.unknown_ctype"),
+        (3, "paramtrack.possibly_truncated_message"),
+        (3, "paramtrack.unknown_ctype"),
+        (4, "paramtrack.empty_ctype"),
+        (4, "paramtrack.empty_verb"),
     ]
 
 

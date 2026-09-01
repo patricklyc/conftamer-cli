@@ -72,6 +72,27 @@ uv run conftamer build \
 Supplying these inputs is the caller's assertion that they describe a compatible
 corpus; the producer files contain no shared verifiable run identity.
 
+### Debug standalone producer files
+
+Project the real target-scraper ParamTrack observation without enrichment
+context. Its CType reference remains unvalidated and its undirected edges are
+visualization-only associations:
+
+```bash
+uv run conftamer debug paramtrack \
+  examples/paramtrack/runs/target-scraper-all/parameters.csv \
+  --output /tmp/paramtrack-debug.graphml
+```
+
+Project the real Accessors CType graph through the existing verified loader and
+projector:
+
+```bash
+uv run conftamer debug ctype \
+  examples/paramtrack/static/accessors.text \
+  --output /tmp/accessors-debug.graphml
+```
+
 ### Query a CType graph
 
 ```bash

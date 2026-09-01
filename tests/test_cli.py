@@ -198,6 +198,9 @@ def write_graph_inputs(tmp_path: Path) -> dict[str, tuple[Path, str, int]]:
         ("stitch", "--help"),
         ("query", "--help"),
         ("export", "--help"),
+        ("debug", "--help"),
+        ("debug", "paramtrack", "--help"),
+        ("debug", "ctype", "--help"),
     ],
 )
 def test_replacement_help_exposes_graph_compiler_commands(arguments):
@@ -205,7 +208,7 @@ def test_replacement_help_exposes_graph_compiler_commands(arguments):
 
     assert result.exit_code == 0, result.output
     if arguments == ("--help",):
-        for command in ("build", "stitch", "query", "export"):
+        for command in ("build", "stitch", "query", "export", "debug"):
             assert command in result.stdout
 
 
@@ -218,6 +221,123 @@ def test_replacement_cli_has_no_legacy_or_producer_commands(command):
 
     assert result.exit_code != 0
     assert "No such command" in result.output
+
+
+def test_debug_paramtrack_writes_association_graph_and_separates_diagnostics(
+    tmp_path,
+):
+    input_path = tmp_path / "parameters.csv"
+    input_path.write_text(
+        "API,Verb,Resource,CType,Param key\n"
+        "api-a,GET,/,/Type,alpha,shared,\n"
+        "api-b,POST,/x,/Type,shared\n",
+        encoding="utf-8",
+    )
+    output = tmp_path / "paramtrack.graphml"
+
+    result = invoke(
+        "debug",
+        "paramtrack",
+        str(input_path),
+        "--output",
+        str(output),
+    )
+
+    assert result.exit_code == 0, result.output
+    graph = ig.Graph.Read_GraphML(str(output))
+    assert not graph.is_directed()
+    assert graph.vs["name"] == [
+        "row:2",
+        "row:3",
+        "ctype:/Type",
+        "parameter:alpha",
+        "parameter:shared",
+    ]
+    assert sorted(graph.es["relation"]) == [
+        "ctype",
+        "ctype",
+        "parameter",
+        "parameter",
+        "parameter",
+    ]
+    assert "ParamTrack GraphML" in result.stdout
+    assert "paramtrack.empty_key" not in result.stdout
+    assert "paramtrack.empty_key" in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("character", "existing_output"),
+    [("\x00", None), ("\x01", b"existing output")],
+)
+def test_debug_paramtrack_rejects_xml_controls_without_damaging_output(
+    tmp_path, character, existing_output
+):
+    input_path = tmp_path / "parameters.csv"
+    input_path.write_text(
+        f"API,Verb,Resource,CType,Param key\napi,GET,/,/Type,a{character}b\n",
+        encoding="utf-8",
+    )
+    output = tmp_path / "paramtrack.graphml"
+    if existing_output is not None:
+        output.write_bytes(existing_output)
+
+    result = invoke(
+        "debug",
+        "paramtrack",
+        str(input_path),
+        "--output",
+        str(output),
+    )
+
+    assert result.exit_code == 1
+    assert f"U+{ord(character):04X}" in result.stderr
+    assert "Traceback" not in result.stderr
+    if existing_output is None:
+        assert not output.exists()
+    else:
+        assert output.read_bytes() == existing_output
+
+
+def test_debug_paramtrack_rejects_an_invalid_header_without_output(tmp_path):
+    input_path = tmp_path / "parameters.csv"
+    input_path.write_text(
+        "API,Verb,Resource,CType,Wrong\n",
+        encoding="utf-8",
+    )
+    output = tmp_path / "paramtrack.graphml"
+
+    result = invoke(
+        "debug",
+        "paramtrack",
+        str(input_path),
+        "--output",
+        str(output),
+    )
+
+    assert result.exit_code == 1
+    assert "invalid ParamTrack CSV header" in result.stderr
+    assert not output.exists()
+
+
+def test_debug_ctype_reuses_verified_projection(tmp_path):
+    input_path = write_ctype(tmp_path / "types.text")
+    output = tmp_path / "ctype.graphml"
+
+    result = invoke(
+        "debug",
+        "ctype",
+        str(input_path),
+        "--output",
+        str(output),
+    )
+
+    assert result.exit_code == 0, result.output
+    graph = ig.Graph.Read_GraphML(str(output))
+    assert graph.is_directed()
+    assert graph.vcount() == 3
+    assert graph.get_edgelist() == [(0, 1), (1, 2)]
+    assert "CType GraphML" in result.stdout
+    assert result.stderr == ""
 
 
 def test_installed_entry_point_targets_replacement_app():
@@ -411,17 +531,25 @@ def test_ctype_dispatch_accepts_json_content_independent_of_suffix(
 
 
 @pytest.mark.parametrize(
-    ("suffix", "message"),
+    ("command", "suffix", "message"),
     [
-        (".gv", "Graphviz CType input is not supported"),
-        (".graphml", "GraphML input is not supported"),
+        (("export",), ".gv", "Graphviz CType input is not supported"),
+        (("debug", "ctype"), ".gv", "Graphviz CType input is not supported"),
+        (("export",), ".graphml", "visualization GraphML input is not supported"),
+        (
+            ("debug", "ctype"),
+            ".graphml",
+            "GraphML CType input is not supported",
+        ),
     ],
 )
-def test_ctype_dispatch_preserves_blocked_suffix_rejection(tmp_path, suffix, message):
+def test_ctype_dispatch_preserves_blocked_suffix_rejection(
+    tmp_path, command, suffix, message
+):
     input_path = write_ctype(tmp_path / f"types{suffix}")
     output = tmp_path / "output.graphml"
 
-    result = invoke("export", str(input_path), "--output", str(output))
+    result = invoke(*command, str(input_path), "--output", str(output))
 
     assert result.exit_code != 0
     assert message in result.output

@@ -8,12 +8,14 @@ from conftamer.analysis import (
     ctype_to_igraph,
     find_vertices,
     influence_subgraph,
+    paramtrack_to_igraph,
     to_igraph,
     write_graphml,
 )
 from conftamer.appgraph import stitch_pmgraphs
 from conftamer.ctype_graph import CTypeEdge, CTypeGraph, CTypeNode
 from conftamer.diagnostics import EvidenceRef, SourceArtifact
+from conftamer.paramtrack import ParamTrackRecord
 from conftamer.pmgraph import (
     BehaviorNode,
     ParameterNode,
@@ -303,6 +305,69 @@ def test_ctype_projection_preserves_nested_semantics_and_grouped_ast_paths():
     assert graph.vs.find(name="/child.Type")["tags_json"] == ""
     assert graph.vs.find(name="/isolated.Type")["tags_json"] == "{}"
     assert graph.es[0]["ast_paths_json"] == ('[["Field:a"],["Field:z","Tail"]]')
+
+
+def test_paramtrack_projection_preserves_rows_and_shared_associations(tmp_path):
+    records = (
+        ParamTrackRecord(
+            2,
+            "api-a",
+            "GET",
+            "/",
+            "/A",
+            ("shared", "", "alpha", "shared"),
+        ),
+        ParamTrackRecord(3, "api-b", "POST", "/x", "/A", ("shared",)),
+        ParamTrackRecord(4, "api-c", "GET", "/empty", "", ()),
+    )
+
+    graph = paramtrack_to_igraph(reversed(records))
+
+    assert not graph.is_directed()
+    assert graph.vs["name"] == [
+        "row:2",
+        "row:3",
+        "row:4",
+        "ctype:/A",
+        "parameter:alpha",
+        "parameter:shared",
+    ]
+    assert graph.vcount() == 6
+    assert graph.ecount() == 5
+    assert graph.vs.find(name="row:2")["api"] == "api-a"
+    assert graph.vs.find(name="row:4")["ctype"] == ""
+    assert graph.vs.find(name="parameter:shared")["parameter_key"] == "shared"
+    assert all(
+        isinstance(value, str)
+        for vertex in graph.vs
+        for value in vertex.attributes().values()
+    )
+    assert graph.get_edgelist() == [
+        (0, 3),
+        (0, 4),
+        (0, 5),
+        (1, 3),
+        (1, 5),
+    ]
+    assert graph.es["relation"] == [
+        "ctype",
+        "parameter",
+        "parameter",
+        "ctype",
+        "parameter",
+    ]
+
+    ordered = paramtrack_to_igraph(records)
+    assert ordered.vs["name"] == graph.vs["name"]
+    assert ordered.get_edgelist() == graph.get_edgelist()
+    assert ordered.es["relation"] == graph.es["relation"]
+
+    output = tmp_path / "paramtrack.graphml"
+    write_graphml(graph, output)
+    loaded = ig.Graph.Read_GraphML(str(output))
+    assert not loaded.is_directed()
+    assert loaded.vs["name"] == graph.vs["name"]
+    assert loaded.es["relation"] == graph.es["relation"]
 
 
 def test_find_vertices_prefers_exact_canonical_names():

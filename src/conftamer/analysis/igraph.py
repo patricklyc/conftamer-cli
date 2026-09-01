@@ -7,6 +7,7 @@ import igraph as ig
 
 from conftamer.appgraph import AppGraph, AppNode
 from conftamer.ctype_graph import CTypeGraph
+from conftamer.paramtrack import ParamTrackRecord
 from conftamer.pmgraph import (
     BehaviorNode,
     ParameterNode,
@@ -76,6 +77,63 @@ def ctype_to_igraph(document: CTypeGraph) -> ig.Graph:
     return graph
 
 
+def paramtrack_to_igraph(records: Iterable[ParamTrackRecord]) -> ig.Graph:
+    ordered = tuple(sorted(records, key=lambda record: record.input_line))
+    ctypes = sorted({record.ctype for record in ordered if record.ctype})
+    parameters = sorted({key for record in ordered for key in record.keys if key})
+    vertices = [
+        {
+            "name": f"row:{record.input_line}",
+            "label": f"line {record.input_line}: {record.verb} {record.resource}",
+            "node_type": "Row",
+            "source_line": str(record.input_line),
+            "api": record.api,
+            "verb": record.verb,
+            "resource": record.resource,
+            "ctype": record.ctype,
+            "parameter_key": "",
+        }
+        for record in ordered
+    ]
+    vertices.extend(_association_attributes("CType", value) for value in ctypes)
+    vertices.extend(_association_attributes("Parameter", value) for value in parameters)
+
+    graph = ig.Graph(n=len(vertices), directed=False)
+    for vertex, attributes in zip(graph.vs, vertices, strict=True):
+        vertex.update_attributes(attributes)
+    indices = {vertex["name"]: vertex.index for vertex in graph.vs}
+    edges = []
+    relations = []
+    for record in ordered:
+        row = indices[f"row:{record.input_line}"]
+        if record.ctype:
+            edges.append((row, indices[f"ctype:{record.ctype}"]))
+            relations.append("ctype")
+        for key in sorted({key for key in record.keys if key}):
+            edges.append((row, indices[f"parameter:{key}"]))
+            relations.append("parameter")
+    graph.add_edges(edges)
+    graph.es["relation"] = relations
+    return graph
+
+
+def _association_attributes(node_type: str, value: str) -> dict[str, str]:
+    prefix = node_type.lower()
+    attributes = {
+        "name": f"{prefix}:{value}",
+        "label": value,
+        "node_type": node_type,
+        "source_line": "",
+        "api": "",
+        "verb": "",
+        "resource": "",
+        "ctype": "",
+        "parameter_key": "",
+    }
+    attributes["ctype" if node_type == "CType" else "parameter_key"] = value
+    return attributes
+
+
 def find_vertices(graph: ig.Graph, query: str) -> tuple[int, ...]:
     if not query:
         raise ValueError("search query must not be empty")
@@ -132,7 +190,34 @@ def influence_subgraph(
 
 
 def write_graphml(graph: ig.Graph, path: str | Path) -> None:
+    _validate_graphml_strings(graph)
     graph.write_graphml(str(path))
+
+
+def _validate_graphml_strings(graph: ig.Graph) -> None:
+    for name in graph.attributes():
+        _validate_xml_string(graph[name], f"graph attribute {name!r}")
+    for kind, elements in (("vertex", graph.vs), ("edge", graph.es)):
+        for element in elements:
+            for name, value in element.attributes().items():
+                _validate_xml_string(value, f"{kind} attribute {name!r}")
+
+
+def _validate_xml_string(value: object, location: str) -> None:
+    if not isinstance(value, str):
+        return
+    for character in value:
+        codepoint = ord(character)
+        allowed = (
+            codepoint in {0x09, 0x0A, 0x0D}
+            or 0x20 <= codepoint <= 0xD7FF
+            or 0xE000 <= codepoint <= 0xFFFD
+            or 0x10000 <= codepoint <= 0x10FFFF
+        )
+        if not allowed:
+            raise ValueError(
+                f"{location} contains XML 1.0-forbidden character U+{codepoint:04X}"
+            )
 
 
 def _app_attributes(node: AppNode) -> dict[str, str]:

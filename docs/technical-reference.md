@@ -22,6 +22,14 @@ ContextTrack JSONL
 ParamTrack CSV + Unmarshaler/Accessors CType .text graphs
     -> validated aggregate Parameter enrichment
 
+Standalone ParamTrack CSV
+    -> CSV-local diagnostics and undirected observation associations
+    -> visualization GraphML
+
+Standalone verified CType graph
+    -> existing CType projection
+    -> visualization GraphML
+
 message graph + optional enrichment
     -> canonical PMGraph v2
 
@@ -138,6 +146,41 @@ validated graph to GraphML. PMGraph and AppGraph use canonical IDs as vertex
 names. CType edges preserve each grouped ordered AST path in the
 `ast_paths_json` attribute.
 
+### `debug paramtrack`
+
+```text
+conftamer debug paramtrack PARAMETERS.csv --output PARAMETERS.graphml
+```
+
+This command reads a standalone targeted ParamTrack CSV without events, module,
+Unmarshaler, or Accessors inputs. The output is a deterministic undirected
+observation graph with one `row:<physical-line>` vertex per valid row, one
+`ctype:<exact CType>` vertex per distinct nonempty raw CType, and one
+`parameter:<exact key>` vertex per distinct nonempty key. Every vertex has
+string-valued `name`, `label`, `node_type`, `source_line`, `api`, `verb`,
+`resource`, `ctype`, and `parameter_key` attributes; nonapplicable values are
+empty strings.
+
+Edges associate a row with its nonempty CType (`relation="ctype"`) and each
+lexically ordered, deduplicated nonempty key (`relation="parameter"`). They do
+not assert influence, causality, CType validity, or a Send match. Standalone
+reading reports only `paramtrack.invalid_row`, `paramtrack.empty_key`,
+`paramtrack.empty_verb`, `paramtrack.empty_ctype`, and
+`paramtrack.possibly_truncated_message`. External CType and Send-candidate
+diagnostics remain enrichment-only.
+
+### `debug ctype`
+
+```text
+conftamer debug ctype GRAPH.text --output CTYPE.graphml
+```
+
+This command reuses the existing verified CType JSON transport loader and
+`ctype_to_igraph` projector, preserving direction, topology, and grouped AST
+paths. It does not enable CType GraphML or `.gv` input. Both debug commands
+require `--output`; their GraphML is visualization-only and cannot be used as
+canonical input.
+
 ## Diagnostics and provenance
 
 Independent malformed ContextTrack or ParamTrack records normally produce a
@@ -183,6 +226,22 @@ from conftamer.pmgraph import load_pmgraph, write_pmgraph
 graph = load_pmgraph("service.pmgraph.json")
 write_pmgraph(graph, "copy.pmgraph.json")
 ```
+
+Standalone ParamTrack reading and observation projection:
+
+```python
+from conftamer.analysis import paramtrack_to_igraph
+from conftamer.paramtrack import read_paramtrack
+
+result = read_paramtrack("parameters.csv")
+projected = paramtrack_to_igraph(result.records)
+```
+
+`read_paramtrack(path) -> ParamTrackReadResult` returns the SHA-256 source,
+structurally valid records, and CSV-local diagnostics. `paramtrack_to_igraph`
+also accepts directly constructed `ParamTrackRecord` iterables; it normalizes
+each row's nonempty keys by deduplicating and sorting them for deterministic
+projection.
 
 CType loading and projection:
 
@@ -262,6 +321,9 @@ uv run conftamer build --help
 uv run conftamer stitch --help
 uv run conftamer query --help
 uv run conftamer export --help
+uv run conftamer debug --help
+uv run conftamer debug paramtrack --help
+uv run conftamer debug ctype --help
 ```
 
 ## License

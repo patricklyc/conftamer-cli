@@ -234,6 +234,31 @@ continue with task 6. A deferred task has no checkpoint commit.
 
 **Checkpoint:** `refactor: remove legacy CSV and PMGraph v1 workflows`
 
+## 12. Add standalone debug-source visualization
+
+**Files:** `src/conftamer/paramtrack/{__init__.py,models.py,importer.py}`,
+`src/conftamer/analysis/{__init__.py,igraph.py}`, `src/conftamer/cli.py`, focused
+tests, `README.md`, `docs/technical-reference.md`, and `examples/README.md`
+
+- [x] Add `ParamTrackReadResult` and `read_paramtrack` with CSV-local
+  diagnostics independent of enrichment inputs.
+- [x] Project ParamTrack records as a deterministic undirected observation
+  association graph without CType validation, Send matching, or influence
+  semantics.
+- [x] Add `debug paramtrack` and `debug ctype` nested commands while preserving
+  existing CType transport rejection rules.
+- [x] Document both diagnostic workflows and keep generated GraphML under
+  `/tmp`.
+- [x] Run focused and full verification, all help pages, real-input GraphML
+  smoke tests and igraph re-reads, and record the 3,300-line checkpoint.
+
+**Checkpoint:** `feat: add standalone debug-source visualization`
+
+**Checkpoint record:** 3,308 physical production Python lines under explicit
+task-specific approval to exceed the 3,300-line gate; real ParamTrack GraphML
+re-read as 110 vertices and 109 edges; real Accessors CType GraphML re-read as
+582 vertices and 822 edges; no dependency or canonical-format change.
+
 ## Fresh verification after the final change
 
 ```bash
@@ -251,6 +276,9 @@ uv run conftamer build --help
 uv run conftamer stitch --help
 uv run conftamer query --help
 uv run conftamer export --help
+uv run conftamer debug --help
+uv run conftamer debug paramtrack --help
+uv run conftamer debug ctype --help
 
 find src/conftamer -name '*.py' -print0 | xargs -0 wc -l
 git diff --check

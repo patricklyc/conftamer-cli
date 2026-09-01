@@ -11,6 +11,7 @@ from conftamer.analysis import (
     ctype_to_igraph,
     find_vertices,
     influence_subgraph,
+    paramtrack_to_igraph,
     to_igraph,
     write_graphml,
 )
@@ -24,9 +25,12 @@ from conftamer.appgraph import (
 from conftamer.build import build_pmgraph
 from conftamer.ctype_graph import CTypeGraph, load_ctype_graph
 from conftamer.diagnostics import Diagnostic
+from conftamer.paramtrack import read_paramtrack
 from conftamer.pmgraph import PMGraph, load_pmgraph, write_pmgraph
 
 app = typer.Typer()
+debug_app = typer.Typer(help="Inspect standalone producer artifacts.")
+app.add_typer(debug_app, name="debug")
 GraphInput = PMGraph | AppGraph | CTypeGraph
 Direction = Literal["ancestors", "descendants", "both"]
 
@@ -109,6 +113,30 @@ def export_graph(
         projected = _project(_load_graph(graph))
         write_graphml(projected, output)
     _echo_summary("GraphML", projected.vcount(), projected.ecount(), output)
+
+
+@debug_app.command("paramtrack")
+def debug_paramtrack(
+    parameters: Annotated[Path, typer.Argument()],
+    output: Annotated[Path, typer.Option("--output")],
+) -> None:
+    with _user_errors():
+        result = read_paramtrack(parameters)
+        projected = paramtrack_to_igraph(result.records)
+        write_graphml(projected, output)
+    _emit_diagnostics(result.diagnostics)
+    _echo_summary("ParamTrack GraphML", projected.vcount(), projected.ecount(), output)
+
+
+@debug_app.command("ctype")
+def debug_ctype(
+    graph: Annotated[Path, typer.Argument()],
+    output: Annotated[Path, typer.Option("--output")],
+) -> None:
+    with _user_errors():
+        projected = ctype_to_igraph(load_ctype_graph(graph))
+        write_graphml(projected, output)
+    _echo_summary("CType GraphML", projected.vcount(), projected.ecount(), output)
 
 
 def _load_graph(path: Path) -> GraphInput:
