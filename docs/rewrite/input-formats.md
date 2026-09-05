@@ -1,335 +1,53 @@
-# Input formats and provenance
+# CType input format and provenance
 
-This document records upstream formats observed in checked-in artifacts and
-current producer implementations. It separates producer facts from ConfTamer
-normalization policy. Stable target models and matching decisions live in
+This document records the gopls CType transport observed in checked-in artifacts
+and the inspected producer implementation. It separates producer evidence from
+ConfTamer normalization policy. Owned models and projection behavior live in
 [Architecture](architecture.md).
 
 ## Evidence policy
 
-The files under [`examples/`](../../examples/) are the executable source of truth
-for currently accepted producer behavior. Prose summarizes those files; it
-does not replace them. When prose and an example disagree, inspect the producer
-and update both the example and this document before changing a parser.
+The two files under [`examples/ctype/`](../../examples/ctype/) are executable
+source-of-truth inputs. Prose summarizes those files; it does not replace them.
+If an artifact conflicts with this document, inspect the producer and update the
+contract deliberately before changing the parser.
 
-Labels used below:
+Unknown producer fields are accepted at the raw boundary for forward
+compatibility but do not implicitly become normalized semantics or GraphML
+attributes. Sibling repositories and the paper are read-only references.
 
-- **Observed input:** verified in a checked-in artifact or current upstream
-  serializer.
-- **Current policy:** downstream behavior already implemented by tool34 and
-  retained by the rewrite; it is not guaranteed by the producer.
-- **Target design:** a contract the rewrite will own.
-- **Paper-derived:** a concept from the paper without a current producer.
-- **Blocked:** not implementation-ready until a real artifact defines it.
+### Inspected producer revision
 
-Unknown producer fields are accepted at input boundaries but do not
-implicitly become canonical semantics. Sibling repositories and the paper are
-references only.
+The gopls contracts were inspected in read-only checkout
+`../run-prmtrk/golang.org-x-tools` at revision
+`27eb7264a2b4e89466594ae95821963e1b320907`:
 
-### Inspected producer sources
+- `gopls/internal/cmd/conftamer/output.go:Marshal` writes the JSON graph;
+- `gopls/internal/cmd/conftamer/output.go:Serialize` writes JSON plus optional
+  DOT; and
+- the graph serializer defines nullable edge `Data` path collections.
 
-Producer-only meanings below were checked against these read-only revisions:
+The checked-in files remain executable parser evidence. Reinspect and record a
+new revision before assigning meaning to future serializer changes.
 
-| Checkout and revision | Relevant source contracts |
-| --- | --- |
-| `../conftamer` at `010683952e74dd0103c8b97b333d860ba9519d52` | `contexttrack/go-inlibrary.patch` defines and serializes the five event kinds; `contexttrack/prometheus-common-route.patch` emits external route matches; `pkg/apimessages/http/http.go:GetMessageInfo` captures method, path, and User-Agent with `MaxStringLen: 10`; `parsetests/parse.go:(*AllTaint).Dump` writes the variable-width CSV |
-| `../run-prmtrk/golang.org-x-tools` at `27eb7264a2b4e89466594ae95821963e1b320907` | `gopls/internal/cmd/conftamer/dlv/main.go:HandleMessageSend` associates recognized CType stack frames with sends; `dlv/params.go:ParamKeys` derives keys; `conftamer/output.go:Marshal` and `Serialize` write JSON plus optional DOT |
+## Authoritative artifacts
 
-These revisions identify the implementations inspected for this rewrite; the
-checked-in artifacts remain the parser's executable examples. If upstream is
-updated, re-check the named functions and record the new revision before
-changing field meanings.
-
-## Authoritative artifact catalog
-
-| Artifact | Producer role | ConfTamer role |
+| Artifact | Producer role | Counts |
 | --- | --- | --- |
-| `examples/contexttrack/prometheus/*.jsonl` | ContextTrack event traces | Message input |
-| `examples/paramtrack/runs/target-scraper-all/parameters.csv` | ParamTrack observations for one target-scraper run | Parameter input |
-| `examples/paramtrack/runs/manager-st-zero/parameters.csv` | ParamTrack observations for one manager run | Parameter input |
-| `examples/paramtrack/static/unmarshaler_subgraph.text` | gopls Unmarshaler Subgraph | CType graph input |
-| `examples/paramtrack/static/accessors.text` | gopls Accessors graph | CType graph input |
-| `examples/paramtrack/static/*.gv` | Graphviz visualization | Reference only; not parsed |
-| `examples/paramtrack/runs/*/parameters_hierarchy.txt` | Human-readable ParamTrack derivative | Reference only; not parsed |
-| `examples/paramtrack/static/*.log` | gopls log | Reference only; not parsed |
-| `examples/paramtrack/runs/*/*.log` | ParamTrack/Delve log | Reference only; not parsed |
+| `examples/ctype/unmarshaler_subgraph.text` | gopls Unmarshaler Subgraph | 57 vertices, 90 edges, 58 `List` entries, 1 nonidentity alias |
+| `examples/ctype/accessors.text` | gopls Accessors graph | 582 vertices, 822 edges, 595 `List` entries, 13 nonidentity aliases |
 
-See [`examples/README.md`](../../examples/README.md) and the
-[ParamTrack artifact catalog](../../examples/paramtrack/README.md) for capture
-provenance and usage. Generated PMGraph, AppGraph, and GraphML output does not
-belong in the example input directories.
+The files are independent, complete JSON documents despite the `.text` suffix.
+They are exported separately and never merged. Generated GraphML does not belong
+under `examples/`.
 
-Older files directly under `examples/paramtrack/` were byte-identical aliases
-of the organized `static/` and `runs/` artifacts, not additional producer
-shapes or independent fixtures. They were removed with the other stale example
-surfaces; the cataloged organized paths remain the checked-in artifacts used by
-integration work.
+The previous `.gv` files and producer logs are not retained as MVP examples and
+are not machine inputs.
 
-## ContextTrack JSONL
+## Top-level JSON document
 
-### Observed event envelope
-
-Each nonblank line is one JSON object. A representative observed event is:
-
-```json
-{
-  "kind": "Request sent",
-  "pid": 63118,
-  "goroutine_id": 21,
-  "thread_id": 0,
-  "file": "/go-conftamer/src/net/http/transport.go",
-  "line": 599,
-  "message": {
-    "req.Method": "GET",
-    "req.URL.Host": "127.0.0.1:38151",
-    "req.URL.Path": "",
-    "req.URL.RawQuery": ""
-  },
-  "context": {
-    "source": "req.Context()",
-    "type": "context.Context",
-    "context_id": "id:1"
-  },
-  "request_id": {
-    "method": "GET",
-    "host": "127.0.0.1:38151",
-    "path": ""
-  },
-  "api_id": "github.com/prometheus"
-}
-```
-
-**Observed input:** the five consumed kinds are:
-
-- `Request sent`
-- `Request received`
-- `Request routed`
-- `Response sent`
-- `Response received`
-
-The envelope may also carry unknown fields. Message keys vary by hook. The
-adapter must preserve nested `message`, `context`, and `request_id` structures
-until semantic projection.
-
-`request_id` is an endpoint label `(method, host, path)`, not a unique request
-correlation ID. ContextTrack does not currently emit a stable correlation ID or
-producer sequence. `api_id` identifies an API/package association for an event;
-it is not the module ID of the complete graph.
-
-### Raw validation contract
-
-**Current policy retained by the target:** each nonblank line must decode to a
-JSON object with string `kind`, integer `pid`, object `message`, and object
-`context`. `goroutine_id`, `thread_id`, and source `line` are optional integers;
-`file` is an optional string. Unknown envelope and nested fields are retained.
-`context.source`, `context.type`, `context.context_id`, and `context.error` are
-optional strings, so an event can be valid without a usable context group.
-
-After dispatch by the exact `kind`, these fields are required:
-
-| Kind | Required `message` fields | Optional fields used by the adapter |
-| --- | --- | --- |
-| `Request sent` | string `req.Method`, string `req.URL.Path` | string `req.URL.Host`, string `req.URL.RawQuery`, string `api_id`; optional `request_id` object containing string `method`, `host`, and `path` |
-| `Request received` | string `req.Method`, string `req.URL.Path` | string `req.URL.Host`, string `req.URL.RawQuery`, string `api_id`, string `handler` |
-| `Request routed` | string `req.Method`, string `req.URL.Path`, string `pattern` | unknown route-hook fields |
-| `Response sent` | string `req.Method`, string `req.URL.Path`, decimal-string or integer `code` | unknown response-hook fields |
-| `Response received` | decimal-string or integer `resp.StatusCode` | string `req.Method`, string `req.URL.Path`, string `api_id` |
-
-The observed serializer writes status values as decimal strings; the raw adapter
-accepts base-10 JSON strings or JSON integers and projects them to an integer
-before PMGraph validation. Booleans, floats, nondecimal values, a missing
-required field, a non-object nested structure, and unsupported event kinds
-produce a line diagnostic and skip that line. An empty routed `pattern` is also
-unusable: diagnose and ignore that route hook so an inbound request can use its
-concrete-path fallback. Semantic incompleteness allowed by this matrix is
-handled later; for example, a hostless Request sent remains a valid raw event
-but cannot produce a Send Request node.
-
-### Reader contract
-
-**Current policy:**
-
-- skip blank lines;
-- validate each line independently with permissive Pydantic models;
-- preserve original input line numbers;
-- retain unknown fields for evidence and forward compatibility;
-- assign an internal sequence from valid input order;
-- continue after malformed or unsupported lines with diagnostics; and
-- group context inference by `(pid, context_id)`, never context ID alone.
-
-A convertible event without `context_id` may produce a semantic node, but it
-cannot produce a context-derived edge.
-
-### Fields used by semantic projection
-
-| Raw field | Use |
-| --- | --- |
-| `kind` | Select request, response, or route handling |
-| `pid`, `context.context_id` | Context grouping |
-| `goroutine_id` | Conservative response disambiguation/fallback only |
-| `message` method, host, path, status fields | Hook labels and matching evidence |
-| `request_id.method`, `.host`, `.path` | Preferred outbound request labels when present |
-| `api_id` | Message metadata and outbound response carry-through |
-| route path/handler fields | Route reconstruction evidence |
-| `message["req.URL.RawQuery"]` | Accepted evidence; excluded from node identity |
-| `handler` | Accepted evidence; excluded from node identity |
-| source `file` and `line` | Diagnostics/evidence, not semantic identity |
-
-**Current policy:** normalize method case and empty paths only when constructing
-semantic labels. A Send Request without a host cannot satisfy PMGraph labels
-and is omitted with `contexttrack.request_without_host`. In the checked-in
-`all-tests.jsonl`, 5,820 of 7,159 Request-sent hooks have no host; this is a
-fixture observation and deliberate PMGraph omission policy, not an upstream
-schema error.
-
-Route reconstruction, response matching, duplicate-hook suppression, and
-context-order edges are downstream heuristics described in
-[Architecture](architecture.md#contexttrack-semantic-projection). They are not
-producer guarantees.
-
-### Checked-in traces
-
-| Trace | Valid event lines | Intended use |
-| --- | ---: | --- |
-| `prometheus/scrape-ok.jsonl` | 20 | Quick message-conversion smoke test |
-| `prometheus/package-tests.jsonl` | 5,530 | Package-level integration input |
-| `prometheus/all-tests.jsonl` | 13,954 | Broad, noisy matching and omission input |
-
-Counts describe the checked-in captures, not general schema limits or stable
-PMGraph output contracts.
-
-## ParamTrack CSV
-
-### Distinction from removed legacy CSV
-
-**Observed input:** ParamTrack emits a headered, variable-width parameter CSV.
-It is unrelated to tool34's old headerless edge CSV. The rewrite removes the
-legacy parser and adds a dedicated ParamTrack adapter; the formats must not
-share models or row interpretation.
-
-### Header and rows
-
-The exact observed header is:
-
-```csv
-API,Verb,Resource,CType,Param key
-```
-
-A data row has four identity columns and zero or more parameter-key columns:
-
-```text
-API, Verb, Resource, CType, parameter_key_1, parameter_key_2, ...
-```
-
-The header labels only the first column of the repeated tail. The upstream
-writer may emit only the four identity columns when no parameter keys are
-found. Parsing must use Python's `csv` module so quoted values retain normal CSV
-semantics.
-
-Observed row prefixes include:
-
-```csv
-Prometheus,GET,,/scrape.targetScraper,...
-Prometheus,GET,/metrics,/scrape.scrapeLoop,...
-Prometheus,GET,/metrics,/discovery.Manager,...
-Prometheus,GET,/metrics,/scrape.Manager,...
-Prometheus,GET,/metrics,/scrape.targetScraper,...
-```
-
-### Field meanings and omissions
-
-| Field | Observed meaning |
-| --- | --- |
-| `API` | Debugger-captured HTTP `User-Agent`; evidence, not a stable API identity |
-| `Verb` | Debugger-captured HTTP request method |
-| `Resource` | Debugger-captured HTTP request path |
-| `CType` | Coarse CType association found while scanning recognized CType methods on user-goroutine stacks |
-| repeated tail | Parameter keys associated conservatively with that message/CType row |
-
-CType values may be module-prefix-shortened and begin with `/`. Preserve them
-exactly. Parameter keys are producer results; ConfTamer does not recompute
-them and does not interpret them as proof of per-send causality.
-
-The current debugger uses `MaxStringLen: 10` for `API`, `Verb`, and `Resource`.
-The CSV carries no flag saying whether a value at the limit is complete or
-truncated.
-
-The CSV does not contain:
-
-- host or authority;
-- response status or message direction/type;
-- ContextTrack `api_id`;
-- run, process, test, or Send occurrence identity;
-- graph digests or source identity;
-- inference kind; or
-- completeness metadata.
-
-ConfTamer must not invent these fields. In particular, ParamTrack `API`
-(`Prometheus` in the examples) and ContextTrack `api_id`
-(`github.com/prometheus`) have different producer meanings and are never
-compared.
-
-### Adapter validation
-
-**Target design grounded in observed rows:**
-
-- require the exact five-field header;
-- treat a wrong header or unreadable CSV as a file-level error;
-- preserve the starting physical source line for each logical CSV row, including
-  quoted rows that span more than one physical line;
-- require at least the four identity cells `API`, `Verb`, `Resource`, and
-  `CType`; diagnose a shorter row locally and continue with independent rows;
-- interpret a four-cell row as a valid no-key row and cells five onward as the
-  repeated parameter-key tail, regardless of row width;
-- diagnose an empty `Verb` or `CType` as unusable;
-- retain an empty `API` as evidence;
-- permit empty `Resource` and normalize it to `/` only for joining;
-- because the producer exposes no truncation flag, conservatively mark `Verb`
-  or `Resource` values whose Python string length is at least 10 as
-  `paramtrack.possibly_truncated_message` and do not use them for a Send join;
-- permit no-key rows but create no Parameter nodes or edges from them;
-- diagnose and omit empty key cells without discarding other keys in the row;
-- deduplicate equal keys within a row, merge equal semantic rows across the
-  file, and sort canonical output; and
-- do not rely on upstream data-row order, filenames, or run-directory names for
-  identity.
-
-Several rows may describe one method/path through different CTypes. Their keys
-are unioned only after CType validation and a unique semantic Send match, as
-defined in [ParamTrack enrichment](architecture.md#paramtrack-enrichment).
-
-### Real fixture facts
-
-`runs/target-scraper-all/parameters.csv` contains one row:
-
-```text
-API=Prometheus, Verb=GET, Resource=<empty>, CType=/scrape.targetScraper
-```
-
-It has 108 sorted, unique parameter keys. The CType is represented in Accessors.
-Its empty Resource and the matching quickstart ContextTrack path both normalize
-to `/` at the semantic join boundary.
-
-`runs/manager-st-zero/parameters.csv` contains four rows with
-`API=Prometheus`, `Verb=GET`, and `Resource=/metrics`:
-
-| CType | Keys |
-| --- | ---: |
-| `/scrape.scrapeLoop` | 133 |
-| `/discovery.Manager` | 120 |
-| `/scrape.Manager` | 201 |
-| `/scrape.targetScraper` | 108 |
-
-Each row's keys are sorted and unique. Their union has 226 keys. All four CTypes
-are represented in Accessors and not in the Unmarshaler Subgraph. These are
-fixture assertions, not CSV schema limits.
-
-## CType graph `.text` JSON
-
-### Top-level document
-
-**Observed input:** the current machine format is one JSON object, often on one
-physical line:
+The current producer machine format is one JSON object, commonly on one physical
+line:
 
 ```json
 {
@@ -340,14 +58,12 @@ physical line:
 ```
 
 Parse the complete byte stream as one JSON document; newline count has no
-meaning.
+meaning. The root must be an object containing array `Edges`, array `Vertices`,
+and object `List`. A missing field or wrong container type is a file-level
+contract error. Unknown top-level fields are accepted and excluded from
+normalized semantics.
 
-**Target raw validation:** the root must be an object containing array `Edges`,
-array `Vertices`, and object `List`. Unknown top-level fields are accepted for
-forward compatibility and excluded from normalized semantics. A missing field
-or wrong container type is a file-level contract error.
-
-### Vertices
+## Vertices
 
 A representative vertex is:
 
@@ -363,20 +79,23 @@ A representative vertex is:
 }
 ```
 
-**Observed input:**
+Observed meanings:
 
-- `Names` is nonempty; the first name is the current node hash/ID;
-- additional names are aliases combined into the same node;
+- `Names` is nonempty and its first value is the upstream node ID;
+- additional names are aliases represented by the same node;
 - `Methods` is a list and may be empty;
 - `Tags` is an object or `null`; and
-- methods may remain fully qualified while node names are module-shortened.
+- methods may be fully qualified while names are module-shortened.
 
-**Target raw validation:** every vertex is an object with a nonempty `Names`
-array of nonempty strings, a `Methods` array of nonempty strings, and `Tags`
-either `null` or an object whose keys and values are strings. Unknown vertex
-fields are accepted but do not participate in normalized CType identity.
+Every vertex must be an object with a nonempty `Names` array of nonempty
+strings, a `Methods` array of nonempty strings, and `Tags` either `null` or an
+object with string keys and values. Unknown vertex fields are accepted but do
+not enter normalized identity.
 
-### Edges
+ConfTamer preserves upstream strings exactly. It does not expand shortened names
+or infer source types.
+
+## Edges
 
 A representative edge is:
 
@@ -394,32 +113,30 @@ A representative edge is:
 }
 ```
 
-**Observed input and current serializer:**
+Observed producer behavior:
 
-- source and target are represented vertex IDs;
-- current edges include `Attributes`, `Weight`, and `Data`;
-- `Attributes: {}` and `Weight: 0` are generic graph-library defaults without
-  observed CType domain meaning;
-- the serializer permits `Data` to be `null` or a list of ordered AST paths;
-- each path is a string list, an empty list, or `null`; and
-- several paths stay grouped on one edge rather than becoming invented
-  parallel edges.
+- `Source` and `Target` identify represented vertex IDs;
+- current files include `Attributes`, `Weight`, and `Data`;
+- empty attributes and zero weight are generic graph-library defaults without
+  observed CType meaning;
+- `Data` may be `null` or a list of ordered AST paths;
+- each path may be a string list, an empty list, or `null`; and
+- multiple paths remain grouped on one edge rather than becoming parallel
+  edges.
 
-The checked-in graphs contain list-valued `Data`; null normalization is grounded
-in the inspected serializer rather than claimed as a fixture occurrence.
+The checked-in files contain list-valued `Data`; nullable behavior is grounded
+in the inspected serializer.
 
-**Target raw validation:** every edge is an object with nonempty string `Source`
-and `Target` and an object `Properties`. `Properties.Data` is required and must
-be `null` or an array whose elements are `null` or arrays of strings. Unknown
-edge/property fields, including `Attributes` and `Weight`, are accepted.
+Every edge must be an object with nonempty string `Source` and `Target` and an
+object `Properties`. `Properties.Data` is required and must be `null` or an
+array whose items are `null` or arrays of strings. Unknown edge/property fields
+are accepted. `Data: null` normalizes to no paths; a null path item normalizes
+to an empty path. Segment order and path grouping are preserved. Duplicate
+`(Source, Target)` records and missing represented endpoints are rejected.
 
-**Target normalization:** `Data: null` means no paths and a null path element
-means an empty path. Segment order and empty paths are preserved. Unknown
-fields and generic defaults are excluded from semantic identity.
+## Name mapping (`List`)
 
-### Name mapping (`List`)
-
-`List` maps known names and aliases to a node's first name:
+`List` maps represented names and aliases to a vertex's first name:
 
 ```json
 {
@@ -427,94 +144,49 @@ fields and generic defaults are excluded from semantic identity.
 }
 ```
 
-For a full US or Accessors output, entries describe represented vertices. An
-upstream queried subgraph may retain extra mappings from the source graph.
+Every key and value must be a nonempty string. Every represented vertex name
+must occur and map to that vertex's first name. A represented alias may resolve
+to only one vertex. Additional mappings retained by an upstream queried
+subgraph are accepted only when their target resolves to a represented vertex;
+unresolved extras are omitted from the normalized mapping. Missing or
+conflicting represented mappings are errors, and mappings are never synthesized.
 
-**Target raw validation:** every `List` key and value is a nonempty string.
-Unknown fields elsewhere do not weaken this represented-name contract.
-Target normalization and validation require:
+## Normalization summary
 
-- every represented vertex name maps to that vertex's first name;
-- every edge endpoint is the first name of an existing vertex;
-- a represented alias resolves to only one vertex;
-- extra unresolved `List` entries are accepted at input and omitted from the
-  normalized represented-name mapping;
-- ParamTrack CTypes are valid only when their target vertex is represented;
-- duplicate `(Source, Target)` records are rejected; and
-- US and Accessors are allowed to have different node sets.
+ConfTamer preserves the first name as stable ID, exact names, methods, tags,
+ordered AST path segments, grouped paths, edge direction, producer edge
+cardinality, and isolated vertices. It sorts and deduplicates aliases, methods,
+and equal paths according to the architecture, and sorts normalized nodes,
+edges, tag keys, and mapping keys. Unknown fields, graph-library attributes,
+and weights are discarded from normalized semantics.
 
-The adapter preserves serialized strings exactly and does not claim that a
-shortened or external-looking name is the original source name.
+Real regression facts:
 
-### Real graph facts
+| Graph | Vertices | Edges | `List` entries | Nonidentity aliases | Maximum grouped paths |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Unmarshaler Subgraph | 57 | 90 | 58 | 1 | 4 |
+| Accessors | 582 | 822 | 595 | 13 | 1 |
 
-| Graph | Vertices | Edges | `List` entries | Nonidentity aliases |
-| --- | ---: | ---: | ---: | ---: |
-| Unmarshaler Subgraph | 57 | 90 | 58 | 1 |
-| Accessors | 582 | 822 | 595 | 13 |
+These counts validate the checked-in files; they are not schema limits.
 
-Every real edge contains `Properties.Attributes`, `Properties.Weight`, and
-`Properties.Data`. US has up to four ordered AST paths grouped on one edge.
-These counts are regression checks for the checked-in files, not format limits.
+## Transport dispatch and blocked formats
 
-## CType GraphML
+CType dispatch is content-aware within this narrow policy:
 
-**Blocked:** no real producer GraphML is checked in, and the inspected upstream
-serializer writes `.text` JSON plus DOT. Do not implement a parser from guesses
-about namespaces, key names, structural IDs, defaults, or collection encoding.
+- `.text` or JSON-leading content: parse the verified JSON envelope;
+- `.gv` or DOT-leading content: reject as unsupported;
+- `.graphml` or XML-leading content: reject as unsupported and blocked; and
+- malformed or unrelated JSON: reject as invalid CType input.
 
-GraphML is transport, not a new semantic graph. Before accepting it:
+No real producer GraphML is checked in, and the inspected serializer emits JSON
+plus optional DOT. Do not infer GraphML namespaces, keys, structural IDs,
+defaults, direction, or collection encoding.
 
-1. add real producer US and Accessors `.graphml` files beside the `.text`
-   examples;
-2. inspect namespaces, `<key>` declarations, direction, structural IDs,
-   defaults, and value types;
-3. document the exact field mapping here;
-4. decide unknown-attribute behavior from those files; and
-5. prove equivalent `.text` and GraphML inputs normalize to equal CTypeGraph
-   nodes, edges, AST paths, isolated vertices, and represented-name mappings.
+Before producer GraphML could be accepted, both real Unmarshaler and Accessors
+files would need to be added, their transport documented, and equivalence tests
+would need to prove identical normalized nodes, edges, grouped AST paths,
+isolates, aliases, tags, methods, and mappings. Visualization GraphML written by
+ConfTamer is never producer input.
 
-Until this gate passes, `.text` is the only accepted CType machine input and the
-CLI must not claim GraphML input compatibility. `.gv` remains explicitly
-unsupported. GraphML written by ConfTamer for visualization is never treated as
-gopls machine input.
-
-## Consumer dispatch and provenance
-
-**Target design:** CType dispatch is content-aware:
-
-- `.text` or JSON-leading content: parse the observed JSON contract;
-- `.gv` or DOT content: unsupported-format error;
-- `.graphml` or XML-leading content: blocked until verified producer examples
-  pass the gate above.
-
-When GraphML becomes accepted, callers still identify graph roles with
-`--unmarshaler` and `--accessors` during PMGraph construction; the normalized
-CType model itself requires no role metadata.
-
-Canonical provenance uses SHA-256 of exact input bytes plus compact record
-identifiers such as line numbers. Paths, fixture directories, and raw payloads
-are not canonical identity. Reformatting an upstream file may therefore change
-its source digest without changing normalized graph semantics.
-
-## Integration smoke expectations
-
-These expectations execute checked-in examples and should remain outside core
-schema assumptions:
-
-1. `scrape-ok.jsonl` plus target-scraper CSV and both CType graphs validates
-   `/scrape.targetScraper`, finds one semantic `GET /` Send Request, creates 108
-   Parameter edges, and preserves the ContextTrack message edge.
-2. Manager CSV parsing yields four same-message CType rows and a 226-key union.
-3. Against a minimal unique `GET /metrics` trace, those rows create 226
-   deduplicated Parameter edges with all supporting source lines.
-4. Against `all-tests.jsonl`, the selected Send identity produces 47 semantic
-   `GET /metrics` candidates with distinct hosts; the join is ambiguous and
-   creates no manager Parameter edges.
-5. Reordering ParamTrack rows does not change semantic node IDs or edge endpoint
-   pairs. The source digest and physical line references do change and must
-   continue to identify the reordered bytes accurately.
-
-If a real producer artifact invalidates an expectation, update the provenance
-record and design deliberately rather than weakening validation around one
-sample.
+The `.gv` transport and producer logs are not retained by this MVP. Their
+presence, extension, or leading syntax must not trigger fallback parsing.

@@ -1,265 +1,50 @@
-# ConfTamer rewrite implementation plan
+# ConfTamer CType GraphML MVP implementation plan
 
-> Execute tasks in order. Use test-driven development and review each checkpoint
-> before beginning the next task.
+> Execute the migration in order with test-driven development and verify each
+> checkpoint before beginning the next.
 
-**Goal:** implement the target described in [Architecture](architecture.md)
-against the producer evidence in [Input formats](input-formats.md) and the real
-files under [`examples/`](../../examples/).
+**Goal:** reduce tool34 to one strict gopls CType `.text` validator and directed
+visualization GraphML exporter, as specified by
+[Architecture](architecture.md) and grounded in
+[Input formats](input-formats.md).
 
-## Execution rules
+The complete task-by-task procedure and acceptance criteria are in
+[`docs/superpowers/plans/2026-09-03-ctype-graphml-mvp.md`](../superpowers/plans/2026-09-03-ctype-graphml-mvp.md).
+That detailed plan is normative for execution.
 
-- Rewrite `AGENTS.md` before source changes so later work follows the target
-  architecture rather than legacy CSV/PMGraph v1 guidance.
-- Keep production Python under 3,300 physical lines; record the cumulative
-  count at every checkpoint and simplify before adding abstractions.
-- Write a failing focused test before each behavior change.
-- Run focused checks first, then fresh full verification before each commit.
-- Treat examples as executable source-of-truth integration inputs. Unit tests
-  should use the smallest explicit representation of an observed shape.
-- Stop rather than guessing if an input contradicts the documented evidence.
-  If GraphML producer artifacts are absent, mark task 5 deferred and continue
-  with task 6; the deferred task is not a release blocker.
-- Do not edit sibling repositories or the paper.
+## Ordered migration
 
-## 1. Align repository guidance
+1. Replace broad graph-compiler contracts with the CType export contract.
+2. Add a readable and lossless CType-to-igraph/GraphML projection using TDD.
+3. Replace the multi-workflow CLI with only
+   `conftamer export INPUT.text --output OUTPUT.graphml`.
+4. Make CType models self-contained and delete unrelated production/test
+   systems without compatibility modules.
+5. Move the two real CType artifacts to `examples/ctype/`, prune other examples,
+   and rewrite user/API documentation around one-file export.
+6. Align package metadata and release smoke tests, then run fresh full,
+   real-data, line-count, scope, diff, and standalone-executable verification.
 
-**Files:** `AGENTS.md`, `docs/rewrite/architecture.md`,
-`docs/rewrite/input-formats.md`, `docs/rewrite/implementation-plan.md`
+## Execution gates
 
-- [x] Rewrite `AGENTS.md` for the graph-compiler architecture and 3,300-line
-  gate; distinguish targeted ParamTrack CSV from removed edge CSV.
-- [x] Review the split documents against every checked-in example and current
-  upstream serializer.
-- [x] Confirm target formats define every discriminator, validator, identity
-  payload, evidence rule, and deterministic ordering rule.
-- [x] Confirm observed fields are never presented as target-owned guarantees.
-- [x] Confirm the real shapes require no additional focused fixtures.
-- [x] Review contracts before touching `src/`.
+- Preserve the verified `Edges`/`Vertices`/`List` producer contract and accept
+  unknown raw fields without promoting them to semantics.
+- Keep Unmarshaler and Accessors files independent; never merge two inputs.
+- Reject DOT, GraphML/XML input, malformed JSON, and unrelated JSON.
+- Preserve upstream IDs/names, aliases, methods, tags, grouped ordered AST
+  paths, direction, exact producer edge cardinality, and isolated vertices.
+- Every behavior change starts with a focused failing test.
+- Every checked-in GraphML test re-reads with `ig.Graph.Read_GraphML()`.
+- Production Python must remain at or below the **450-line** hard ceiling, with
+  a target near 400.
+- Do not add dependencies, raise Python 3.13, edit producers/sibling
+  repositories, or retain removed command/domain compatibility surfaces.
 
-**Checkpoint:** `docs: align graph compiler contracts with upstream output`
+## Final acceptance
 
-**Checkpoint record:** 1,016 physical production Python lines; no fixtures
-added; CType GraphML remains blocked because no producer artifacts are checked
-in.
-
-## 2. Add diagnostics and PMGraph v2
-
-**Files:** `src/conftamer/diagnostics.py`,
-`src/conftamer/pmgraph/{__init__.py,models.py,io.py}`,
-`tests/pmgraph/{test_models.py,test_io.py}`
-
-- [x] Test every complete node shape, including schema-only Behavior.
-- [x] Test Parameter-to-Send Request and Receive-to-Send edges.
-- [x] Test IDs, status bounds, duplicates, endpoints, self-edges, source tables,
-  dangling evidence, evidence merging, and canonical collection order.
-- [x] Add fixed vectors proving semantic node IDs exclude evidence and preserve
-  the existing hash algorithm.
-- [x] Implement immutable models, evidence merging, validation, normalization,
-  and deterministic newline-terminated JSON.
-- [x] Prove byte-identical output from shuffled semantic inputs.
-
-**Checkpoint:** `feat: define canonical PMGraph v2`
-
-## 3. Import ContextTrack events
-
-**Files:** `src/conftamer/contexttrack/{models.py,matching.py,importer.py}`,
-`src/conftamer/contexttrack/__init__.py`, `tests/contexttrack/`
-
-- [x] Migrate distinct reader, route, response, duplicate-hook, redirect, and
-  conversion behavior into failing tests.
-- [x] Cover actual nested fields, unknown fields, input sequence, line numbers,
-  `(pid, context_id)` grouping, handler/query evidence, and absent context IDs.
-- [x] Test conservative route suffix reconstruction and ambiguity.
-- [x] Test unresolved usable hooks, silent endpoint-less response hooks, hostless
-  sends, and response `api_id` evidence.
-- [x] Implement permissive input models, JSONL reading, matching, and semantic
-  projection without flattening raw events early.
-- [x] Run `scrape-ok.jsonl`; confirm the documented hostless-send count against
-  `all-tests.jsonl`.
-- [x] Remove superseded ContextTrack modules only after replacement tests pass.
-
-**Checkpoint:** `feat: import ContextTrack events`
-
-## 4. Parse CType `.text` graphs
-
-**Files:** `src/conftamer/ctype_graph/{__init__.py,models.py,io.py}`,
-`tests/ctype_graph/test_io.py`
-
-- [x] Test vertices, aliases, methods, nullable tags, grouped AST paths, null
-  normalization, endpoints, duplicate edges, and extra `List` mappings.
-- [x] Parse a complete one-line JSON document independent of newline count.
-- [x] Preserve names exactly; exclude unknown fields and generic properties from
-  semantic identity.
-- [x] Reject `.gv` explicitly.
-- [x] Assert real US counts: 57 vertices, 90 edges, 58 mappings, 1 alias.
-- [x] Assert real Accessors counts: 582 vertices, 822 edges, 595 mappings,
-  13 aliases.
-- [x] Prove all four manager CTypes resolve only through Accessors.
-
-**Checkpoint:** `feat: parse gopls CType graph output`
-
-## 5. Gate and add CType GraphML input
-
-**Prerequisite:** real producer `unmarshaler_subgraph.graphml` and
-`accessors.graphml` exist under `examples/paramtrack/static/`. If either is
-absent, mark this task deferred, make no parser claim or code change, and
-continue with task 6. A deferred task has no checkpoint commit.
-
-**Files after gate:** `docs/rewrite/input-formats.md`,
-`src/conftamer/ctype_graph/io.py`, `tests/ctype_graph/test_io.py`
-
-- [x] Check for both prerequisite producer GraphML files; both are absent, so
-  defer this task.
-- [x] Make no parser claim or code change and continue with task 6.
-- [ ] **Blocked:** document observed namespaces, keys, IDs, defaults, direction,
-  and value encodings.
-- [ ] **Blocked:** test grouped AST paths, isolated nodes, aliases/name mappings,
-  and unknown attributes according to the real files.
-- [ ] **Blocked:** implement content/extension dispatch with no caller-supplied
-  graph metadata.
-- [ ] **Blocked:** prove equivalent `.text` and GraphML normalize identically.
-
-**Checkpoint:** deferred; no commit
-
-## 6. Import and join ParamTrack CSV
-
-**Files:** `src/conftamer/paramtrack/{__init__.py,models.py,importer.py}`,
-`tests/paramtrack/test_importer.py`
-
-- [x] Test the exact header, variable-width/quoted rows, no-key rows, empty key
-  cells, duplicate keys, malformed rows, and row-order-independent semantic
-  IDs/edge endpoints with accurate reordered provenance.
-- [x] Test empty Resource normalization, potentially truncated labels, preserved
-  API evidence, and exact leading-slash CType validation through either graph.
-- [x] Test overlapping keys across several CTypes and merged line evidence.
-- [x] Test one, zero, and several semantic method/path Send candidates; never
-  compare ParamTrack `API` with ContextTrack `api_id`.
-- [x] Assert target-scraper has 108 keys and manager rows have 133, 120, 201,
-  and 108 keys with a 226-key union.
-- [x] Export `import_paramtrack` as a file importer, not a producer wrapper.
-
-**Checkpoint:** `feat: import targeted ParamTrack CSV`
-
-## 7. Build complete PMGraphs
-
-**Files:** `src/conftamer/build.py`, `tests/test_build.py`
-
-- [x] Test message-only builds and all-or-none ParamTrack/CType options.
-- [x] Test module identity, source digests, evidence union, the caller-association
-  diagnostic, and `unique-method-path` evidence.
-- [x] Prove deterministic output under shuffled semantic inputs.
-- [x] Run the target-scraper integration and assert 108 edges to one `GET /` Send.
-- [x] Join manager CSV to a minimal unique `GET /metrics` trace and assert 226
-  deduplicated edges with all source lines.
-- [x] Pair manager CSV with `all-tests.jsonl`; assert 47 candidates, an ambiguity
-  diagnostic, and zero manager Parameter edges.
-- [x] Validate serialized output through PMGraph v2.
-
-**Checkpoint:** `feat: build PMGraphs from upstream artifacts`
-
-## 8. Add igraph analysis and export
-
-**Files:** `src/conftamer/analysis/{__init__.py,igraph.py}`,
-`tests/analysis/test_igraph.py`
-
-- [x] Test isolated nodes, canonical names, direction, and semantic attributes.
-- [x] Test exact/substring search, ambiguity, ancestors, descendants, and
-  induced subgraphs.
-- [x] Test optional-value sanitization and canonical nested JSON attributes.
-- [x] Project PMGraph and CTypeGraph without merging their domain models.
-- [x] Preserve grouped CType paths in `ast_paths_json`.
-- [x] Export and re-read every tested GraphML with igraph.
-
-**Checkpoint:** `feat: analyze and export graphs with igraph`
-
-## 9. Stitch PMGraphs into AppGraph
-
-**Files:** `src/conftamer/appgraph/{__init__.py,models.py,matching.py,stitch.py}`,
-`src/conftamer/analysis/igraph.py`, `tests/appgraph/`,
-`tests/analysis/test_igraph.py`
-
-- [x] Reject fewer than two PMGraphs and duplicate module IDs; union source
-  tables and validate all embedded evidence.
-- [x] Test exact paths, trailing subtrees, `{name}`, `:name`, and terminal
-  `*name`; reject unsupported syntax unless literal.
-- [x] Test 1:1, 1:N, N:1, N:M, same-module, and no-candidate cases.
-- [x] Prove host and `api_id` do not select a module and every accepted match is
-  visibly labeled `unique-http-labels`.
-- [x] Match responses only through accepted request matches.
-- [x] Add fixed AppNode IDs; test valid and invalid match-state combinations,
-  three-module contraction, evidence-bearing edge origins, edge remapping,
-  provenance, shuffled input order, and explicit unmatched pruning.
-- [x] Export and re-read AppGraph GraphML.
-
-**Checkpoint:** `feat: stitch multiple PMGraphs into AppGraphs`
-
-## 10. Replace the CLI
-
-**Files:** `src/conftamer/cli.py`, `src/conftamer/__init__.py`,
-`pyproject.toml`, `tests/test_cli.py`
-
-- [x] Write help and command smoke tests for `build`, `stitch`, `query`, and
-  `export`; verify no analyzer, runner, or Delve command exists.
-- [x] Keep orchestration thin; diagnostics use stderr and summaries use stdout.
-- [x] Enforce all-or-none enrichment options and at least two stitch inputs.
-- [x] Accept canonical JSON and verified CType transports in query/export without
-  extra graph metadata.
-- [x] Prove stitch output is input-order independent.
-- [x] Change the entry point to `conftamer.cli:app` and format Python/TOML.
-
-**Checkpoint:** `feat: replace CLI with graph compiler workflows`
-
-## 11. Remove legacy surfaces and release
-
-**Delete:** `src/conftamer/csv_graph.py`, superseded `main.py`, old tests,
-`examples/legacy/*.csv`, deprecated duplicate files directly under
-`examples/paramtrack/`, and stale `context/interfaces/` snapshots.
-
-**Update:** `README.md`, `docs/technical-reference.md`, `examples/README.md`,
-`.gitignore`, `.github/workflows/release.yml`, and `uv.lock` if required.
-
-- [x] Delete old code only after all replacement tests pass.
-- [x] Remove old commands, PMGraph v1, and `parse_contexttrack` exports while
-  retaining standard-library CSV use for ParamTrack.
-- [x] Replace legacy examples and release smoke tests with build, enrichment,
-  CType query, multi-PMGraph stitch, query, and export workflows.
-- [x] Make `docs/technical-reference.md` the current-release user/API guide;
-  link to these contracts instead of repeating architecture or input schemas.
-- [x] Document `.gv`, hierarchy, and producer logs as reference-only.
-- [x] Search for stale imports, legacy CSV assumptions, invented GraphML fields,
-  split CType AST paths, exact ParamTrack correlation, and old CLI names.
-- [x] Record the final production count: 3,154 physical lines under the
-  user-approved 3,300-line gate.
-
-**Checkpoint:** `refactor: remove legacy CSV and PMGraph v1 workflows`
-
-## Fresh verification after the final change
-
-```bash
-uv run pytest -q tests/pmgraph tests/test_build.py
-uv run pytest -q tests/paramtrack tests/ctype_graph
-uv run pytest -q tests/contexttrack tests/appgraph
-uv run pytest -q tests/analysis tests/test_cli.py
-uvx ruff format --check src tests
-uvx tombi format --check pyproject.toml
-uvx ty check
-uv run pytest -q
-
-uv run conftamer --help
-uv run conftamer build --help
-uv run conftamer stitch --help
-uv run conftamer query --help
-uv run conftamer export --help
-
-find src/conftamer -name '*.py' -print0 | xargs -0 wc -l
-git diff --check
-```
-
-Also validate generated PMGraph/AppGraph JSON through their Pydantic models;
-compare repeated identical inputs and shuffled in-memory semantic inputs
-byte-for-byte; verify reordered ParamTrack files preserve semantic IDs/endpoints
-while updating source digests and line evidence; re-read every GraphML with
-`ig.Graph.Read_GraphML()`; and inspect the complete diff including untracked
-example files. Manually load one final
-visualization in Gephi Lite when available.
+Both real artifacts parse and export independently. Re-read GraphML has 57
+vertices/90 edges for the Unmarshaler Subgraph and 582 vertices/822 edges for
+Accessors, remains directed, and contains readable plus lossless string
+attributes. Invalid input exits nonzero before output creation. The only
+installed command is `export`, removed packages and claims are absent, full
+quality checks pass, and the final production line count is recorded.
