@@ -186,6 +186,29 @@ def test_models_are_canonical_and_nested_mappings_are_immutable(tmp_path):
         )
 
 
+def test_models_are_strict_frozen_and_reject_dangling_endpoints():
+    tags = {"json": "name"}
+    node = CTypeNode(id="/a", names=("/a",), methods=(), tags=tags)
+    tags["json"] = "changed"
+
+    assert node.tags == {"json": "name"}
+    with pytest.raises(ValidationError, match="frozen"):
+        node.id = "/changed"  # ty: ignore[invalid-assignment]
+    with pytest.raises(ValidationError):
+        CTypeNode(
+            id=1,  # ty: ignore[invalid-argument-type]
+            names=("/a",),
+            methods=(),
+            tags=None,
+        )
+    with pytest.raises(ValidationError, match="edge endpoints"):
+        CTypeGraph(
+            nodes=(node,),
+            edges=(CTypeEdge(source="/a", target="/missing", ast_paths=()),),
+            name_to_node={"/a": "/a"},
+        )
+
+
 def test_graph_model_rejects_noncanonical_collections():
     first = CTypeNode(id="/a", names=("/a",), methods=(), tags=None)
     second = CTypeNode(id="/b", names=("/b",), methods=(), tags=None)

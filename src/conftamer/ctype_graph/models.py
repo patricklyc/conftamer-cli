@@ -2,12 +2,23 @@ from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Annotated
 
-from pydantic import Field, field_serializer, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
-from conftamer.diagnostics import CanonicalModel, NonEmptyString
+NonEmptyString = Annotated[str, Field(strict=True, min_length=1)]
 
 
-class CTypeNode(CanonicalModel):
+class CTypeModel(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+
+class CTypeNode(CTypeModel):
     id: NonEmptyString
     names: Annotated[tuple[NonEmptyString, ...], Field(min_length=1)]
     methods: tuple[NonEmptyString, ...]
@@ -34,7 +45,7 @@ class CTypeNode(CanonicalModel):
         return self
 
 
-class CTypeEdge(CanonicalModel):
+class CTypeEdge(CTypeModel):
     source: NonEmptyString
     target: NonEmptyString
     ast_paths: tuple[tuple[str, ...], ...]
@@ -49,7 +60,7 @@ class CTypeEdge(CanonicalModel):
         return ast_paths
 
 
-class CTypeGraph(CanonicalModel):
+class CTypeGraph(CTypeModel):
     nodes: tuple[CTypeNode, ...]
     edges: tuple[CTypeEdge, ...]
     name_to_node: Mapping[str, str]
