@@ -1,270 +1,146 @@
-# ConfTamer technical reference
+# ConfTamer CType GraphML technical reference
 
-This is the current-release command-line and Python API guide. Start with the
-[README](../README.md) for installation and short examples.
-
-Normative details intentionally live in two focused contracts:
-
-- [Target architecture](rewrite/architecture.md) defines canonical PMGraph v2,
-  AppGraph v1, matching, provenance, deterministic serialization, igraph
-  projection, and CLI behavior.
-- [Input formats and provenance](rewrite/input-formats.md) records observed
-  ContextTrack, ParamTrack, and gopls producer formats.
-
-This guide links to those contracts instead of duplicating their schemas.
+This is the current CLI and Python API guide. The normative contracts are
+[Architecture](rewrite/architecture.md) and
+[Input formats and provenance](rewrite/input-formats.md).
 
 ## Processing model
 
 ```text
-ContextTrack JSONL
-    -> message nodes and conservative context influence
-
-ParamTrack CSV + Unmarshaler/Accessors CType .text graphs
-    -> validated aggregate Parameter enrichment
-
-message graph + optional enrichment
-    -> canonical PMGraph v2
-
-two or more PMGraphs
-    -> conservative cross-module matching
-    -> canonical AppGraph v1
-
-PMGraph, AppGraph, or CTypeGraph
-    -> python-igraph query/export
+one gopls CType .text file
+    -> strict producer-JSON validation
+    -> immutable normalized CTypeGraph
+    -> directed python-igraph graph
     -> visualization GraphML
 ```
 
-Raw producer models do not enter canonical graph models. CType nodes remain in
-CTypeGraph, and GraphML is never used as canonical persistence.
+Unmarshaler Subgraph and Accessors files share the verified transport but remain
+independent graphs. Export them with separate invocations.
 
-## Input and output boundaries
+## Raw producer boundary
 
-### Machine inputs
+`load_ctype_graph` reads the complete UTF-8 file as one JSON document. The root
+must contain:
 
-- ContextTrack JSONL containing the five supported HTTP event kinds;
-- targeted, headered, variable-width ParamTrack parameter CSV;
-- gopls CType JSON for the Unmarshaler and Accessors graphs, normally emitted
-  with a `.text` suffix;
-- canonical PMGraph v2 JSON; and
-- canonical AppGraph v1 JSON.
+- `Vertices`: vertex objects with nonempty `Names`, a `Methods` array that may
+  be empty, and nullable `Tags`;
+- `Edges`: edge objects with `Source`, `Target`, and nullable/grouped
+  `Properties.Data` AST paths; and
+- `List`: nonempty name-to-first-name string mappings.
 
-The targeted ParamTrack CSV is unrelated to the removed prototype's headerless
-edge CSV. It continues to use Python's standard `csv` module.
+Unknown raw fields are accepted but discarded from normalized semantics. The
+loader validates represented names, mappings, unique vertex IDs, unique edge
+endpoint pairs, and existing endpoints. It accepts `.text` or JSON-leading
+content. Malformed/unrelated JSON, `.gv` or DOT, and `.graphml` or XML are
+rejected. Producer GraphML input remains blocked because no real files define
+its transport.
 
-### Reference-only artifacts
+See [Input formats and provenance](rewrite/input-formats.md) for the exact
+producer revision, examples, null handling, and real counts.
 
-CType `.gv` files are Graphviz views, hierarchy files are human-readable
-ParamTrack derivatives, and gopls/ParamTrack/Delve logs are producer records.
-They are retained for inspection but are not ConfTamer machine inputs.
+## Normalized models
 
-Producer CType GraphML is also unsupported until real producer files establish
-its namespaces, keys, IDs, direction, defaults, and collection encoding.
-GraphML emitted by ConfTamer is visualization output only.
-
-See [Input formats and provenance](rewrite/input-formats.md) for exact observed
-file contracts and rejection policy.
-
-## Command-line interface
-
-The installed entry point is `conftamer.cli:app`. All commands are
-noninteractive, require explicit output paths, print diagnostics to standard
-error, and print concise summaries to standard output.
-
-### `build`
-
-```text
-conftamer build --module-id MODULE --events EVENTS.jsonl
-    [--paramtrack-csv PARAMETERS.csv
-     --unmarshaler UNMARSHALER.text
-     --accessors ACCESSORS.text]
-    --output MODULE.pmgraph.json
-```
-
-`--module-id` identifies the module represented by the complete trace. A
-message-only build omits all enrichment options. An enriched build requires all
-three options together and assigns the CType graph roles explicitly.
-
-Supplying the inputs together is the caller's assertion that they describe a
-compatible corpus. ConfTamer cannot verify a shared run identity. ParamTrack
-rows join only to one unique semantic Send Request selected by normalized
-method/path; ParamTrack `API` is never compared with ContextTrack `api_id`.
-
-The output is deterministic, validated PMGraph v2 JSON ending in one newline.
-
-### `stitch`
-
-```text
-conftamer stitch MODULE_A.pmgraph.json MODULE_B.pmgraph.json
-    [MORE.pmgraph.json ...]
-    --output APPLICATION.appgraph.json
-    [--drop-unmatched]
-```
-
-At least two PMGraphs with distinct module IDs are required. Matching uses HTTP
-labels only: host and `api_id` do not select a destination module. A candidate
-pair is contracted only when both sides are mutually unique. Responses can
-match only through an accepted request match.
-
-Unmatched nodes remain visible by default. `--drop-unmatched` removes singleton
-unmatched message nodes and incident edges while retaining Parameters,
-Behaviors, and matched communications.
-
-### `query`
-
-```text
-conftamer query GRAPH.json|GRAPH.text QUERY
-    [--direction ancestors|descendants|both]
-    [--all-matches]
-    --output RESULT.graphml
-```
-
-The input may be PMGraph v2, AppGraph v1, or verified CType JSON. CType
-dispatch accepts `.text` or JSON-leading content and validates the producer
-envelope. An exact canonical vertex name takes precedence over case-insensitive
-substring search across projected attributes. No match is an error. Multiple
-matches are an error unless `--all-matches` is supplied.
-
-The output is the induced GraphML subgraph containing selected vertices and
-their requested transitive reachability. `both` is the default direction.
-
-### `export`
-
-```text
-conftamer export GRAPH.json|GRAPH.text --output GRAPH.graphml
-```
-
-`export` accepts the same graph inputs as `query` and projects the complete
-validated graph to GraphML. PMGraph and AppGraph use canonical IDs as vertex
-names. CType edges preserve each grouped ordered AST path in the
-`ast_paths_json` attribute.
-
-## Diagnostics and provenance
-
-Independent malformed ContextTrack or ParamTrack records normally produce a
-diagnostic and are omitted; unreadable files and invalid file-level contracts
-are errors. Diagnostics have a stable code, message, optional source path, and
-optional physical line. Build- or stitch-level diagnostics have no source.
-
-Each canonical source records the SHA-256 digest of the exact input bytes.
-Nodes and edges carry compact evidence references such as physical input lines
-and derivation kinds. Evidence is merged but does not participate in semantic
-node identity. See [Diagnostics and provenance](rewrite/architecture.md#diagnostics-and-provenance)
-for the complete contract.
-
-PMGraph edges represent possible influence, not proof of causality. AppGraph
-matches are heuristic and visibly marked `unique-http-labels`.
+`CTypeNode`, `CTypeEdge`, and `CTypeGraph` are strict, frozen Pydantic models.
+They preserve upstream strings exactly, isolated vertices, direction, one edge
+per producer endpoint record, and grouped ordered AST paths. Nodes, edges,
+aliases, methods, equal paths, tag keys, and mapping keys use the canonical
+ordering defined in [Architecture](rewrite/architecture.md#normalized-ctype-graph).
+Nested mappings are read-only copies.
 
 ## Python API
 
-The high-level build boundary mirrors the CLI:
-
 ```python
-from conftamer.build import build_pmgraph
-from conftamer.pmgraph import write_pmgraph
+from conftamer.ctype_graph import export_graphml, load_ctype_graph, to_igraph
 
-result = build_pmgraph(
-    module_id="example.org/service",
-    events="events.jsonl",
-)
-write_pmgraph(result.graph, "service.pmgraph.json")
-
-for diagnostic in result.diagnostics:
-    print(diagnostic.code, diagnostic.message)
+graph = load_ctype_graph("accessors.text")
+projected = to_igraph(graph)
+export_graphml(graph, "accessors.graphml")
 ```
 
-Add `paramtrack_csv`, `unmarshaler`, and `accessors` together for enrichment.
-The direct ContextTrack adapter is `conftamer.contexttrack.import_contexttrack`.
-
-Canonical PMGraph I/O and models are exported by `conftamer.pmgraph`:
+The three public functions are:
 
 ```python
-from conftamer.pmgraph import load_pmgraph, write_pmgraph
-
-graph = load_pmgraph("service.pmgraph.json")
-write_pmgraph(graph, "copy.pmgraph.json")
+def load_ctype_graph(path: str | Path) -> CTypeGraph: ...
+def to_igraph(graph: CTypeGraph) -> ig.Graph: ...
+def export_graphml(graph: CTypeGraph, path: str | Path) -> None: ...
 ```
 
-CType loading and projection:
+`to_igraph` creates all vertices before edges, preserving canonical order and
+isolates. `export_graphml` delegates serialization to python-igraph. Semantic
+projection is stable, but byte-for-byte GraphML identity is not promised across
+igraph versions.
 
-```python
-from conftamer.analysis import ctype_to_igraph
-from conftamer.ctype_graph import load_ctype_graph
+GraphML cannot be converted back to `CTypeGraph`: it is a visualization
+projection and does not retain the normalized `name_to_node` mapping as a
+reversible document. It is never accepted as producer input.
 
-ctype = load_ctype_graph("accessors.text")
-projected = ctype_to_igraph(ctype)
+## GraphML schema
+
+Every attribute value is a string. Vertices expose:
+
+| Attribute | Meaning |
+| --- | --- |
+| `name`, `label` | stable upstream CType ID |
+| `aliases` | aliases, one per line |
+| `methods` | methods, one per line |
+| `tags` | sorted `key: value` entries, one per line |
+| `names_json` | lossless compact JSON names array |
+| `methods_json` | lossless compact JSON methods array |
+| `tags_json` | lossless compact sorted-key object or `null` |
+
+Edges expose:
+
+| Attribute | Meaning |
+| --- | --- |
+| `ast_paths` | one path per line; ` → ` joins segments and `(empty path)` represents `()` |
+| `ast_paths_json` | lossless compact JSON preserving path groups and segment order |
+
+Readable attributes are presentation aids. Use the `*_json` companions when
+values must be recovered without delimiter ambiguity.
+
+## Command-line interface
+
+The installed entry point is `conftamer.cli:app`, and its only command is:
+
+```text
+conftamer export INPUT.text --output OUTPUT.graphml
 ```
 
-AppGraph stitching and I/O:
+The command loads and validates the complete normalized graph before writing.
+On success it prints a concise vertex/edge summary to stdout. I/O, Unicode,
+transport, and validation errors exit nonzero with a one-line `error: ...`
+message on stderr. Loading and validation errors do not create the output file.
 
-```python
-from conftamer.appgraph import (
-    load_appgraph,
-    stitch_pmgraph_files,
-    write_appgraph,
-)
-
-result = stitch_pmgraph_files(["frontend.pmgraph.json", "backend.pmgraph.json"])
-write_appgraph(result.graph, "application.appgraph.json")
-application = load_appgraph("application.appgraph.json")
-```
-
-Programmatic analysis uses the same implementation as the CLI:
-
-```python
-from conftamer.analysis import (
-    find_vertices,
-    influence_subgraph,
-    to_igraph,
-    write_graphml,
-)
-
-projected = to_igraph(application)
-matches = find_vertices(projected, "timeout")
-selected = influence_subgraph(projected, matches, direction="both")
-write_graphml(selected, "timeout.graphml")
-```
-
-Canonical model and function signatures are defined in the
-[architecture contract](rewrite/architecture.md). Loaders validate canonical
-ordering and identity; they do not silently repair noncanonical documents.
-
-## Current limitations
-
-- ContextTrack input does not prove ownership by the supplied module ID.
-- ParamTrack enrichment has no shared occurrence or run identity with
-  ContextTrack and is therefore aggregate and caller-asserted.
-- Ambiguous route, response, parameter, and cross-module matches are diagnosed
-  or retained rather than guessed.
-- Behavior nodes are schema-only because no producer contract creates them.
-- CType GraphML input is blocked; the observed CType JSON transport is accepted
-  from `.text` or JSON-leading content, while `.gv` remains unsupported.
-- Stitching does not model deployment manifests, replicas, or many-to-one
-  contraction.
-- Canonical PMGraph/AppGraph JSON cannot be reconstructed from visualization
-  GraphML.
-
-## Development and verification
-
-Production modules are organized by domain under `src/conftamer/`; tests mirror
-those packages under `tests/`. Checked-in files under `examples/` are executable
-integration inputs rather than generated-output directories.
-
-Run the complete checks with:
+Examples:
 
 ```bash
+uv run conftamer export \
+  examples/ctype/unmarshaler_subgraph.text \
+  --output /tmp/unmarshaler.graphml
+
+uv run conftamer export \
+  examples/ctype/accessors.text \
+  --output /tmp/accessors.graphml
+```
+
+## Development verification
+
+```bash
+uv run pytest -q tests/ctype_graph tests/test_cli.py
 uvx ruff format --check src tests
 uvx tombi format --check pyproject.toml
 uvx ty check
 uv run pytest -q
-
 uv run conftamer --help
-uv run conftamer build --help
-uv run conftamer stitch --help
-uv run conftamer query --help
 uv run conftamer export --help
+find src/conftamer -name '*.py' -print0 | xargs -0 wc -l
 ```
+
+Every checked-in GraphML test re-reads with `ig.Graph.Read_GraphML()`. Real-data
+checks assert directed 57/90 and 582/822 graphs. Production Python has a hard
+450-line MVP ceiling.
 
 ## License
 
-ConfTamer is licensed under the GNU General Public License, version 2 only.
-See [LICENSE](../LICENSE).
+ConfTamer is licensed under the GNU General Public License, version 2 only. See
+[LICENSE](../LICENSE).

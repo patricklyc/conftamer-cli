@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from conftamer.ctype_graph import CTypeEdge, CTypeGraph, CTypeNode, load_ctype_graph
 
-EXAMPLES = Path(__file__).parents[2] / "examples" / "paramtrack" / "static"
+EXAMPLES = Path(__file__).parents[2] / "examples" / "ctype"
 
 
 def write_document(tmp_path: Path, document: object, name: str = "graph.text") -> Path:
@@ -352,8 +352,10 @@ def test_rejects_invalid_raw_contracts(tmp_path, document):
 
 
 def test_rejects_graphviz_and_blocked_graphml_inputs(tmp_path):
+    graphviz_suffix = tmp_path / "graph.gv"
+    graphviz_suffix.write_text("{}", encoding="utf-8")
     with pytest.raises(ValueError, match="Graphviz.*not supported"):
-        load_ctype_graph(EXAMPLES / "unmarshaler_subgraph.gv")
+        load_ctype_graph(graphviz_suffix)
 
     graphviz = tmp_path / "graph.data"
     graphviz.write_text("strict digraph { a -> b }", encoding="utf-8")

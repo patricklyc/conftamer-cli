@@ -11,6 +11,7 @@ from typer.testing import CliRunner
 
 runner = CliRunner()
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+EXAMPLES = PROJECT_ROOT / "examples" / "ctype"
 
 
 def invoke(*arguments: str):
@@ -135,6 +136,43 @@ def test_missing_input_creates_no_output(tmp_path):
     assert result.exit_code != 0
     assert "error:" in result.stderr
     assert not output.exists()
+
+
+@pytest.mark.parametrize(
+    ("filename", "vertices", "edges"),
+    [
+        ("unmarshaler_subgraph.text", 57, 90),
+        ("accessors.text", 582, 822),
+    ],
+)
+def test_real_artifacts_export_independently(tmp_path, filename, vertices, edges):
+    output = tmp_path / f"{filename}.graphml"
+
+    result = invoke(
+        "export",
+        str(EXAMPLES / filename),
+        "--output",
+        str(output),
+    )
+
+    assert result.exit_code == 0, result.output
+    graph = ig.Graph.Read_GraphML(str(output))
+    assert graph.is_directed()
+    assert (graph.vcount(), graph.ecount()) == (vertices, edges)
+    vertex_attributes = {
+        "name",
+        "label",
+        "aliases",
+        "methods",
+        "tags",
+        "names_json",
+        "methods_json",
+        "tags_json",
+    }
+    for vertex in graph.vs:
+        assert vertex_attributes <= vertex.attributes().keys()
+        assert all(isinstance(vertex[name], str) for name in vertex_attributes)
+    assert {"ast_paths", "ast_paths_json"} <= set(graph.edge_attributes())
 
 
 def test_installed_entry_point_targets_app():
