@@ -1,6 +1,8 @@
 import json
+from pathlib import Path
 
 import igraph as ig
+import pytest
 
 from conftamer.ctype_graph import CTypeEdge, CTypeGraph, CTypeNode
 from conftamer.ctype_graph.graphml import export_graphml, to_igraph
@@ -71,6 +73,68 @@ def assert_projection(graph: ig.Graph) -> None:
 
 def test_projection_is_readable_lossless_directed_and_keeps_isolates():
     assert_projection(to_igraph(ctype_graph()))
+
+
+@pytest.mark.parametrize(
+    ("field", "bad_character"),
+    [
+        ("id", "\x00"),
+        ("method", "\x01"),
+        ("tag", "\x01"),
+        ("path", "\x01"),
+    ],
+)
+def test_export_rejects_xml_forbidden_attribute_characters(
+    tmp_path, field, bad_character
+):
+    node_id = f"/Type{bad_character}" if field == "id" else "/Type"
+    node = CTypeNode(
+        id=node_id,
+        names=(node_id,),
+        methods=(f"Method{bad_character}",) if field == "method" else (),
+        tags={"json": f"value{bad_character}"} if field == "tag" else None,
+    )
+    graph = CTypeGraph(
+        nodes=(node,),
+        edges=(
+            CTypeEdge(
+                source=node_id,
+                target=node_id,
+                ast_paths=((f"Field{bad_character}",),) if field == "path" else (),
+            ),
+        ),
+        name_to_node={node_id: node_id},
+    )
+    output = tmp_path / "invalid.graphml"
+
+    with pytest.raises(ValueError, match="XML 1.0"):
+        export_graphml(graph, output)
+
+    assert not output.exists()
+
+
+def test_export_preserves_destination_and_cleans_temp_after_igraph_failure(
+    tmp_path, monkeypatch
+):
+    output = tmp_path / "failed.graphml"
+    output.write_bytes(b"original")
+    writer_paths = []
+
+    def fail_after_write(_graph, path):
+        writer_paths.append(Path(path))
+        Path(path).write_text("partial", encoding="utf-8")
+        raise ig.InternalError("serialization failed")
+
+    monkeypatch.setattr(ig.Graph, "write_graphml", fail_after_write)
+
+    with pytest.raises(ValueError, match="could not write GraphML"):
+        export_graphml(ctype_graph(), output)
+
+    assert len(writer_paths) == 1
+    assert writer_paths[0] != output
+    assert writer_paths[0].parent == output.parent
+    assert output.read_bytes() == b"original"
+    assert set(tmp_path.iterdir()) == {output}
 
 
 def test_graphml_round_trip_preserves_projection(tmp_path):

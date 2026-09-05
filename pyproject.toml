@@ -1,7 +1,7 @@
 [project]
 name = "conftamer"
 version = "0.1.0"
-description = "Add your description here"
+description = "Validate gopls CType artifacts and export readable GraphML"
 readme = "README.md"
 requires-python = ">=3.13"
 license = "GPL-2.0-only"

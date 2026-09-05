@@ -57,11 +57,12 @@ line:
 }
 ```
 
-Parse the complete byte stream as one JSON document; newline count has no
-meaning. The root must be an object containing array `Edges`, array `Vertices`,
-and object `List`. A missing field or wrong container type is a file-level
-contract error. Unknown top-level fields are accepted and excluded from
-normalized semantics.
+Parse the complete byte stream as one RFC 8259 JSON document; newline count has
+no meaning. Reject non-standard `NaN`, `Infinity`, and `-Infinity` constants even
+inside unknown fields. The root must be an object containing array `Edges`,
+array `Vertices`, and object `List`. A missing field or wrong container type is
+a file-level contract error. Unknown top-level fields are accepted and excluded
+from normalized semantics.
 
 ## Vertices
 

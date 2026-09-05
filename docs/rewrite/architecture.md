@@ -126,6 +126,11 @@ directed, follows canonical node and edge order, and uses the upstream CType ID
 for both `name` and `label`. igraph indices are never persistent identities.
 
 All GraphML values are strings to produce a homogeneous, Gephi-friendly schema.
+Before opening the destination, reject any projected string containing a
+character forbidden by XML 1.0; never silently strip or replace an upstream
+value. Serialize to a temporary sibling and atomically replace the destination
+so a writer failure cannot leave partial GraphML.
+
 Every vertex has:
 
 | Attribute | Value |

@@ -123,6 +123,29 @@ def test_invalid_or_unsupported_input_creates_no_output(tmp_path, name, content,
     assert not output.exists()
 
 
+def test_xml_forbidden_input_reports_one_line_and_creates_no_output(tmp_path):
+    input_path = tmp_path / "invalid.text"
+    input_path.write_text(
+        json.dumps(
+            {
+                "Edges": [],
+                "Vertices": [{"Names": ["/Type\x00"], "Methods": [], "Tags": None}],
+                "List": {"/Type\x00": "/Type\x00"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "invalid.graphml"
+
+    result = invoke("export", str(input_path), "--output", str(output))
+
+    assert result.exit_code != 0
+    assert "error:" in result.stderr
+    assert "XML 1.0" in result.stderr
+    assert len(result.stderr.splitlines()) == 1
+    assert not output.exists()
+
+
 def test_missing_input_creates_no_output(tmp_path):
     output = tmp_path / "output.graphml"
 

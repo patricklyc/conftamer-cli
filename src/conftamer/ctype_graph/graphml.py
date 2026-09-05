@@ -1,5 +1,7 @@
 import json
+from itertools import chain
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 import igraph as ig
 
@@ -21,7 +23,36 @@ def to_igraph(document: CTypeGraph) -> ig.Graph:
 
 
 def export_graphml(document: CTypeGraph, path: str | Path) -> None:
-    to_igraph(document).write_graphml(str(path))
+    graph = to_igraph(document)
+    _validate_xml_attributes(graph)
+    output = Path(path)
+    with NamedTemporaryFile(dir=output.parent, delete=False) as temporary:
+        temporary_path = Path(temporary.name)
+    try:
+        try:
+            graph.write_graphml(str(temporary_path))
+        except ig.InternalError as error:
+            raise ValueError(f"could not write GraphML: {error}") from error
+        temporary_path.replace(output)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+
+def _validate_xml_attributes(graph: ig.Graph) -> None:
+    for element in chain(graph.vs, graph.es):
+        for value in element.attributes().values():
+            if any(not _is_xml_character(character) for character in value):
+                raise ValueError("GraphML attributes must use valid XML 1.0 characters")
+
+
+def _is_xml_character(character: str) -> bool:
+    codepoint = ord(character)
+    return (
+        codepoint in {0x9, 0xA, 0xD}
+        or 0x20 <= codepoint <= 0xD7FF
+        or 0xE000 <= codepoint <= 0xFFFD
+        or 0x10000 <= codepoint <= 0x10FFFF
+    )
 
 
 def _node_attributes(node: CTypeNode) -> dict[str, str]:
@@ -50,9 +81,4 @@ def _readable_path(path: tuple[str, ...]) -> str:
 
 
 def _compact_json(value: object) -> str:
-    return json.dumps(
-        value,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    )
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))

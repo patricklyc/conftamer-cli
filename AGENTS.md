@@ -62,8 +62,10 @@ mappings, endpoints, uniqueness, and canonical collection order as specified in
 the architecture. Do not combine or deduplicate across input files.
 
 GraphML is a presentation projection, not canonical persistence. All GraphML
-attributes are strings. Human-readable attributes accompany compact, sorted-key
-JSON strings for lossless nested values. Re-read checked-in GraphML tests with
+attributes are strings. Reject XML-forbidden characters before writing rather
+than mutating upstream values, and publish output atomically. Human-readable
+attributes accompany compact, sorted-key JSON strings for lossless nested
+values. Re-read checked-in GraphML tests with
 `ig.Graph.Read_GraphML()`; semantic order is stable, but byte identity is not a
 public contract.
 

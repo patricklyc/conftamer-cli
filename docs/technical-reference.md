@@ -28,12 +28,13 @@ must contain:
   `Properties.Data` AST paths; and
 - `List`: nonempty name-to-first-name string mappings.
 
-Unknown raw fields are accepted but discarded from normalized semantics. The
-loader validates represented names, mappings, unique vertex IDs, unique edge
-endpoint pairs, and existing endpoints. It accepts `.text` or JSON-leading
-content. Malformed/unrelated JSON, `.gv` or DOT, and `.graphml` or XML are
-rejected. Producer GraphML input remains blocked because no real files define
-its transport.
+Unknown raw fields are accepted but discarded from normalized semantics. Input
+must be RFC 8259 JSON; non-standard non-finite constants are rejected even in
+unknown fields. The loader validates represented names, mappings, unique vertex
+IDs, unique edge endpoint pairs, and existing endpoints. It accepts `.text` or
+JSON-leading content. Malformed/unrelated JSON, `.gv` or DOT, and `.graphml` or
+XML are rejected. Producer GraphML input remains blocked because no real files
+define its transport.
 
 See [Input formats and provenance](rewrite/input-formats.md) for the exact
 producer revision, examples, null handling, and real counts.
@@ -66,9 +67,10 @@ def export_graphml(graph: CTypeGraph, path: str | Path) -> None: ...
 ```
 
 `to_igraph` creates all vertices before edges, preserving canonical order and
-isolates. `export_graphml` delegates serialization to python-igraph. Semantic
-projection is stable, but byte-for-byte GraphML identity is not promised across
-igraph versions.
+isolates. `export_graphml` rejects XML-forbidden characters rather than mutating
+upstream values, serializes through python-igraph to a temporary sibling, and
+atomically replaces the destination. Semantic projection is stable, but
+byte-for-byte GraphML identity is not promised across igraph versions.
 
 GraphML cannot be converted back to `CTypeGraph`: it is a visualization
 projection and does not retain the normalized `name_to_node` mapping as a

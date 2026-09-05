@@ -1,5 +1,6 @@
+import json
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Never
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -46,6 +47,7 @@ def _load_ctype_graph_bytes(path: str | Path, data: bytes) -> CTypeGraph:
     input_path = Path(path)
     text = data.decode("utf-8")
     _validate_transport(input_path, text)
+    json.loads(text, parse_constant=_reject_nonfinite)
     raw = _RawDocument.model_validate_json(text)
     return _normalize(raw)
 
@@ -61,6 +63,10 @@ def _validate_transport(path: Path, text: str) -> None:
         raise ValueError("GraphML CType input is not supported")
     if suffix != ".text" and not content.startswith("{"):
         raise ValueError("unsupported CType graph format")
+
+
+def _reject_nonfinite(value: str) -> Never:
+    raise ValueError(f"non-finite JSON constant {value} is not supported")
 
 
 def _normalize(raw: _RawDocument) -> CTypeGraph:

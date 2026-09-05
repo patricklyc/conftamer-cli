@@ -351,6 +351,25 @@ def test_rejects_invalid_raw_contracts(tmp_path, document):
         load_ctype_graph(write_document(tmp_path, document))
 
 
+@pytest.mark.parametrize("constant", ["NaN", "Infinity", "-Infinity"])
+@pytest.mark.parametrize("nested", [False, True])
+def test_rejects_nonstandard_json_constants_in_unknown_fields(
+    tmp_path, constant, nested
+):
+    if nested:
+        text = (
+            '{"Edges":[],"Vertices":[{"Names":["/Type"],"Methods":[],'
+            f'"Tags":null,"Future":{constant}}}],"List":{{"/Type":"/Type"}}}}'
+        )
+    else:
+        text = f'{{"Edges":[],"Vertices":[],"List":{{}},"Future":{constant}}}'
+    path = tmp_path / "nonstandard.text"
+    path.write_text(text, encoding="utf-8")
+
+    with pytest.raises(ValueError, match="non-finite JSON constant"):
+        load_ctype_graph(path)
+
+
 def test_rejects_graphviz_and_blocked_graphml_inputs(tmp_path):
     graphviz_suffix = tmp_path / "graph.gv"
     graphviz_suffix.write_text("{}", encoding="utf-8")

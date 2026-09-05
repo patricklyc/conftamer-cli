@@ -143,72 +143,40 @@ jobs:
         run: |
           executable="./dist/${{ matrix.executable }}"
           "$executable" --help
-          "$executable" build --help
-          "$executable" stitch --help
-          "$executable" query --help
           "$executable" export --help
 
           mkdir -p smoke
-          cat > smoke/client.jsonl <<'EOF'
-          {"kind":"Request sent","pid":1,"message":{"req.Method":"GET","req.URL.Host":"server:8080","req.URL.Path":"/health"},"context":{"context_id":"client"}}
-          EOF
-          cat > smoke/server.jsonl <<'EOF'
-          {"kind":"Request received","pid":2,"message":{"req.Method":"GET","req.URL.Path":"/health"},"context":{"context_id":"server"}}
-          EOF
-
-          "$executable" build \
-            --module-id example.org/client \
-            --events smoke/client.jsonl \
-            --output smoke/client.pmgraph.json
-          "$executable" build \
-            --module-id example.org/server \
-            --events smoke/server.jsonl \
-            --output smoke/server.pmgraph.json
-          "$executable" build \
-            --module-id github.com/prometheus/prometheus \
-            --events examples/contexttrack/prometheus/scrape-ok.jsonl \
-            --paramtrack-csv examples/paramtrack/runs/target-scraper-all/parameters.csv \
-            --unmarshaler examples/paramtrack/static/unmarshaler_subgraph.text \
-            --accessors examples/paramtrack/static/accessors.text \
-            --output smoke/enriched.pmgraph.json
-
-          "$executable" stitch \
-            smoke/client.pmgraph.json \
-            smoke/server.pmgraph.json \
-            --output smoke/application.appgraph.json
-          "$executable" query \
-            examples/paramtrack/static/accessors.text \
-            scrape.targetScraper \
-            --output smoke/ctype-query.graphml
-          "$executable" query \
-            smoke/enriched.pmgraph.json \
-            global.external_labels.data \
-            --direction descendants \
-            --output smoke/parameter-query.graphml
           "$executable" export \
-            smoke/application.appgraph.json \
-            --output smoke/application.graphml
+            examples/ctype/unmarshaler_subgraph.text \
+            --output smoke/unmarshaler.graphml
+          "$executable" export \
+            examples/ctype/accessors.text \
+            --output smoke/accessors.graphml
 
           uv run --no-sync python - <<'PY'
           import igraph as ig
 
-          from conftamer.appgraph import load_appgraph
-          from conftamer.pmgraph import load_pmgraph
-
-          client = load_pmgraph("smoke/client.pmgraph.json")
-          server = load_pmgraph("smoke/server.pmgraph.json")
-          enriched = load_pmgraph("smoke/enriched.pmgraph.json")
-          application = load_appgraph("smoke/application.appgraph.json")
-          assert client.nodes and server.nodes and application.nodes
-          assert len(enriched.edges) == 109
-
-          for path in (
-              "smoke/ctype-query.graphml",
-              "smoke/parameter-query.graphml",
-              "smoke/application.graphml",
-          ):
+          expected = {
+              "smoke/unmarshaler.graphml": (57, 90),
+              "smoke/accessors.graphml": (582, 822),
+          }
+          vertex_attributes = {
+              "name",
+              "label",
+              "aliases",
+              "methods",
+              "tags",
+              "names_json",
+              "methods_json",
+              "tags_json",
+          }
+          edge_attributes = {"ast_paths", "ast_paths_json"}
+          for path, counts in expected.items():
               graph = ig.Graph.Read_GraphML(path)
-              assert graph.vcount() > 0
+              assert graph.is_directed()
+              assert (graph.vcount(), graph.ecount()) == counts
+              assert vertex_attributes <= set(graph.vertex_attributes())
+              assert edge_attributes <= set(graph.edge_attributes())
           PY
 
       - name: Name release executable
