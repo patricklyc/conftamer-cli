@@ -85,7 +85,9 @@ def test_none_fields_are_omitted_not_written_empty() -> None:
     node_el = root.find(f".//g:node[@id='frontend::message-1']", ns)
     assert node_el is not None
 
-    data_keys_used = {data_el.attrib["key"] for data_el in node_el.findall("g:data", ns)}
+    data_keys_used = {
+        data_el.attrib["key"] for data_el in node_el.findall("g:data", ns)
+    }
     key_names_used = {
         key_el.attrib["attr.name"]
         for key_el in root.findall("g:key", ns)
