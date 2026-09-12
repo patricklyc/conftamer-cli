@@ -61,7 +61,8 @@ MESSAGE_REQUIRED_NULLABLE_FIELDS = ("api_id",)
 def _prefixed_id(module_id: str, node_id: str) -> str:
     return f"{module_id}{NODE_ID_SEPARATOR}{node_id}"
 
-#Used when converting from graphML back to PMGraph
+
+# Used when converting from graphML back to PMGraph
 def _strip_prefix(module_id: str, prefixed_id: str) -> str:
     prefix = f"{module_id}{NODE_ID_SEPARATOR}"
     if not prefixed_id.startswith(prefix):
@@ -79,7 +80,7 @@ def _node_attributes(node: Node) -> dict[str, object]:
         attrs: dict[str, object] = {"kind": node.kind, "method": node.method}
         for field in ("api_id", "host", "path", "pattern", "status_code"):
             value = getattr(node, field)
-            if value is not None: #Just Omit none values, can be changed if needed
+            if value is not None:  # Just Omit none values, can be changed if needed
                 attrs[field] = value
         return attrs
     raise TypeError(f"Unknown PMGraph node type: {type(node)!r}")
@@ -164,7 +165,8 @@ def write_graphml(graph: PMGraph, path: str) -> None:
     ET.indent(root, space="  ")
     ET.ElementTree(root).write(path, encoding="utf-8", xml_declaration=True)
 
-#Usefull for testing
+
+# Usefull for testing
 def graphml_to_pmgraph(xml_text: str) -> PMGraph:
     """Parse a GraphML document (as produced by this module) back into a PMGraph."""
     root = ET.fromstring(xml_text)

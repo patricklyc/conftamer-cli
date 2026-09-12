@@ -1,6 +1,6 @@
-import xml.etree.ElementTree as ET
 from pathlib import Path
- 
+
+from conftamer.pmgraph.models import Message, Parameter, PMGraph
 from conftamer.pmgraph.pm_to_graphml import (
     GRAPHML_NS,
     graphml_to_pmgraph,
@@ -8,8 +8,6 @@ from conftamer.pmgraph.pm_to_graphml import (
     pmgraph_to_graphml_element,
     write_graphml,
 )
-from conftamer.pmgraph.models import Message, Parameter, PMGraph
-
 
 
 def _sample_graph() -> PMGraph:
@@ -43,15 +41,15 @@ def test_round_trip_preserves_graph() -> None:
 
     assert restored == graph
 
+
 def test_write_graphml_round_trips_through_a_file(tmp_path: Path) -> None:
     graph = _sample_graph()
     path = tmp_path / "sample.graphml"
- 
+
     write_graphml(graph, str(path))
     restored = graphml_to_pmgraph(path.read_text(encoding="utf-8"))
- 
-    assert restored == graph
 
+    assert restored == graph
 
 
 def test_node_ids_are_prefixed_with_module_id() -> None:
@@ -82,7 +80,7 @@ def test_none_fields_are_omitted_not_written_empty() -> None:
 
     root = pmgraph_to_graphml_element(graph)
     ns = {"g": GRAPHML_NS}
-    node_el = root.find(f".//g:node[@id='frontend::message-1']", ns)
+    node_el = root.find(".//g:node[@id='frontend::message-1']", ns)
     assert node_el is not None
 
     data_keys_used = {
