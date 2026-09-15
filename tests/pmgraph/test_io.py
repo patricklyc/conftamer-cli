@@ -42,9 +42,9 @@ def test_json_round_trip_is_deterministic_utf8(tmp_path):
         b"\xff",
         b'{"module_id":"m","nodes":{},"edges":[],"extra":true}',
         b'{"module_id":"m","nodes":{},"edges":[["absent","absent"]]}',
-        b'{"module_id":"m","nodes":{"p":{"kind":"parameter","key":"",'
+        b'{"module_id":"m","nodes":{"p":{"kind":"parameter","key":"",',
         b'"extra":true}},"edges":[]}',
-        b'{"module_id":"m","nodes":{"r":{"kind":"send_response","api_id":null,'
+        b'{"module_id":"m","nodes":{"r":{"kind":"send_response","api_id":null,',
         b'"method":"GET","path":"/","status_code":"200"}},"edges":[]}',
     ],
 )
