@@ -1,5 +1,3 @@
-import json
-
 import igraph
 import pytest
 
@@ -16,12 +14,19 @@ def _rich_graph() -> PMGraph:
         path="",
         status_code=10**30,
     )
+    routed_request = Message(
+        kind="receive_request",
+        api_id="api<&",
+        method="POST",
+        pattern="/jobs/{id}",
+    )
     return PMGraph(
         module_id="module<&",
         nodes={
-            "10": Parameter(key="same\0<&é"),
+            "10": Parameter(key="same<&é"),
             '2<&"': response,
-            "isolated": Parameter(key="same\0<&é"),
+            "routed": routed_request,
+            "isolated": Parameter(key="same<&é"),
         },
         edges={("10", '2<&"'), ('2<&"', "10"), ('2<&"', '2<&"')},
     )
@@ -34,29 +39,44 @@ def _named_edges(network: igraph.Graph) -> list[tuple[str, str]]:
     ]
 
 
-def _assert_preserved(network: igraph.Graph, graph: PMGraph) -> None:
+def _assert_topology(network: igraph.Graph, graph: PMGraph) -> None:
     assert network.is_directed()
     assert network["module_id"] == graph.module_id
     assert network.vs["name"] == list(graph.nodes)
-    assert network.vs["kind"] == [node.kind for node in graph.nodes.values()]
     assert _named_edges(network) == sorted(graph.edges)
-    assert [json.loads(value) for value in network.vs["node_json"]] == [
-        node.model_dump(mode="json") for node in graph.nodes.values()
-    ]
 
 
-def test_conversion_and_graphml_round_trip_preserve_the_complete_graph(tmp_path):
+def test_conversion_and_graphml_export_use_flattened_node_attributes(tmp_path):
     graph = _rich_graph()
     original = graph.model_copy(deep=True)
 
     network = to_igraph(graph)
-    _assert_preserved(network, graph)
+    _assert_topology(network, graph)
+    assert {
+        attribute: network.vs[attribute] for attribute in network.vertex_attributes()
+    } == {
+        "name": ["10", '2<&"', "routed", "isolated"],
+        "kind": [
+            "parameter",
+            "receive_response",
+            "receive_request",
+            "parameter",
+        ],
+        "key": ["same<&é", None, None, "same<&é"],
+        "api_id": [None, None, "api<&", None],
+        "method": [None, "GET", "POST", None],
+        "host": [None, "example.test", None, None],
+        "path": [None, "", None, None],
+        "pattern": [None, None, "/jobs/{id}", None],
+        "status_code": [None, 10**30, None, None],
+    }
     assert network.degree("isolated", mode="all") == 0
-    assert "\\u0000" in network.vs["node_json"][0]
 
     path = tmp_path / "graph.graphml"
     write_graphml(graph, path)
-    _assert_preserved(igraph.Graph.Read_GraphML(str(path)), graph)
+    exported = igraph.Graph.Read_GraphML(str(path))
+    _assert_topology(exported, graph)
+    assert exported.vs.find(name="10")["key"] == "same<&é"
     assert graph == original
 
 
@@ -80,7 +100,16 @@ def test_write_graphml_rejects_unpreservable_identities(tmp_path, module_id, nod
         module_id=module_id, nodes={node_id: Parameter(key="ok")}, edges=set()
     )
 
-    with pytest.raises(ValueError, match="GraphML cannot preserve identity"):
+    with pytest.raises(ValueError, match="GraphML cannot preserve"):
+        write_graphml(graph, path)
+    assert not path.exists()
+
+
+def test_write_graphml_rejects_unpreservable_node_attribute(tmp_path):
+    path = tmp_path / "invalid.graphml"
+    graph = PMGraph(module_id="m", nodes={"n": Parameter(key="bad\0key")}, edges=set())
+
+    with pytest.raises(ValueError, match="GraphML cannot preserve"):
         write_graphml(graph, path)
     assert not path.exists()
 
