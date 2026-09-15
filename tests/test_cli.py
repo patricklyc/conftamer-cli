@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import igraph
@@ -9,6 +10,11 @@ from conftamer.pmgraph.io import load_pmgraph_json
 
 runner = CliRunner()
 CAPTURE = Path(__file__).parents[1] / "examples/contexttrack/prometheus/scrape-ok.jsonl"
+QUERY_GRAPH = (
+    '{"module_id":"m","nodes":{"c":{"kind":"parameter","key":"z"},'
+    '"a":{"kind":"parameter","key":"x"},"b":{"kind":"parameter","key":"y"}},'
+    '"edges":[["a","b"],["b","c"]]}'
+)
 
 
 def test_build_capture(tmp_path):
@@ -42,6 +48,28 @@ def test_build_reports_errors_without_overwriting(tmp_path, text, existing_outpu
         assert output.read_bytes() == b"keep"
     else:
         assert not output.exists()
+
+
+def test_query_pmgraph_json(tmp_path):
+    source = tmp_path / "graph.json"
+    source.write_text(QUERY_GRAPH, encoding="utf-8")
+
+    result = runner.invoke(app, ["query", str(source), "--node", "c"])
+
+    assert result.exit_code == 0 and result.stderr == ""
+    assert json.loads(result.stdout) == {"ancestors": ["a", "b"], "descendants": []}
+
+
+@pytest.mark.parametrize("text,node", [("{", "x"), (QUERY_GRAPH, "missing")])
+def test_query_reports_expected_errors(tmp_path, text, node):
+    source = tmp_path / "graph.json"
+    source.write_text(text, encoding="utf-8")
+
+    result = runner.invoke(app, ["query", str(source), "--node", node])
+
+    assert result.exit_code == 2 and result.stdout == ""
+    assert f"Cannot query {source}:" in result.stderr
+    assert "Traceback" not in result.stderr
 
 
 def test_export_pmgraph_json(tmp_path):

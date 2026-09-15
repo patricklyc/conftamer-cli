@@ -19,6 +19,22 @@ def to_igraph(graph: PMGraph) -> igraph.Graph:
     return network
 
 
+def query_node(graph: PMGraph, node_id: str) -> dict[str, list[str]]:
+    if node_id not in graph.nodes:
+        raise ValueError(f"unknown node ID {node_id!r}")
+    network = to_igraph(graph)
+    selected = network.vs.find(name=node_id).index
+    names = network.vs["name"]
+    result: dict[str, list[str]] = {}
+    for relation, mode in (("ancestors", "in"), ("descendants", "out")):
+        reached = set(network.subcomponent(selected, mode=mode))
+        reached.discard(selected)
+        result[relation] = [
+            name for index, name in enumerate(names) if index in reached
+        ]
+    return result
+
+
 def _check_graphml_identity(value: str) -> None:
     for character in value:
         code = ord(character)

@@ -3,7 +3,7 @@ import json
 import igraph
 import pytest
 
-from conftamer.pmgraph.igraph_ops import to_igraph, write_graphml
+from conftamer.pmgraph.igraph_ops import query_node, to_igraph, write_graphml
 from conftamer.pmgraph.models import Message, Parameter, PMGraph
 
 
@@ -58,6 +58,54 @@ def test_conversion_and_graphml_round_trip_preserve_the_complete_graph(tmp_path)
     write_graphml(graph, path)
     _assert_preserved(igraph.Graph.Read_GraphML(str(path)), graph)
     assert graph == original
+
+
+def test_query_node_returns_directed_reachability_in_node_order():
+    graph = PMGraph(
+        module_id="m",
+        nodes={
+            name: Parameter(key=name)
+            for name in (
+                "descendant-2",
+                "ancestor-2",
+                "seed",
+                "ancestor-1",
+                "descendant-1",
+                "isolate",
+            )
+        },
+        edges={
+            ("ancestor-2", "ancestor-1"),
+            ("ancestor-1", "seed"),
+            ("seed", "descendant-1"),
+            ("descendant-1", "descendant-2"),
+            ("seed", "descendant-2"),
+        },
+    )
+    original = graph.model_copy(deep=True)
+
+    assert query_node(graph, "seed") == {
+        "ancestors": ["ancestor-2", "ancestor-1"],
+        "descendants": ["descendant-2", "descendant-1"],
+    }
+    assert query_node(graph, "isolate") == {"ancestors": [], "descendants": []}
+    assert graph == original
+
+
+def test_query_node_excludes_seed_from_cycles_and_uses_exact_ids():
+    graph = _rich_graph()
+
+    assert query_node(graph, "10") == {
+        "ancestors": ['2<&"'],
+        "descendants": ['2<&"'],
+    }
+
+
+def test_query_node_rejects_unknown_id():
+    graph = PMGraph(module_id="m", nodes={"known": Parameter(key="x")}, edges=set())
+
+    with pytest.raises(ValueError, match="unknown node ID 'missing'"):
+        query_node(graph, "missing")
 
 
 def test_empty_graph_and_existing_output(tmp_path):
