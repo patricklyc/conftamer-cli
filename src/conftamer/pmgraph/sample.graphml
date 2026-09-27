@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  <key id="module_id" for="graph" attr.name="module_id" attr.type="string" />
+  <key id="kind" for="node" attr.name="kind" attr.type="string" />
+  <key id="key" for="node" attr.name="key" attr.type="string" />
+  <key id="api_id" for="node" attr.name="api_id" attr.type="string" />
+  <key id="method" for="node" attr.name="method" attr.type="string" />
+  <key id="host" for="node" attr.name="host" attr.type="string" />
+  <key id="path" for="node" attr.name="path" attr.type="string" />
+  <key id="pattern" for="node" attr.name="pattern" attr.type="string" />
+  <key id="status_code" for="node" attr.name="status_code" attr.type="int" />
+  <graph id="frontend" edgedefault="directed">
+    <data key="module_id">frontend</data>
+    <node id="frontend::message-1">
+      <data key="kind">send_request</data>
+      <data key="method">POST</data>
+      <data key="host">backend:8080</data>
+      <data key="path">/jobs</data>
+    </node>
+    <node id="frontend::parameter-1">
+      <data key="kind">parameter</data>
+      <data key="key">timeout</data>
+    </node>
+    <edge source="frontend::parameter-1" target="frontend::message-1" />
+  </graph>
+</graphml>
