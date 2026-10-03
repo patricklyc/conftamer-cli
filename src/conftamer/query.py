@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections import defaultdict
-from collections.abc import Iterator
 from dataclasses import dataclass
-from itertools import islice
+from itertools import islice, product
+
+import igraph as ig
 
 from conftamer.appgraph.models import AppGraph
 from conftamer.pmgraph.models import PMGraph
@@ -28,89 +28,38 @@ class QueryResult:
     truncated: bool
 
 
-def _adjacency(
-    edges: set[tuple[str, str]],
-) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
-    """Build forward (successor) and reverse (predecessor) adjacency maps."""
-    successors: dict[str, set[str]] = defaultdict(set)
-    predecessors: dict[str, set[str]] = defaultdict(set)
-    for source, target in edges:
-        successors[source].add(target)
-        predecessors[target].add(source)
-    return successors, predecessors
+def to_igraph(graph: Graph) -> ig.Graph:
+    """Convert a PMGraph or AppGraph into a directed ``igraph.Graph``.
 
-
-def _reachable(start: str, adjacency: dict[str, set[str]]) -> set[str]:
-    """Every node reachable from ``start`` by following ``adjacency`` (excludes
-    ``start`` itself, given the no-cycles assumption)."""
-    reached: set[str] = set()
-    stack = list(adjacency.get(start, ()))
-    while stack:
-        node = stack.pop()
-        if node in reached:
-            continue
-        reached.add(node)
-        stack.extend(adjacency.get(node, ()))
-    return reached
+    Each vertex's ``name`` attribute is its node ID. Vertices are added in sorted
+    node-ID order, so igraph's index-ordered traversals visit neighbors in sorted
+    ID order and results are deterministic. Raises ``ValueError`` if an edge
+    references a node ID that is not in ``graph.nodes``.
+    """
+    names = sorted(graph.nodes)
+    index = {name: i for i, name in enumerate(names)}
+    edges: list[tuple[int, int]] = []
+    for source, target in sorted(graph.edges):
+        if source not in index or target not in index:
+            raise ValueError(f"edge {(source, target)!r} has a missing endpoint")
+        edges.append((index[source], index[target]))
+    return ig.Graph(
+        n=len(names), edges=edges, directed=True, vertex_attrs={"name": names}
+    )
 
 
 def _paths_to_ends(
-    start: str, adjacency: dict[str, set[str]], on_path: set[str]
-) -> Iterator[list[str]]:
-    """Yield every simple path from ``start`` to a node with no outgoing edge in
-    ``adjacency`` (a root when walking predecessors, a leaf when walking
-    successors). Each yielded path begins with ``start``. ``on_path`` guards
-    against revisiting a node so a stray cycle cannot loop forever."""
-    neighbors = adjacency.get(start)
-    if not neighbors:
-        yield [start]
-        return
-    for neighbor in sorted(neighbors):
-        if neighbor in on_path:
-            continue
-        on_path.add(neighbor)
-        for tail in _paths_to_ends(neighbor, adjacency, on_path):
-            yield [start, *tail]
-        on_path.discard(neighbor)
-
-
-def _through_paths(
-    node_id: str,
-    successors: dict[str, set[str]],
-    predecessors: dict[str, set[str]],
-) -> Iterator[list[str]]:
-    """Yield every root->leaf path passing through ``node_id``.
-
-    Splits the work: walk predecessors to enumerate root->node prefixes and
-    successors to enumerate node->leaf suffixes, then cross-product them. Suffixes
-    are cached as they are pulled so each is computed once, while prefixes stay
-    lazy -- so with a downstream cap only as many suffixes as needed are built.
-    """
-    up_paths = (
-        list(reversed(path))  # yielded as [node, ..., root]; want [root, ..., node]
-        for path in _paths_to_ends(node_id, predecessors, {node_id})
-    )
-    down_gen = _paths_to_ends(node_id, successors, {node_id})
-
-    down_cache: list[list[str]] = []
-    down_exhausted = False
-    for up in up_paths:
-        index = 0
-        while True:
-            if index < len(down_cache):
-                down = down_cache[index]
-            elif down_exhausted:
-                break
-            else:
-                nxt = next(down_gen, None)
-                if nxt is None:
-                    down_exhausted = True
-                    break
-                down_cache.append(nxt)
-                down = nxt
-            # up ends with node_id and down starts with it; drop the duplicate.
-            yield [*up[:-1], *down]
-            index += 1
+    g: ig.Graph, vertex: int, mode: str, limit: int | None
+) -> list[list[int]]:
+    """Every simple path from ``vertex`` to a structural end, as vertex indices
+    starting at ``vertex``: roots (in-degree 0) when ``mode="in"``, leaves
+    (out-degree 0) when ``mode="out"``. At most ``limit`` paths (None = all)."""
+    degree = g.indegree if mode == "in" else g.outdegree
+    if degree(vertex) == 0:
+        # igraph never returns the zero-length path from a vertex to itself.
+        return [[vertex]] if limit != 0 else []
+    ends = [v for v, d in enumerate(degree()) if d == 0]
+    return g.get_all_simple_paths(vertex, to=ends, mode=mode, max_results=limit)
 
 
 def query(graph: Graph, node_id: str, path_limit: int = -1) -> QueryResult:
@@ -124,26 +73,34 @@ def query(graph: Graph, node_id: str, path_limit: int = -1) -> QueryResult:
     if node_id not in graph.nodes:
         raise ValueError(f"node ID {node_id!r} not in graph")
 
-    successors, predecessors = _adjacency(graph.edges)
+    g = to_igraph(graph)
+    vertex = g.vs.find(name=node_id).index
 
-    keep = (
-        {node_id} | _reachable(node_id, predecessors) | _reachable(node_id, successors)
+    keep = set(g.subcomponent(vertex, mode="in")) | set(
+        g.subcomponent(vertex, mode="out")
     )
-    sub_nodes = {nid: node for nid, node in graph.nodes.items() if nid in keep}
-    sub_edges = {
-        (source, target)
-        for source, target in graph.edges
-        if source in keep and target in keep
-    }
+    sub = g.induced_subgraph(sorted(keep))
+    sub_names: list[str] = sub.vs["name"]
+    sub_nodes = {name: graph.nodes[name] for name in sub_names}
+    sub_edges = {(sub_names[s], sub_names[t]) for s, t in sub.get_edgelist()}
     subgraph = graph.model_copy(update={"nodes": sub_nodes, "edges": sub_edges})
 
-    paths_iter = _through_paths(node_id, successors, predecessors)
-    if path_limit < 0:
+    # Split enumeration: root->node prefixes x node->leaf suffixes. Pulling one
+    # extra past the cap tells a full result from a truncated one; the first
+    # path_limit + 1 cross-product items never need more than that many of either.
+    cap = None if path_limit < 0 else path_limit + 1
+    ups = _paths_to_ends(g, vertex, "in", cap)  # each is [node, ..., root]
+    downs = _paths_to_ends(g, vertex, "out", cap)  # each is [node, ..., leaf]
+    names: list[str] = g.vs["name"]
+    paths_iter = (
+        [names[v] for v in reversed(up)] + [names[v] for v in down[1:]]
+        for up, down in product(ups, downs)
+    )
+    if cap is None:
         paths = list(paths_iter)
         truncated = False
     else:
-        # Pull one extra to tell a full result from a truncated one.
-        paths = list(islice(paths_iter, path_limit + 1))
+        paths = list(islice(paths_iter, cap))
         truncated = len(paths) > path_limit
         paths = paths[:path_limit]
 

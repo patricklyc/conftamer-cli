@@ -127,7 +127,8 @@ AppGraph. Given one node it returns a `QueryResult` with:
 
 `path_limit` caps how many paths are returned; `-1` means no limit. A dense graph
 can contain an enormous number of root-to-leaf paths, so a limit is worth setting
-on large graphs.
+on large graphs. Paths are returned in a deterministic order (by node ID), so the
+same query always yields the same paths, and a limit always keeps the same ones.
 
 ```python
 from conftamer.query import query
@@ -138,7 +139,24 @@ result = query(appgraph, "frontend::timeout")
 # result.truncated: False
 ```
 
-Querying an unknown node ID raises `ValueError`.
+Querying an unknown node ID raises `ValueError`, as does querying a graph with
+an edge that points at a node ID missing from `nodes`.
+
+### igraph
+
+Graphs are always stored as their pydantic models; querying converts them to
+[igraph](https://python.igraph.org/) internally on every call and converts the
+results back, so you never need to handle igraph objects yourself. The
+conversion is available on its own as `to_igraph(graph)`, which returns a
+directed `igraph.Graph` whose vertex `name` attribute is the node ID (vertices
+are in sorted node-ID order):
+
+```python
+from conftamer.query import to_igraph
+
+g = to_igraph(appgraph)
+g.vs["name"]  # ["frontend::timeout", "link0"]
+```
 
 ## Not yet wired up
 

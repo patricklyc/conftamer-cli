@@ -4,7 +4,7 @@ import pytest
 
 from conftamer.appgraph.models import AppGraph
 from conftamer.pmgraph.models import Message, Parameter, PMGraph
-from conftamer.query import query
+from conftamer.query import query, to_igraph
 
 
 def _pmgraph(edges: set[tuple[str, str]], extra_nodes: Iterable[str] = ()) -> PMGraph:
@@ -17,6 +17,56 @@ def _pmgraph(edges: set[tuple[str, str]], extra_nodes: Iterable[str] = ()) -> PM
         nodes={nid: Parameter(key=nid) for nid in node_ids},
         edges=edges,
     )
+
+
+def _named_edges(graph: PMGraph | AppGraph) -> set[tuple[str, str]]:
+    g = to_igraph(graph)
+    return {(g.vs[s]["name"], g.vs[t]["name"]) for s, t in g.get_edgelist()}
+
+
+class TestToIgraph:
+    def test_vertices_are_named_by_node_id_in_sorted_order(self) -> None:
+        g = to_igraph(_pmgraph({("b", "a"), ("c", "b")}))
+
+        assert g.is_directed()
+        assert g.vs["name"] == ["a", "b", "c"]
+
+    def test_edges_round_trip(self) -> None:
+        edges = {("r", "a"), ("a", "m"), ("m", "b1"), ("m", "b2"), ("a", "l")}
+        graph = _pmgraph(edges)
+
+        assert to_igraph(graph).ecount() == len(edges)
+        assert _named_edges(graph) == edges
+
+    def test_isolated_nodes_become_vertices(self) -> None:
+        g = to_igraph(_pmgraph({("a", "b")}, extra_nodes={"solo"}))
+
+        assert set(g.vs["name"]) == {"a", "b", "solo"}
+        assert g.vs.find(name="solo").degree() == 0
+
+    def test_empty_graph(self) -> None:
+        g = to_igraph(PMGraph(module_id="m", nodes={}, edges=set()))
+
+        assert g.vcount() == 0
+        assert g.ecount() == 0
+
+    def test_appgraph(self) -> None:
+        graph = AppGraph(
+            nodes={nid: Parameter(key=nid) for nid in ("a", "m", "b")},
+            edges={("a", "m"), ("m", "b")},
+        )
+
+        assert to_igraph(graph).vs["name"] == ["a", "b", "m"]
+        assert _named_edges(graph) == {("a", "m"), ("m", "b")}
+
+    def test_dangling_edge_raises(self) -> None:
+        # PMGraph does not itself validate edge endpoints; conversion does.
+        graph = PMGraph(
+            module_id="m", nodes={"a": Parameter(key="a")}, edges={("a", "ghost")}
+        )
+
+        with pytest.raises(ValueError, match="missing endpoint"):
+            to_igraph(graph)
 
 
 def test_unknown_node_raises() -> None:
@@ -92,6 +142,23 @@ def test_path_limit_caps_and_flags_truncation() -> None:
     unlimited = query(graph, "m", path_limit=-1)
     assert len(unlimited.paths) == 2
     assert unlimited.truncated is False
+
+
+def test_paths_cross_multiple_roots_and_leaves() -> None:
+    # Two roots feed m and m feeds two leaves: 2 prefixes x 2 suffixes, ordered
+    # by prefix first, then suffix (both in sorted node-ID order).
+    graph = _pmgraph({("r1", "m"), ("r2", "m"), ("m", "l1"), ("m", "l2")})
+
+    assert query(graph, "m").paths == [
+        ["r1", "m", "l1"],
+        ["r1", "m", "l2"],
+        ["r2", "m", "l1"],
+        ["r2", "m", "l2"],
+    ]
+
+    capped = query(graph, "m", path_limit=3)
+    assert capped.paths == [["r1", "m", "l1"], ["r1", "m", "l2"], ["r2", "m", "l1"]]
+    assert capped.truncated is True
 
 
 def test_path_limit_zero_returns_none_but_flags_truncation() -> None:
