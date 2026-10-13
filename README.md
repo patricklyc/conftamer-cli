@@ -164,6 +164,9 @@ The command-line program is still a simple greeting demo: stitching and querying
 are available as a library, but not yet as CLI commands. The CLI also does not
 yet read ContextTrack captures, save graph files, or export GraphML.
 
+For a runnable, end-to-end example of what *is* available — sample PMGraph files
+for a three-module app, stitched and queried — see [`examples/`](examples/README.md).
+
 ## Development setup
 
 Requirements:

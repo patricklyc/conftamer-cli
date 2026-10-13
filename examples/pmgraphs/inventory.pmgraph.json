@@ -1,0 +1,26 @@
+{
+  "module_id": "inventory",
+  "nodes": {
+    "param-db-pool-size": {
+      "kind": "parameter",
+      "key": "db.pool_size"
+    },
+    "recv-reserve": {
+      "kind": "receive_request",
+      "api_id": "inventory-api",
+      "method": "PUT",
+      "pattern": "/stock/:sku/reserve"
+    },
+    "send-reserve-200": {
+      "kind": "send_response",
+      "api_id": "inventory-api",
+      "method": "PUT",
+      "pattern": "/stock/:sku/reserve",
+      "status_code": 200
+    }
+  },
+  "edges": [
+    ["recv-reserve", "send-reserve-200"],
+    ["param-db-pool-size", "send-reserve-200"]
+  ]
+}

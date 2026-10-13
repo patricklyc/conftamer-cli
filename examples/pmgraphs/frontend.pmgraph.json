@@ -1,0 +1,35 @@
+{
+  "module_id": "frontend",
+  "nodes": {
+    "param-checkout-timeout": {
+      "kind": "parameter",
+      "key": "checkout.timeout"
+    },
+    "send-checkout": {
+      "kind": "send_request",
+      "api_id": "orders-api",
+      "method": "POST",
+      "host": "orders:8080",
+      "path": "/carts/42/checkout"
+    },
+    "recv-checkout-201": {
+      "kind": "receive_response",
+      "api_id": "orders-api",
+      "method": "POST",
+      "host": "orders:8080",
+      "path": "/carts/42/checkout",
+      "status_code": 201
+    },
+    "send-analytics": {
+      "kind": "send_request",
+      "api_id": "analytics-api",
+      "method": "POST",
+      "host": "analytics:9000",
+      "path": "/events"
+    }
+  },
+  "edges": [
+    ["param-checkout-timeout", "send-checkout"],
+    ["param-checkout-timeout", "send-analytics"]
+  ]
+}

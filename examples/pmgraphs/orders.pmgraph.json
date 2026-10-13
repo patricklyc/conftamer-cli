@@ -1,0 +1,43 @@
+{
+  "module_id": "orders",
+  "nodes": {
+    "param-max-retries": {
+      "kind": "parameter",
+      "key": "inventory.max_retries"
+    },
+    "recv-checkout": {
+      "kind": "receive_request",
+      "api_id": "orders-api",
+      "method": "POST",
+      "pattern": "/carts/{cart_id}/checkout"
+    },
+    "send-reserve": {
+      "kind": "send_request",
+      "api_id": "inventory-api",
+      "method": "PUT",
+      "host": "inventory:7000",
+      "path": "/stock/sku-123/reserve"
+    },
+    "recv-reserve-200": {
+      "kind": "receive_response",
+      "api_id": "inventory-api",
+      "method": "PUT",
+      "host": "inventory:7000",
+      "path": "/stock/sku-123/reserve",
+      "status_code": 200
+    },
+    "send-checkout-201": {
+      "kind": "send_response",
+      "api_id": "orders-api",
+      "method": "POST",
+      "pattern": "/carts/{cart_id}/checkout",
+      "status_code": 201
+    }
+  },
+  "edges": [
+    ["recv-checkout", "send-reserve"],
+    ["param-max-retries", "send-reserve"],
+    ["recv-checkout", "send-checkout-201"],
+    ["recv-reserve-200", "send-checkout-201"]
+  ]
+}
