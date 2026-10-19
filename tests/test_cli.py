@@ -10,6 +10,10 @@ from conftamer.pmgraph.io import load_pmgraph_json
 
 runner = CliRunner()
 CAPTURE = Path(__file__).parents[1] / "examples/contexttrack/prometheus/scrape-ok.jsonl"
+NORMALIZED_REQUEST = (
+    '{"schema_version":1,"kind":"receive_request","pid":1,"context":{},'
+    '"message":{"method":"GET","path":"/"}}'
+)
 QUERY_GRAPH = (
     '{"module_id":"m","nodes":{"c":{"kind":"parameter","key":"z"},'
     '"a":{"kind":"parameter","key":"x"},"b":{"kind":"parameter","key":"y"}},'
@@ -17,10 +21,18 @@ QUERY_GRAPH = (
 )
 
 
-def test_build_capture(tmp_path):
+def test_build_capture(tmp_path, normalized_scrape_capture):
     output = tmp_path / "graph.json"
     result = runner.invoke(
-        app, ["build", str(CAPTURE), "--module-id", "scraper", "--output", str(output)]
+        app,
+        [
+            "build",
+            str(normalized_scrape_capture),
+            "--module-id",
+            "scraper",
+            "--output",
+            str(output),
+        ],
     )
     assert result.exit_code == 0, result.output
     assert result.stdout == result.stderr == ""
@@ -29,10 +41,34 @@ def test_build_capture(tmp_path):
     assert len(graph.nodes) == 4 and graph.edges == {("n1", "n2")}
 
 
+def test_build_rejects_raw_capture(tmp_path):
+    output = tmp_path / "graph.json"
+    result = runner.invoke(
+        app, ["build", str(CAPTURE), "--module-id", "scraper", "--output", str(output)]
+    )
+    assert result.exit_code == 2 and result.stdout == ""
+    assert f"{CAPTURE}:1:" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert not output.exists()
+
+
 @pytest.mark.parametrize(
-    "text, existing_output", [("{", False), ("null", False), ("", True)]
+    "text, line, existing_output",
+    [
+        ("{", 1, False),
+        (
+            NORMALIZED_REQUEST
+            + "\n \n"
+            + NORMALIZED_REQUEST.replace('"schema_version":1', '"schema_version":2'),
+            3,
+            False,
+        ),
+        ("", None, True),
+    ],
 )
-def test_build_reports_errors_without_overwriting(tmp_path, text, existing_output):
+def test_build_reports_errors_without_overwriting(
+    tmp_path, text, line, existing_output
+):
     source, output = tmp_path / "events.jsonl", tmp_path / "graph.json"
     source.write_text(text, encoding="utf-8")
     if existing_output:
@@ -43,6 +79,8 @@ def test_build_reports_errors_without_overwriting(tmp_path, text, existing_outpu
     assert result.exit_code == 2
     assert result.stdout == ""
     assert f"Cannot build {source}:" in result.stderr
+    if line is not None:
+        assert f"{source}:{line}:" in result.stderr
     assert "Traceback" not in result.stderr
     if existing_output:
         assert output.read_bytes() == b"keep"

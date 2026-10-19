@@ -1,43 +1,45 @@
 import json
 import warnings
-from pathlib import Path
 
 import pytest
+from contexttrack import EventFileError, iter_events
 
+import conftamer.contexttrack as consumer
 from conftamer.contexttrack import load_contexttrack
 from conftamer.pmgraph.models import Message
 
 
-def event(kind="Request received", *, path="", pattern="/route", **fields):
-    message = {"req.Method": "gEt", "req.URL.Path": path}
+def event(kind="receive_request", *, path="/", pattern="/route", **fields):
+    message = {"method": "gEt", "path": path}
 
-    if kind == "Request routed":
+    if kind == "send_request":
+        message["host"] = "Höst:80"
+    if kind == "request_routed":
         message["pattern"] = pattern
+    if kind in ("send_response", "receive_response"):
+        message["status_code"] = 200
 
-    if kind in ("Response sent", "Response received"):
-        message["code" if kind == "Response sent" else "resp.StatusCode"] = "0200"
-
-    record = {
+    return {
+        "schema_version": 1,
         "kind": kind,
         "pid": 1,
         "context": {"context_id": "c"},
         "message": message,
         "api_id": " API\n",
-    }
-
-    if kind == "Request sent":
-        record["request_id"] = {"method": "gEt", "host": "H\u00f6st:80", "path": path}
-
-    return record | fields
+    } | fields
 
 
-def load(tmp_path, *records, warn=False):
+def write_capture(tmp_path, *records):
     path = tmp_path / "events.jsonl"
     path.write_text(
         "\n".join(json.dumps(record, ensure_ascii=False) for record in records),
         encoding="utf-8",
     )
+    return path
 
+
+def load(tmp_path, *records, warn=False):
+    path = write_capture(tmp_path, *records)
     with warnings.catch_warnings(record=True) as notices:
         warnings.simplefilter("always")
         graph = load_contexttrack(path, module_id="module")
@@ -56,46 +58,68 @@ def test_blank_capture(tmp_path, text):
     assert (graph.module_id, graph.nodes, graph.edges) == ("module", {}, set())
 
 
-def test_literal_utf8_input_is_preserved(tmp_path):
-    graph = load(tmp_path, event("Request sent"))
+def test_normalized_sent_request(tmp_path):
+    graph = load(
+        tmp_path,
+        {
+            "schema_version": 1,
+            "kind": "send_request",
+            "pid": 1,
+            "context": {"context_id": "c"},
+            "api_id": " API\n",
+            "message": {
+                "method": "gEt",
+                "host": "Höst:80",
+                "path": "/",
+                "raw_query": "",
+            },
+        },
+    )
 
-    [message] = graph.nodes.values()
-    assert message.host == "Höst:80"
+    assert graph.nodes == {
+        "n0": Message(
+            kind="send_request", api_id=" API\n", method="gEt", host="Höst:80", path="/"
+        )
+    }
+    assert graph.edges == set()
 
 
 @pytest.mark.parametrize(
-    "record, expected_error",
+    "record",
     [
-        ("{", ValueError),
-        (None, TypeError),
-        (event(kind=3), TypeError),
-        (event(pid=True), TypeError),
-        (event(message=None), TypeError),
-        (event(context=[]), TypeError),
-        (event(request_id=3), TypeError),
-        (event(context={"context_id": 3}), TypeError),
-        (event(api_id=[]), TypeError),
-        (event(message={"req.Method": 3}), TypeError),
-        (event(message={"req.URL.Path": None}), TypeError),
-        (event("Request sent", request_id={"host": False}), TypeError),
-        (event("Response sent", message={"code": "bad"}), ValueError),
-        (event(extra=float("nan")), ValueError),
-        (event("unknown", message={"req.Method": False}), None),
-        (event(message={"req.Method": "gEt"}), None),
-        (event("Request sent", request_id=None), None),
+        "{",
+        None,
+        {"kind": "Request received", "pid": 1, "context": {}, "message": {}},
+        event(schema_version=2),
+        event(kind="unknown"),
+        event(extra=False),
+        event(message={"method": 3}),
+        event(message={"path": ""}),
+        event("send_response", message={"status_code": "200"}),
+        b"\xff",
     ],
 )
-def test_bad_input_diagnostics(tmp_path, record, expected_error):
+def test_normalized_input_diagnostics(tmp_path, record):
     path = tmp_path / "bad.jsonl"
-    text = record if isinstance(record, str) else json.dumps(record, ensure_ascii=False)
-    path.write_text("\n \n" + text, encoding="utf-8")
+    if isinstance(record, bytes):
+        data = record
+    else:
+        text = (
+            record
+            if isinstance(record, str)
+            else json.dumps(record, ensure_ascii=False)
+        )
+        data = text.encode("utf-8")
+    path.write_bytes(json.dumps(event()).encode("utf-8") + b"\n \t\n" + data)
 
-    with (
-        pytest.raises(expected_error, match=rf"{path}:3: .+")
-        if expected_error
-        else pytest.warns(UserWarning, match=rf"{path}:3: .+")
-    ):
-        assert load_contexttrack(path, module_id="module").nodes == {}
+    with pytest.raises(EventFileError) as caught:
+        load_contexttrack(path, module_id="module")
+
+    error = caught.value
+    assert error.path == path and error.line == 3
+    assert error.reason and str(error).startswith(f"{path}:3:")
+    assert error.__cause__ is not None
+    assert not isinstance(error.__cause__, EventFileError)
 
 
 @pytest.mark.parametrize(
@@ -110,15 +134,15 @@ def test_module_id_must_be_a_nonempty_string(tmp_path, module_id, expected_error
     "paths, pattern",
     [
         ([], None),
-        (["", "/"], "/route-1"),
-        (["", "/rewritten"], None),
-        (["/rewritten", ""], None),
+        (["/", "/"], "/route-1"),
+        (["/", "/rewritten"], None),
+        (["/rewritten", "/"], None),
     ],
 )
 @pytest.mark.parametrize("copies", [1, 2])
 def test_routing_fallback_and_last_pattern(tmp_path, paths, pattern, copies):
     routes = [
-        event("Request routed", path=p, pattern=f"/route-{i}")
+        event("request_routed", path=p, pattern=f"/route-{i}")
         for i, p in enumerate(paths)
     ]
 
@@ -126,7 +150,7 @@ def test_routing_fallback_and_last_pattern(tmp_path, paths, pattern, copies):
         tmp_path,
         *([event()] * copies),
         *routes,
-        event("Response sent"),
+        event("send_response"),
         warn=copies == 2 or "/rewritten" in paths,
     )
 
@@ -137,12 +161,13 @@ def test_routing_fallback_and_last_pattern(tmp_path, paths, pattern, copies):
         )
 
 
-@pytest.mark.parametrize("direction", ["sent", "received"])
-@pytest.mark.parametrize("copies", [0, 1, 2])
-@pytest.mark.parametrize("api_id", [None, " API\n", "conflict"])
+@pytest.mark.parametrize("direction", ["send", "receive"])
+@pytest.mark.parametrize(
+    "copies, api_id", [(0, None), (2, None), (1, None), (1, " API\n"), (1, "conflict")]
+)
 def test_response_matching(tmp_path, direction, copies, api_id):
-    request = event(f"Request {direction}")
-    response_kind = "Response received" if direction == "sent" else "Response sent"
+    request = event(f"{direction}_request")
+    response_kind = "receive_response" if direction == "send" else "send_response"
     response = event(response_kind, api_id=api_id)
     records = [request] * copies + [response, response]
 
@@ -163,9 +188,9 @@ def test_response_matching(tmp_path, direction, copies, api_id):
         ) == response_node.model_dump(exclude={"kind", "status_code"})
 
 
-@pytest.mark.parametrize("field", ["req.Method", "req.URL.Path", "code"])
+@pytest.mark.parametrize("field", ["method", "path"])
 def test_missing_response_labels_never_use_partial_matches(tmp_path, field):
-    response = event("Response sent")
+    response = event("send_response")
     del response["message"][field]
 
     graph = load(tmp_path, event(), response, warn=True)
@@ -174,17 +199,23 @@ def test_missing_response_labels_never_use_partial_matches(tmp_path, field):
 
 
 @pytest.mark.parametrize(
-    "context", [None, {}, {"context_id": None}, {"context_id": ""}, {"context_id": "c"}]
+    "context, fields, repeats",
+    [
+        ({}, {}, 2),
+        ({"context_id": None}, {}, 2),
+        ({"context_id": ""}, {}, 2),
+        ({"context_id": "c"}, {}, 0),
+        ({"context_id": "c"}, {}, 2),
+        ({"context_id": "c"}, {"pid": 2}, 2),
+        ({"context_id": "c"}, {"context": {"context_id": "other"}}, 2),
+        ({"context_id": "c"}, {"context": {"context_id": " c "}}, 2),
+    ],
 )
-@pytest.mark.parametrize(
-    "fields", [{}, {"pid": 2}, {"context": {"context_id": "other"}}]
-)
-@pytest.mark.parametrize("repeats", [0, 1, 2])
 def test_context_scoped_occurrence_influence(tmp_path, context, fields, repeats):
     received = event(context=context)
-    sent = event("Request sent", context=context) | fields
-    sent["message"] = {"unconsumed": False}
-    reply = event("Response sent", context=context) | fields
+    sent = event("send_request", context=context) | fields
+    sent["message"]["raw_query"] = "unconsumed=false"
+    reply = event("send_response", context=context) | fields
     connected = context == {"context_id": "c"} and not fields
 
     graph = load(
@@ -200,9 +231,159 @@ def test_context_scoped_occurrence_influence(tmp_path, context, fields, repeats)
     assert graph.edges == expected
 
 
-def test_scrape_capture():
-    captures = Path(__file__).parents[1] / "examples/contexttrack/prometheus"
-    graph = load_contexttrack(captures / "scrape-ok.jsonl", module_id="scraper")
+@pytest.mark.parametrize(
+    "kind, message",
+    [
+        ("receive_request", {}),
+        ("receive_request", {"method": "", "path": "/"}),
+        ("receive_request", {"method": "gEt", "path": None}),
+        ("send_request", {"method": "gEt", "path": "/", "host": None}),
+        ("send_request", {"method": "gEt", "path": "/", "host": ""}),
+        ("request_routed", {"method": "gEt", "path": "/", "pattern": None}),
+        ("request_routed", {"method": "gEt", "path": "/", "pattern": ""}),
+        ("send_response", {"method": "gEt", "path": "/", "status_code": None}),
+    ],
+)
+def test_incomplete_normalized_evidence_warns(tmp_path, kind, message):
+    graph = load(tmp_path, event(), event(kind, message=message), warn=True)
+
+    assert graph.nodes == {
+        "n0": Message(kind="receive_request", api_id=" API\n", method="gEt", path="/")
+    }
+    assert graph.edges == set()
+
+
+@pytest.mark.parametrize("status_code", [0, 999])
+def test_status_codes_have_no_http_range_limit(tmp_path, status_code):
+    response = event("send_response")
+    response["message"]["status_code"] = status_code
+
+    graph = load(tmp_path, event(), response)
+
+    assert graph.nodes["n1"].status_code == status_code
+    assert graph.edges == {("n0", "n1")}
+
+
+def test_nonsemantic_metadata_does_not_change_graph(tmp_path):
+    records = [
+        event(kind, path="/Raw%2f//", context={"context_id": " \t"})
+        for kind in (
+            "receive_request",
+            "request_routed",
+            "send_request",
+            "send_response",
+            "receive_response",
+        )
+    ]
+    baseline = load(tmp_path, *records)
+    for index, record in enumerate(records):
+        record.update(
+            handler=f"handler-{index}",
+            file="debug.go",
+            line=999,
+            goroutine_id=index,
+            thread_id=-index,
+        )
+        record["context"].update(
+            source="source", type="context.Context", error="diagnostic"
+        )
+        if record["kind"] in ("receive_request", "send_request"):
+            record["message"]["raw_query"] = f"query={index}%2F"
+
+    graph = load(tmp_path, *records)
+
+    assert graph == baseline
+    assert graph.edges == {("n0", "n1"), ("n0", "n2")}
+    assert graph.nodes["n1"] == Message(
+        kind="send_request",
+        api_id=" API\n",
+        method="gEt",
+        host="Höst:80",
+        path="/Raw%2f//",
+    )
+
+
+def test_warning_uses_physical_not_debug_location(tmp_path):
+    path = tmp_path / "events.jsonl"
+    path.write_text(
+        "\n\n" + json.dumps(event(message={}, file="debug.go", line=999)),
+        encoding="utf-8",
+    )
+
+    with pytest.warns(UserWarning, match=rf"{path}:3: incomplete request label"):
+        assert load_contexttrack(path, module_id="module").nodes == {}
+
+
+def test_association_does_not_mutate_wire_events(tmp_path, monkeypatch):
+    path = write_capture(
+        tmp_path,
+        event(),
+        event("request_routed", pattern="GET /items/{id}"),
+        event("send_request"),
+        event("send_response", api_id=None),
+        event("receive_response", api_id=None),
+    )
+    records = list(iter_events(path))
+    original = [record.event.model_dump_json() for record in records]
+    monkeypatch.setattr(consumer, "iter_events", lambda _source: iter(records))
+
+    graph = load_contexttrack(path, module_id="module")
+
+    assert [record.event.model_dump_json() for record in records] == original
+    assert graph.nodes["n2"] == Message(
+        kind="send_response",
+        api_id=" API\n",
+        method="gEt",
+        pattern="GET /items/{id}",
+        status_code=200,
+    )
+    assert graph.nodes["n3"] == Message(
+        kind="receive_response",
+        api_id=" API\n",
+        method="gEt",
+        host="Höst:80",
+        path="/",
+        status_code=200,
+    )
+    assert graph.edges == {("n0", "n1"), ("n0", "n2")}
+
+
+def test_conflicting_duplicate_hook_preserves_usable_response(tmp_path):
+    response = event("receive_response", api_id=None)
+    response["message"]["status_code"] = 202
+    path = write_capture(
+        tmp_path, event("send_request"), response, response | {"api_id": "conflict"}
+    )
+
+    with pytest.warns(UserWarning) as notices:
+        graph = load_contexttrack(path, module_id="module")
+
+    assert len(notices) == 1
+    assert (
+        str(notices[0].message) == f"{path}:3: conflicting response and request API IDs"
+    )
+    assert list(graph.nodes) == ["n0", "n1"]
+    assert graph.nodes["n0"].kind == "send_request"
+    assert graph.nodes["n1"] == Message(
+        kind="receive_response",
+        api_id=" API\n",
+        method="gEt",
+        host="Höst:80",
+        path="/",
+        status_code=202,
+    )
+    assert graph.edges == set()
+
+
+def test_scrape_capture(normalized_scrape_capture):
+    records = list(iter_events(normalized_scrape_capture))
+    assert len(records) == 20
+    assert sum(record.event.kind == "receive_response" for record in records) == 8
+
+    with warnings.catch_warnings(record=True) as notices:
+        warnings.simplefilter("always")
+        graph = load_contexttrack(normalized_scrape_capture, module_id="scraper")
+    assert notices == []
     host = "127.0.0.1:38151"
 
     assert list(graph.nodes) == ["n0", "n1", "n2", "n3"]

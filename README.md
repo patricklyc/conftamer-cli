@@ -5,8 +5,10 @@ ConfTamer turns ContextTrack HTTP traces into a **per-module influence graph
 and sent messages. Build a graph from a capture, query node reachability, or
 export it to GraphML.
 
-The current implementation consumes ContextTrack artifacts only. It does not
-collect traces or prove causality or capture completeness.
+The current implementation consumes **normalized ContextTrack schema-v1 JSONL**
+only. Go hooks emit raw captures; normalize them separately with the installed
+ContextTrack package before building. ConfTamer does not collect traces or prove
+causality or capture completeness.
 
 ## Setup
 
@@ -19,6 +21,10 @@ uv python install 3.14
 uv sync --locked --dev
 ```
 
+The lockfile pins ContextTrack 0.2.0 to Git revision
+`b014ae331865b36ae011b2fa00a7661763612ca1` (`contexttrack` subdirectory),
+with Pydantic >=2.13.5,<3; no sibling checkout is needed at runtime.
+
 ## Quick start
 
 Run the following in Bash from the repository root. A fresh temporary directory
@@ -26,18 +32,18 @@ keeps generated files separate from the source captures and avoids overwriting
 previous output.
 
 ```bash
-output_dir=$(mktemp -d)
-
-# Build a PMGraph from the bundled capture.
-uv run conftamer build examples/contexttrack/prometheus/scrape-ok.jsonl \
-  --module-id example-module --output "$output_dir/module.pmgraph.json"
+RUN=$(mktemp -d /tmp/conftamer-migration.XXXXXX) &&
+uv run contexttrack normalize examples/contexttrack/prometheus/scrape-ok.jsonl \
+  --output "$RUN/events.v1.jsonl" &&
+uv run conftamer build "$RUN/events.v1.jsonl" \
+  --module-id example-module --output "$RUN/module.pmgraph.json"
 
 # Query the received-request node in this capture.
-uv run conftamer query "$output_dir/module.pmgraph.json" --node n1
+uv run conftamer query "$RUN/module.pmgraph.json" --node n1
 
 # Export the same graph to GraphML.
-uv run conftamer export "$output_dir/module.pmgraph.json" \
-  --output "$output_dir/module.graphml"
+uv run conftamer export "$RUN/module.pmgraph.json" \
+  --output "$RUN/module.graphml"
 ```
 
 The capture produces four nodes and one edge, `n1 → n2`. The query prints:
@@ -52,15 +58,18 @@ The capture produces four nodes and one edge, `n1 → n2`. The query prints:
 ```
 
 Here, `n1` is a received request and `n2` is a sent response. The generated files
-are in `$output_dir`.
+are in `$RUN`; the original raw fixture is unchanged. Normalization retains all
+20 observations, including eight received-response hooks, rather than
+deduplicating them into the four semantic nodes.
 
-For your own capture, change the input path and `--module-id`. The module identity
-is supplied by you, not inferred from API IDs. Node IDs are keys in the PMGraph
-JSON file's top-level `nodes` object, not API IDs or URLs. Inspect the file to
-choose an exact ID:
+For your own completed capture, change the normalization input path and
+`--module-id`. Already-normalized v1 files can go directly to `build`. The module
+identity is supplied by you, not inferred from API IDs. Node IDs are keys in the
+PMGraph JSON file's top-level `nodes` object, not API IDs or URLs. Inspect the file
+to choose an exact ID:
 
 ```bash
-uv run python -m json.tool "$output_dir/module.pmgraph.json"
+uv run python -m json.tool "$RUN/module.pmgraph.json"
 ```
 
 ## Graph semantics and limits
@@ -82,8 +91,8 @@ uv run python -m json.tool "$output_dir/module.pmgraph.json"
 
 ## Files and errors
 
-- **Inputs:** `build` reads UTF-8 ContextTrack JSONL; `query` and `export` read
-  PMGraph JSON. PMGraph JSON loading rejects type coercion and unknown fields,
+- **Inputs:** `build` reads normalized ContextTrack v1 UTF-8 JSONL; `query` and
+  `export` read PMGraph JSON. PMGraph JSON loading rejects type coercion and unknown fields,
   and validates message field combinations, nonempty module/node IDs, and existing
   edge endpoints. PMGraph JSON output preserves node order and explicit nulls
   and sorts edge pairs.
@@ -95,25 +104,49 @@ uv run python -m json.tool "$output_dir/module.pmgraph.json"
   including unknown node IDs, produce stderr diagnostics and exit code 2 without
   a traceback. Capture record diagnostics include the input path and physical
   line number.
-- **GraphML:** Export preserves directed named topology, isolated nodes, module
-  identity, and complete node data. Each vertex has `name` and `kind` attributes;
-  its complete model is stored as escaped JSON in `node_json`. Export rejects
-  module or node IDs that XML cannot preserve exactly.
+- **GraphML:** Export preserves directed named topology, isolates, and the graph
+  attribute `module_id`. Vertices expose `name`, `kind`, `key`, `api_id`, `method`,
+  `host`, `path`, `pattern`, and `status_code` as named attributes, not an embedded
+  JSON document. Use `name` for original node IDs; readers may also expose
+  writer-generated XML IDs. Native conversions can turn nulls into `"None"`,
+  numeric `NaN`, or `False` for all-null attributes; large integers may lose
+  precision. GraphML is not lossless PMGraph persistence; use PMGraph JSON for
+  that. Export rejects XML-invalid characters and carriage returns in module/node
+  IDs and every string-valued node field rather than silently altering them.
+
+### Input compatibility
+
+This is a breaking input-format and exception change, not a graph-schema change.
+Raw, mixed-format, or unsupported-version captures now fail; there is no format
+option, auto-detection, or raw fallback. Existing saved PMGraphs remain usable by
+`query` and `export`.
+
+Upstream validation rejects unknown kinds/fields, wrong-kind payload fields,
+coercion, duplicate keys, BOM, and nonfinite numbers. Normalized `context` and
+`message` objects are required (`{}` is valid incomplete evidence); paths must
+be nonempty when present and response status must be a nonnegative integer or
+null (`0` and `999` are valid; there is no 100–599 restriction). Only upstream raw
+normalization converts an explicit empty raw path to `/`. Missing labels and
+ambiguous associations still warn and omit conservatively. HTTP query strings,
+handlers, and debug/context diagnostics do not become graph labels.
 
 ## Python API
 
 The same operations are callable without the CLI:
 
 ```python
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from contexttrack import normalize_file
 from conftamer.contexttrack import load_contexttrack
 from conftamer.pmgraph.igraph_ops import query_node
 
-graph = load_contexttrack(
-    "examples/contexttrack/prometheus/scrape-ok.jsonl",
-    module_id="example-module",
-)
-result = query_node(graph, "n1")
-print(result)
+with TemporaryDirectory(prefix="conftamer-") as run:
+    normalized = Path(run) / "events.v1.jsonl"
+    normalize_file("examples/contexttrack/prometheus/scrape-ok.jsonl", normalized)
+    graph = load_contexttrack(normalized, module_id="example-module")
+    print(query_node(graph, "n1"))
 ```
 
 For persistence, `conftamer.pmgraph.io` provides `load_pmgraph_json(path)` and
@@ -121,9 +154,13 @@ For persistence, `conftamer.pmgraph.io` provides `load_pmgraph_json(path)` and
 `conftamer.pmgraph.igraph_ops` provides `to_igraph(graph)` and
 `write_graphml(graph, path)`.
 
-The ContextTrack importer raises `TypeError` for invalid consumed types and
-`ValueError` for malformed JSON or invalid values. PMGraph JSON loading raises
-`ValueError` for invalid data; filesystem failures raise `OSError`.
+The ContextTrack reader raises `contexttrack.EventFileError` (a `ValueError`)
+for invalid input, retaining `.path`, physical `.line`, `.reason`, and the original
+exception as `__cause__`. Clients catching the old raw parser's `TypeError` must
+catch `EventFileError`/`ValueError` instead. Caller validation is unchanged:
+nonstring `module_id` raises `TypeError`, and an empty string raises `ValueError`,
+before input is opened. PMGraph JSON loading raises `ValueError` for invalid
+data; filesystem failures remain `OSError`.
 
 ## Development
 
@@ -134,7 +171,16 @@ uv run pytest -q
 uvx ruff format --check src tests
 uvx ty check
 uv run conftamer --help
+uv run conftamer build --help
 ```
+
+Tests cover consumer graph policy and representative upstream-reader failures;
+exhaustive wire-schema validation belongs to the pinned ContextTrack package.
+See [AGENTS.md](AGENTS.md) for development scope and the
+[normalized-input contract](docs/superpowers/plans/2026-10-13-normalized-contexttrack-input.md)
+for the implemented migration. Other plans retain their original implementation
+steps as history; the [PR #8 review](docs/pr-8-code-review.md) concerns a different
+reviewed revision, not features available in this checkout.
 
 For VS Code, select `.venv/bin/python` as the workspace interpreter. The
 [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python),

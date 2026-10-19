@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.14"
 
 [[package]]
@@ -43,6 +43,7 @@ name = "conftamer"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "contexttrack" },
     { name = "igraph" },
     { name = "pydantic" },
     { name = "typer" },
@@ -58,14 +59,23 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "contexttrack", git = "https://github.com/patricklyc/conftamer.git?subdirectory=contexttrack&rev=b014ae331865b36ae011b2fa00a7661763612ca1" },
     { name = "igraph", specifier = ">=1.0.0" },
-    { name = "pydantic", specifier = ">=2.13.5" },
+    { name = "pydantic", specifier = ">=2.13.5,<3" },
     { name = "typer", specifier = ">=0.27.2" },
 ]
 
 [package.metadata.requires-dev]
 build = [{ name = "pyinstaller", specifier = "==6.22.2" }]
 dev = [{ name = "pytest", specifier = ">=9.1.1" }]
+
+[[package]]
+name = "contexttrack"
+version = "0.2.0"
+source = { git = "https://github.com/patricklyc/conftamer.git?subdirectory=contexttrack&rev=b014ae331865b36ae011b2fa00a7661763612ca1#b014ae331865b36ae011b2fa00a7661763612ca1" }
+dependencies = [
+    { name = "pydantic" },
+]
 
 [[package]]
 name = "igraph"

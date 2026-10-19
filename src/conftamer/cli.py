@@ -22,6 +22,7 @@ def build(
     module_id: Annotated[str, typer.Option(..., "--module-id")],
     output: Annotated[Path, typer.Option(..., "--output")],
 ) -> None:
+    """Build a message-only PMGraph from normalized ContextTrack v1 JSONL."""
     try:
         write_pmgraph_json(load_contexttrack(input_path, module_id=module_id), output)
     except (OSError, TypeError, ValueError) as error:

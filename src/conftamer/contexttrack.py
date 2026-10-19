@@ -1,23 +1,24 @@
 """Import one ContextTrack capture as a message-only per-module influence graph."""
 
-import json
 import warnings
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
+from contexttrack import (
+    RequestRouted,
+    RequestSent,
+    ResponseReceived,
+    ResponseSent,
+    iter_events,
+)
+
 from conftamer.pmgraph.models import Message, PMGraph
 
-_KINDS = {
-    "Request sent": "send_request",
-    "Request received": "receive_request",
-    "Response sent": "send_response",
-    "Response received": "receive_response",
-}
 _REQUEST_KIND_BY_EVENT = {
-    "Request routed": "Request received",
-    "Response sent": "Request received",
-    "Response received": "Request sent",
+    "request_routed": "receive_request",
+    "send_response": "receive_request",
+    "receive_response": "send_request",
 }
 
 
@@ -39,112 +40,25 @@ class _Event:
         warnings.warn(f"{self.location}: {reason}", stacklevel=2)
 
 
-def _object(record: dict, name: str) -> dict:
-    value = record.get(name)
-
-    if value is None:
-        return {}
-
-    if not isinstance(value, dict):
-        raise TypeError(f"{name} must be an object")
-
-    return value
-
-
-def _string(record: dict, name: str, *, nullable: bool = False) -> str | None:
-    value = record.get(name)
-
-    if value is None and (name not in record or nullable):
-        return None
-
-    if not isinstance(value, str):
-        raise TypeError(f"{name} must be a string")
-
-    return value
-
-
-def _normalized_path(path: str | None) -> str | None:
-    return "/" if path == "" else path
-
-
-def _reject_constant(value: str) -> None:
-    raise ValueError(f"invalid JSON constant {value}")
-
-
 def _read_events(path: Path) -> Iterator[_Event]:
-    with path.open(encoding="utf-8") as source:
-        for line_number, line in enumerate(source, 1):
-            if not line.strip():
-                continue
-
-            location = f"{path}:{line_number}"
-
-            try:
-                record = json.loads(line, parse_constant=_reject_constant)
-
-                if not isinstance(record, dict):
-                    raise TypeError("record must be an object")
-
-                kind = record.get("kind")
-                pid = record.get("pid")
-                message = record.get("message")
-
-                if not isinstance(kind, str):
-                    raise TypeError("kind must be a string")
-                if type(pid) is not int:
-                    raise TypeError("pid must be an integer, not a boolean")
-                if not isinstance(message, dict):
-                    raise TypeError("message must be an object")
-
-                context_id = _string(
-                    _object(record, "context"), "context_id", nullable=True
-                )
-                request_id = _object(record, "request_id")
-                api_id = _string(record, "api_id", nullable=True)
-
-                if kind not in _KINDS and kind != "Request routed":
-                    warnings.warn(
-                        f"{location}: unknown event kind {kind!r}", stacklevel=2
-                    )
-                    continue
-
-                if kind == "Request sent":
-                    method = _string(request_id, "method")
-                    concrete_path = _string(request_id, "path")
-                    host = _string(request_id, "host")
-                else:
-                    method = _string(message, "req.Method")
-                    concrete_path = _string(message, "req.URL.Path")
-                    host = None
-
-                pattern = (
-                    _string(message, "pattern") if kind == "Request routed" else None
-                )
-
-                status_key = "code" if kind == "Response sent" else "resp.StatusCode"
-                status = None
-
-                if kind.startswith("Response"):
-                    status = _string(message, status_key)
-
-                if status is not None and not status.isdecimal():
-                    raise ValueError(f"{status_key} must be a decimal status string")
-
-                yield _Event(
-                    kind=kind,
-                    context_key=(pid, context_id) if context_id else None,
-                    method=method,
-                    path=_normalized_path(concrete_path),
-                    host=host,
-                    api_id=api_id,
-                    location=location,
-                    pattern=pattern,
-                    status_code=int(status) if status is not None else None,
-                )
-            except TypeError as error:
-                raise TypeError(f"{location}: {error}") from error
-            except ValueError as error:
-                raise ValueError(f"{location}: {error}") from error
+    # Copy immutable wire evidence before consumer-owned association enriches it.
+    for record in iter_events(path):
+        event = record.event
+        yield _Event(
+            kind=event.kind,
+            context_key=event.context_key,
+            method=event.message.method,
+            path=event.message.path,
+            host=event.message.host if isinstance(event, RequestSent) else None,
+            api_id=event.api_id,
+            location=record.location,
+            pattern=event.message.pattern if isinstance(event, RequestRouted) else None,
+            status_code=(
+                event.message.status_code
+                if isinstance(event, (ResponseSent, ResponseReceived))
+                else None
+            ),
+        )
 
 
 def _correlate(events: Iterator[_Event]) -> list[_Event]:
@@ -157,14 +71,14 @@ def _correlate(events: Iterator[_Event]) -> list[_Event]:
     occurrences = []
 
     for event in events:
-        if event.kind in ("Request sent", "Request received"):
+        if event.kind in ("send_request", "receive_request"):
             if event.context_key is not None:
                 requests.setdefault(event.context_key, []).append(event)
 
             occurrences.append(event)
             continue
 
-        routed = event.kind == "Request routed"
+        routed = event.kind == "request_routed"
         missing_match_key = (
             event.context_key is None or not event.method or event.path is None
         )
@@ -221,7 +135,7 @@ def _correlate(events: Iterator[_Event]) -> list[_Event]:
 
 
 def load_contexttrack(path: str | Path, *, module_id: str) -> PMGraph:
-    """Load one UTF-8 JSONL capture; module identity is supplied by the caller."""
+    """Load normalized ContextTrack v1 JSONL with caller-supplied module identity."""
     if not isinstance(module_id, str):
         raise TypeError("module_id must be a string")
     if not module_id:
@@ -239,14 +153,14 @@ def load_contexttrack(path: str | Path, *, module_id: str) -> PMGraph:
         if (
             not request.method
             or request.path is None
-            or (request.kind == "Request sent" and not request.host)
+            or (request.kind == "send_request" and not request.host)
         ):
             event.warn("incomplete request label: method, path or client host missing")
             continue
 
         message = Message.model_validate(
             {
-                "kind": _KINDS[event.kind],
+                "kind": event.kind,
                 "api_id": event.api_id,
                 "method": request.method,
                 "host": request.host,

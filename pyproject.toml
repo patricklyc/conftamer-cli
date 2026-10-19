@@ -8,8 +8,9 @@ license = "GPL-2.0-only"
 license-files = ["LICENSE"]
 authors = [{ name = "Patrick Lau", email = "patricklyc@berkeley.edu" }]
 dependencies = [
+  "contexttrack @ git+https://github.com/patricklyc/conftamer.git@b014ae331865b36ae011b2fa00a7661763612ca1#subdirectory=contexttrack",
   "igraph>=1.0.0",
-  "pydantic>=2.13.5",
+  "pydantic>=2.13.5,<3",
   "typer>=0.27.2",
 ]
 
