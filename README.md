@@ -8,6 +8,8 @@ This branch provides three things: the Python data format for a per-module graph
 (a **PMGraph**); a **stitcher** that fuses several PMGraphs into a single
 cross-module graph (an **AppGraph**); and a **query** that, given one node,
 returns the part of a graph connected to it plus the paths that run through it.
+All of these are available from the `conftamer` command line, along with
+building PMGraphs from ContextTrack captures and exporting to GraphML.
 
 ## Graph format
 
@@ -158,14 +160,26 @@ g = to_igraph(appgraph)
 g.vs["name"]  # ["frontend::timeout", "link0"]
 ```
 
-## Not yet wired up
+## Command line
 
-The command-line program is still a simple greeting demo: stitching and querying
-are available as a library, but not yet as CLI commands. The CLI also does not
-yet read ContextTrack captures, save graph files, or export GraphML.
+```bash
+uv run conftamer build capture.jsonl --module-id frontend --output frontend.json
+uv run conftamer stitch frontend.json backend.json --output app.json
+uv run conftamer query app.json --node frontend::timeout [--path-limit 100]
+uv run conftamer export app.json --output app.graphml
+```
 
-For a runnable, end-to-end example of what *is* available — sample PMGraph files
-for a three-module app, stitched and queried — see [`examples/`](examples/README.md).
+- **`build`** turns a ContextTrack JSONL capture into a PMGraph.
+- **`stitch`** combines PMGraph files into an AppGraph.
+- **`query`** prints a `QueryResult` (`subgraph`, `paths`, `truncated`) as JSON.
+- **`export`** writes GraphML.
+
+`query` and `export` work on either graph type and detect which one they were
+given. Outputs are never overwritten. Errors print one line to stderr and exit
+with code 2.
+
+For a runnable example with sample PMGraphs for a three-module app, see
+[`examples/`](examples/README.md).
 
 ## Development setup
 
