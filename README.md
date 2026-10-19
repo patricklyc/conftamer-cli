@@ -32,10 +32,9 @@ keeps generated files separate from the source captures and avoids overwriting
 previous output.
 
 ```bash
-RUN=$(mktemp -d /tmp/conftamer-migration.XXXXXX) &&
-uv run contexttrack normalize examples/contexttrack/prometheus/scrape-ok.jsonl \
-  --output "$RUN/events.v1.jsonl" &&
-uv run conftamer build "$RUN/events.v1.jsonl" \
+RUN=$(mktemp -d /tmp/conftamer-run.XXXXXX) &&
+uv run conftamer build \
+  examples/contexttrack/prometheus/TestTargetScraperScrapeOK/normalized.jsonl \
   --module-id example-module --output "$RUN/module.pmgraph.json"
 
 # Query the received-request node in this capture.
@@ -58,15 +57,28 @@ The capture produces four nodes and one edge, `n1 → n2`. The query prints:
 ```
 
 Here, `n1` is a received request and `n2` is a sent response. The generated files
-are in `$RUN`; the original raw fixture is unchanged. Normalization retains all
-20 observations, including eight received-response hooks, rather than
-deduplicating them into the four semantic nodes.
+are in `$RUN`; both supplied source files (`raw.jsonl` and `normalized.jsonl`)
+are unchanged. The normalized capture retains all 20 observations, including
+eight received-response hooks, rather than deduplicating them into the four
+semantic nodes.
 
-For your own completed capture, change the normalization input path and
-`--module-id`. Already-normalized v1 files can go directly to `build`. The module
-identity is supplied by you, not inferred from API IDs. Node IDs are keys in the
-PMGraph JSON file's top-level `nodes` object, not API IDs or URLs. Inspect the file
-to choose an exact ID:
+The [example inventory](examples/README.md) also describes the larger `all-tests`
+pair: 7,235 observations per file, producing 960 nodes and 117 edges with 373
+warnings under the current conservative association policy. These are regression
+results for these artifacts, not general graph-size guarantees or a verified
+multi-module corpus.
+
+For your own completed capture, pass its normalized v1 path to `build` and choose
+`--module-id`. If you have raw JSONL, normalize it first into a **new file in an
+existing directory**, then pass that output to `build`:
+
+```bash
+uv run contexttrack normalize /path/to/raw.jsonl --output /path/to/new-events.v1.jsonl
+```
+
+The module identity is supplied by you, not inferred from API IDs. Node IDs are
+keys in the PMGraph JSON file's top-level `nodes` object, not API IDs or URLs.
+Inspect the file to choose an exact ID:
 
 ```bash
 uv run python -m json.tool "$RUN/module.pmgraph.json"
@@ -135,18 +147,14 @@ handlers, and debug/context diagnostics do not become graph labels.
 The same operations are callable without the CLI:
 
 ```python
-from pathlib import Path
-from tempfile import TemporaryDirectory
-
-from contexttrack import normalize_file
 from conftamer.contexttrack import load_contexttrack
 from conftamer.pmgraph.igraph_ops import query_node
 
-with TemporaryDirectory(prefix="conftamer-") as run:
-    normalized = Path(run) / "events.v1.jsonl"
-    normalize_file("examples/contexttrack/prometheus/scrape-ok.jsonl", normalized)
-    graph = load_contexttrack(normalized, module_id="example-module")
-    print(query_node(graph, "n1"))
+graph = load_contexttrack(
+    "examples/contexttrack/prometheus/TestTargetScraperScrapeOK/normalized.jsonl",
+    module_id="example-module",
+)
+print(query_node(graph, "n1"))
 ```
 
 For persistence, `conftamer.pmgraph.io` provides `load_pmgraph_json(path)` and
@@ -174,8 +182,10 @@ uv run conftamer --help
 uv run conftamer build --help
 ```
 
-Tests cover consumer graph policy and representative upstream-reader failures;
-exhaustive wire-schema validation belongs to the pinned ContextTrack package.
+Tests cover consumer graph policy, both supplied normalized real captures, and
+representative upstream-reader failures, including raw-input rejection. They read
+repository fixtures directly; no sibling checkout or Go capture run is needed.
+Exhaustive wire-schema validation belongs to the pinned ContextTrack package.
 See [AGENTS.md](AGENTS.md) for development scope and the
 [normalized-input contract](docs/superpowers/plans/2026-10-13-normalized-contexttrack-input.md)
 for the implemented migration. Other plans retain their original implementation

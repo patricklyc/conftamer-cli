@@ -1,5 +1,6 @@
 import json
 import warnings
+from collections import Counter
 
 import pytest
 from contexttrack import EventFileError, iter_events
@@ -384,7 +385,7 @@ def test_scrape_capture(normalized_scrape_capture):
         warnings.simplefilter("always")
         graph = load_contexttrack(normalized_scrape_capture, module_id="scraper")
     assert notices == []
-    host = "127.0.0.1:38151"
+    host = "127.0.0.1:43203"
 
     assert list(graph.nodes) == ["n0", "n1", "n2", "n3"]
 
@@ -399,3 +400,53 @@ def test_scrape_capture(normalized_scrape_capture):
         ("github.com/prometheus", "GET", "/", None)
     }
     assert graph.edges == {("n1", "n2")}
+
+
+def test_all_tests_capture(normalized_all_tests_capture):
+    records = list(iter_events(normalized_all_tests_capture))
+    assert len(records) == 7235
+    assert len({record.event.pid for record in records}) == 69
+
+    with warnings.catch_warnings(record=True) as notices:
+        warnings.simplefilter("always")
+        graph = load_contexttrack(
+            normalized_all_tests_capture, module_id="prometheus-tests"
+        )
+
+    assert graph.module_id == "prometheus-tests"
+    assert len(graph.nodes) == 960 and len(graph.edges) == 117
+    assert all(isinstance(node, Message) for node in graph.nodes.values())
+    for source, target in graph.edges:
+        assert graph.nodes[source].kind in ("receive_request", "receive_response")
+        assert graph.nodes[target].kind in ("send_request", "send_response")
+
+    # Later routing metadata labels both the request and its response.
+    assert graph.nodes["n66"] == Message(
+        kind="receive_request", api_id=None, method="GET", pattern="/v2/droplets"
+    )
+    assert graph.nodes["n67"] == Message(
+        kind="send_response",
+        api_id=None,
+        method="GET",
+        pattern="/v2/droplets",
+        status_code=202,
+    )
+    assert ("n66", "n67") in graph.edges
+
+    diagnostics = [str(notice.message) for notice in notices]
+    assert all(
+        diagnostic.startswith(f"{normalized_all_tests_capture}:")
+        for diagnostic in diagnostics
+    )
+    assert Counter(diagnostic.split(": ", 1)[1] for diagnostic in diagnostics) == {
+        "conflicting response and request API IDs": 370,
+        "expected one preceding request, found 0": 3,
+    }
+    assert [
+        diagnostic
+        for diagnostic in diagnostics
+        if "expected one preceding request" in diagnostic
+    ] == [
+        f"{normalized_all_tests_capture}:{line}: expected one preceding request, found 0"
+        for line in (1147, 1148, 1149)
+    ]

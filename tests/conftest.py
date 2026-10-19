@@ -1,14 +1,20 @@
 from pathlib import Path
 
 import pytest
-from contexttrack import normalize_file
+
+CAPTURES = Path(__file__).parents[1] / "examples/contexttrack/prometheus"
 
 
 @pytest.fixture
-def normalized_scrape_capture(tmp_path) -> Path:
-    source = (
-        Path(__file__).parents[1] / "examples/contexttrack/prometheus/scrape-ok.jsonl"
-    )
-    output = tmp_path / "scrape.v1.jsonl"
-    normalize_file(source, output)
-    return output
+def normalized_scrape_capture() -> Path:
+    return CAPTURES / "TestTargetScraperScrapeOK/normalized.jsonl"
+
+
+@pytest.fixture
+def raw_scrape_capture() -> Path:
+    return CAPTURES / "TestTargetScraperScrapeOK/raw.jsonl"
+
+
+@pytest.fixture
+def normalized_all_tests_capture() -> Path:
+    return CAPTURES / "all-tests/normalized.jsonl"

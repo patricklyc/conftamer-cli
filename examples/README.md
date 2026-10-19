@@ -1,57 +1,101 @@
 # Examples and test fixtures
 
-This directory contains real **raw** ContextTrack HTTP event captures used as
-read-only source fixtures. ConfTamer consumes only normalized schema-v1 JSONL;
-these files require a separate upstream normalization step. They are not generated
-PMGraphs or a set of runnable command examples.
+This directory contains real upstream ContextTrack HTTP artifacts used as
+read-only source fixtures. Each capture directory contains an original
+`raw.jsonl` and its supplied schema-v1 `normalized.jsonl`. ConfTamer consumes the
+**normalized file directly**; Go's raw output still requires separate upstream
+normalization. These files are observations, not generated PMGraphs.
 
 ## ContextTrack Prometheus captures
 
-The files under [`contexttrack/prometheus/`](contexttrack/prometheus/) are
-raw newline-delimited JSON (JSONL) captures from an instrumented Prometheus test
-run. Each line contains one observation, not one normalized graph node.
+The pairs under [`contexttrack/prometheus/`](contexttrack/prometheus/) come from
+instrumented Prometheus tests. Each JSONL record is one observation, not one
+semantic graph node. Both pairs are repository test fixtures, not optional
+sibling-checkout inputs.
 
-| File | Raw observations | Intended use |
-| --- | ---: | --- |
-| [`scrape-ok.jsonl`](contexttrack/prometheus/scrape-ok.jsonl) | 20 | Small correlation and graph-projection regression fixture |
-| [`package-tests.jsonl`](contexttrack/prometheus/package-tests.jsonl) | 5,530 | Larger integration fixture |
-| [`all-tests.jsonl`](contexttrack/prometheus/all-tests.jsonl) | 13,954 | Broad, noisy integration fixture |
+| Capture directory | Observations per file | Current PMGraph | Warnings | Intended use |
+| --- | ---: | --- | ---: | --- |
+| [`TestTargetScraperScrapeOK/`](contexttrack/prometheus/TestTargetScraperScrapeOK/) | 20 | 4 nodes, 1 edge | 0 | Exact correlation and deduplication regression; CLI build and raw-input rejection |
+| [`all-tests/`](contexttrack/prometheus/all-tests/) | 7,235 | 960 nodes, 117 edges | 373 | Larger importer regression with routing, multiple PIDs, and conflicting/incomplete associations |
 
-Only `scrape-ok.jsonl` is committed in this checkout. The two larger files are
-optional local artifacts and may be absent in a fresh clone; CI does not depend
-on them. Counts describe these specific raw captures, not normalized graph sizes.
-See the [quick start](../README.md#quick-start) for normalization into a fresh
-scratch directory followed by build/query/export.
+### Small scrape capture
 
-Observed raw event kinds include:
+`TestTargetScraperScrapeOK/normalized.jsonl` retains four sent requests, four
+received requests, four sent responses, and eight received-response hooks. The
+client host is `127.0.0.1:43203`. Consumer association and deduplication produce
+four nodes in first-occurrence order:
 
-- `Request sent`
-- `Request received`
-- `Request routed`
-- `Response sent`
-- `Response received`
+- `n0`: sent `GET` request to `127.0.0.1:43203`, path `/`;
+- `n1`: received `GET` request, path `/`;
+- `n2`: sent response, path `/`, status 200; and
+- `n3`: received response from the client request, status 200.
 
-`Request routed` records provide routing metadata; they do not represent an
-additional semantic message. Context IDs are process-local, so consumers must
-scope correlation to a capture and `(pid, context_id)` rather than treating a
-context ID as globally unique.
+The only edge is `n1 → n2`. Wire/client response hooks remain separate
+observations; they are not separate semantic nodes. The raw capture's explicit
+empty client path becomes `/` during upstream normalization, not during import.
+See the [quick start](../README.md#quick-start) for build/query/export using the
+supplied normalized file.
+
+### Broad test capture
+
+`all-tests/normalized.jsonl` contains 69 PIDs with context-ID strings reused across
+processes and 911 routing observations. Correlation remains scoped to
+`(pid, context_id)` within this capture; routing supplies metadata, not nodes.
+
+The current conservative importer emits 373 warnings:
+
+- 370 response observations conflict with their matched request's known API ID;
+- three responses have no preceding matching request, at normalized physical
+  lines 1147–1149.
+
+These unusable response observations are omitted without discarding other usable
+evidence, including nonconflicting duplicate hooks. Warnings identify the file
+actually imported and physical line, not producer debug `file`/`line` values.
+The tests pin the graph counts, message-only receive-to-send direction,
+representative routed labels, and warning reasons/locations. These results do not
+authorize broader matching or establish complete capture coverage.
+
+## Raw versus normalized workflow
+
+Use the supplied `normalized.jsonl` files directly with `conftamer build`.
+`raw.jsonl` is retained as source evidence and for raw-input rejection checks;
+ConfTamer does not auto-detect or import it.
+
+To reproduce normalization with the installed upstream package, write to a fresh
+scratch directory rather than overwriting either artifact:
+
+```bash
+RUN=$(mktemp -d /tmp/conftamer-normalize.XXXXXX) &&
+uv run contexttrack normalize \
+  examples/contexttrack/prometheus/TestTargetScraperScrapeOK/raw.jsonl \
+  --output "$RUN/events.v1.jsonl" &&
+uv run conftamer build "$RUN/events.v1.jsonl" \
+  --module-id example-module --output "$RUN/module.pmgraph.json"
+```
+
+ContextTrack 0.2.0 at the repository's pinned revision reproduces both supplied
+normalized files byte-for-byte. Normalization preserves observation order and
+repeated hooks; association, label recovery, node deduplication, and influence
+projection belong to the consumer. Exhaustive normalizer/schema tests belong to
+the upstream package, not this repository.
 
 ## Fixture policy
 
-Treat these captures as read-only source fixtures:
-
-- Do not edit or normalize them in place to make tests pass.
-- Normalize separate copies with installed `contexttrack.normalize_file` or
-  `uv run contexttrack normalize INPUT --output NEW`. Tests use a shared fixture
-  that writes normalized input to `tmp_path`; no generated capture is checked in.
+- Do not edit, regenerate, or normalize the supplied artifacts in place to make
+  tests pass. Importer tests read the supplied normalized fixtures directly.
 - Use small synthetic traces for focused boundary-case tests.
-- Write generated PMGraphs and other outputs to a pytest temporary directory
-  or another explicitly selected output directory, not beside these files.
-- Do not infer format limits or expected graph sizes from these event counts.
-- Do not treat these Prometheus captures as a representative multi-module
-  application corpus.
+- Write generated normalized copies, PMGraphs, and other outputs to a pytest
+  temporary directory or another explicitly selected output directory, not
+  beside these files.
+- The old flat `scrape-ok.jsonl`, `package-tests.jsonl`, and `all-tests.jsonl`
+  artifacts are no longer the fixture inventory. Their historical 5,530/13,954
+  counts do not describe the new `all-tests/` pair.
+- Do not infer format limits or general graph sizes from these event counts.
+- Do not treat these Prometheus captures as a verified multi-module application
+  corpus. API IDs do not establish module ownership.
 
-The captures reflect only the events observed through the producer's
-instrumentation and the exercised test paths. They model possible influence;
-they are not proof of causality, execution replay, or complete call-graph
-coverage.
+The captures reflect only events observed through the producer's instrumentation
+and exercised test paths. ConfTamer models possible influence, not proof of
+causality, execution replay, or complete call-graph coverage. Normalization is
+not redaction: real artifacts can retain hosts, queries, handlers, and local
+source paths; review sensitivity before adding or sharing further captures.
