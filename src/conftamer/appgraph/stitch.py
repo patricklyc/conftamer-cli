@@ -34,38 +34,81 @@ def _unprefixed(prefixed_id: str) -> str:
     return prefixed_id.split(_SEPARATOR, 1)[1]
 
 
-def _is_wildcard_segment(segment: str) -> bool:
+_END_ANCHOR = "{$}"
+
+
+def _is_go_wildcard(segment: str) -> bool:
+    return segment.startswith("{") and segment.endswith("}")
+
+
+def _is_router_wildcard(segment: str) -> bool:
+    return segment.startswith((":", "*"))
+
+
+def _is_rest_wildcard(segment: str) -> bool:
     return segment.startswith("*") or (
-        segment.startswith("{") and segment.endswith("...}")
+        _is_go_wildcard(segment) and segment.endswith("...}")
     )
 
 
+def check_pattern(pattern: str) -> None:
+    """Raise ``ValueError`` if ``pattern`` uses syntax ``path_matches_pattern``
+    does not support."""
+
+    def unsupported(reason: str) -> ValueError:
+        return ValueError(f"unsupported route pattern {pattern!r}: {reason}")
+
+    if not pattern.startswith("/"):
+        raise unsupported("must start with '/' (no method or host prefix)")
+    segments = pattern.split("/")
+    for index, segment in enumerate(segments):
+        is_last = index == len(segments) - 1
+        if _is_go_wildcard(segment):
+            name = segment[1:-1].removesuffix("...")
+            if segment != _END_ANCHOR and not name:
+                raise unsupported(f"wildcard {segment!r} has no name")
+        elif "{" in segment or "}" in segment:
+            raise unsupported(f"wildcard {segment!r} must be a whole segment")
+        elif _is_router_wildcard(segment) and len(segment) == 1:
+            raise unsupported(f"wildcard {segment!r} has no name")
+        if (_is_rest_wildcard(segment) or segment == _END_ANCHOR) and not is_last:
+            raise unsupported(f"{segment!r} must be the last segment")
+    if any(map(_is_go_wildcard, segments)) and any(map(_is_router_wildcard, segments)):
+        raise unsupported("mixes net/http and httprouter wildcards")
+
+
 def _segment_matches(path_segment: str, pattern_segment: str) -> bool:
-    if pattern_segment.startswith("{") and pattern_segment.endswith("}"):
+    if pattern_segment == _END_ANCHOR:
+        return path_segment == ""
+    if _is_go_wildcard(pattern_segment) or pattern_segment.startswith(":"):
         return bool(path_segment)  # a named segment must consume something
-    if pattern_segment.startswith(":"):
-        return bool(path_segment)
     return path_segment == pattern_segment
 
 
 def path_matches_pattern(path: str, pattern: str) -> bool:
     """Does the concrete URL ``path`` satisfy route ``pattern``?
 
-    Supports net/http 1.22+ patterns (``{name}``, trailing ``{name...}``)
-    and httprouter patterns (``:name``, trailing ``*name``). A trailing
-    wildcard segment consumes the rest of the path, which must be
-    nonempty. ``pattern`` is assumed to carry no method/host prefix.
+    Supports net/http 1.22+ patterns (``{name}``, trailing ``{name...}``,
+    trailing ``{$}``, and a trailing ``/`` matching the whole subtree) and
+    httprouter patterns (``:name``, trailing ``*name``; a trailing ``/`` is
+    literal). A trailing rest wildcard consumes the rest of the path, which
+    must be nonempty. Raises ``ValueError`` for unsupported syntax, including
+    a method or host prefix.
     """
+    check_pattern(pattern)
     if path == pattern:
         return True
 
     path_segments = path.split("/")
     pattern_segments = pattern.split("/")
+    is_subtree = pattern_segments[-1] == "" and not any(
+        map(_is_router_wildcard, pattern_segments)
+    )
+    if is_subtree:
+        pattern_segments = pattern_segments[:-1]
 
     for index, segment in enumerate(pattern_segments):
-        if _is_wildcard_segment(segment):
-            if index != len(pattern_segments) - 1:
-                return False
+        if _is_rest_wildcard(segment):
             remainder = path_segments[index:]
             is_empty_remainder = remainder == [] or remainder == [""]
             return not is_empty_remainder
@@ -74,6 +117,8 @@ def path_matches_pattern(path: str, pattern: str) -> bool:
         if not _segment_matches(path_segments[index], segment):
             return False
 
+    if is_subtree:
+        return len(path_segments) > len(pattern_segments)
     return len(path_segments) == len(pattern_segments)
 
 
@@ -87,21 +132,26 @@ def _messages_match(concrete: Message, pattern_side: Message) -> bool:
     if concrete.status_code != pattern_side.status_code:
         return False
 
-    target = (
-        pattern_side.pattern if pattern_side.pattern is not None else pattern_side.path
-    )
     # Guaranteed by Message's own validators: concrete-path kinds always
     # have a path, and pattern-or-path kinds always have exactly one of
     # path/pattern.
     assert concrete.path is not None
-    assert target is not None
-    return path_matches_pattern(concrete.path, target)
+    if pattern_side.pattern is not None:
+        return path_matches_pattern(concrete.path, pattern_side.pattern)
+    # A fallback path is literal evidence, not a route expression: wildcard
+    # syntax in it (":id", "{id}", "*rest") must not match other paths.
+    return concrete.path == pattern_side.path
 
 
 def _check_unique_module_ids(graphs: list[PMGraph]) -> None:
     seen: set[str] = set()
     for graph in graphs:
         _check_no_separator(graph.module_id, "module_id")
+        # A trailing ":" would let the separator start inside the module ID
+        # ("a:" + "::" + "cfg" == "a" + "::" + ":cfg"), making prefixed IDs
+        # collide and split back to the wrong module.
+        if graph.module_id.endswith(":"):
+            raise ValueError(f"module_id {graph.module_id!r} must not end with ':'")
         if graph.module_id in seen:
             raise ValueError(f"duplicate module_id {graph.module_id!r}")
         seen.add(graph.module_id)
@@ -128,9 +178,10 @@ def _forward_reachable(seeds: Iterable[str], edges: set[tuple[str, str]]) -> set
 def stitch(graphs: Iterable[PMGraph]) -> AppGraph:
     """Combine per-module PMGraphs into one AppGraph (CompTool).
 
-    Raises ``ValueError`` if two graphs share a ``module_id``, or if any
+    Raises ``ValueError`` if two graphs share a ``module_id``, if any
     ``module_id``/node ID contains ``"::"`` (used internally to keep IDs
-    globally unique while stitching).
+    globally unique while stitching), if a ``module_id`` ends with ``":"``, or
+    if any route pattern uses unsupported syntax (see ``check_pattern``).
     """
     graphs = list(graphs)
     _check_unique_module_ids(graphs)
@@ -144,6 +195,10 @@ def stitch(graphs: Iterable[PMGraph]) -> AppGraph:
             prefixed_edges.add(
                 (_prefixed(graph.module_id, source), _prefixed(graph.module_id, target))
             )
+
+    for node in prefixed_nodes.values():
+        if isinstance(node, Message) and node.pattern is not None:
+            check_pattern(node.pattern)
 
     # prefixed node ID -> the link ID(s) it was merged into. A node can
     # participate in more than one link (e.g. one route pattern matching

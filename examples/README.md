@@ -44,16 +44,7 @@ The example is a small checkout flow spread across three modules (services):
                        201                                      200
 ```
 
-- **frontend** sends the checkout request and receives the `201` response. Its
-  `checkout.timeout` parameter influences the checkout request. It also
-  influences an analytics call to a service we have no PMGraph for.
-- **orders** handles `POST /carts/{cart_id}/checkout` (a net/http-style
-  pattern). While handling it, orders calls inventory, then sends the `201`. Its
-  `inventory.max_retries` parameter influences the inventory call.
-- **inventory** handles `PUT /stock/:sku/reserve` (an httprouter-style pattern).
-  Its `db.pool_size` parameter influences the `200` response it sends.
-
-Together, the three modules exercise every stitching behavior:
+The three modules exercise every stitching behavior:
 
 | Behavior | Where in the example |
 |---|---|
@@ -81,26 +72,24 @@ An edge `A → B` means "A may influence B within this module". The usual cases
 are a parameter influencing a message the module sends, or a received message
 influencing a later sent message.
 
-Node kinds:
-
-| `kind` | Required fields | Notes |
-|---|---|---|
-| `parameter` | `key` | A configuration key, e.g. `"db.pool_size"`. |
-| `send_request` | `api_id`, `method`, `host`, `path` | Client side: uses a **concrete** path. |
-| `receive_response` | `api_id`, `method`, `host`, `path`, `status_code` | Client side: uses a **concrete** path. |
-| `receive_request` | `api_id`, `method`, `pattern` (or `path`) | Server side: no `host`. |
-| `send_response` | `api_id`, `method`, `pattern` (or `path`), `status_code` | Server side: no `host`. |
 
 When writing PMGraphs by hand, follow these rules:
 
-- **Node IDs and `module_id` must not contain `::`.** Stitching uses `::` to
-  namespace IDs, as in `orders::param-max-retries`.
+- **Node IDs and `module_id` must not contain `::`, and `module_id` must not
+  end with `:`.** Stitching uses `::` to namespace IDs, as in
+  `orders::param-max-retries`.
+- **`path` and `pattern` must be nonempty**, and each message sets exactly one
+  of them.
 - **Matching messages must share an `api_id`.** Two messages are stitched only
   when they agree on `api_id`, `method`, and `status_code`, and the client's
-  concrete `path` satisfies the server's `pattern`. A message with
-  `"api_id": null` is never stitched.
-- **Supported pattern syntaxes:** net/http (`{name}`, trailing `{name...}`) and
-  httprouter (`:name`, trailing `*name`).
+  concrete `path` satisfies the server's `pattern`. If the server has a `path`
+  instead of a `pattern`, the two paths must be identical. Wildcard syntax in a
+  `path` is taken literally. A message with `"api_id": null` is never stitched.
+- **Supported pattern syntaxes:** net/http (`{name}`, trailing `{name...}`,
+  trailing `{$}`, and a trailing `/` that matches the whole subtree) and
+  httprouter (`:name`, trailing `*name`; a trailing `/` is literal). Patterns
+  must start with `/`, so no method or host prefix. A pattern that mixes the
+  two syntaxes or uses anything else makes `stitch` raise `ValueError`.
 - **Messages only match across modules.** A send and a receive in the same
   module are never stitched together.
 
@@ -211,46 +200,10 @@ paths (truncated=False):
 The subgraph contains only the queried node and the nodes connected to it.
 Unrelated parameters and the frontend→orders request (`link0`) are left out.
 
-### 5. Cap the number of paths
 
-The number of root-to-leaf paths can grow very quickly on large graphs. Set
-`path_limit` to cap it. When paths were dropped, `truncated` is `True`. The
-cap affects only `paths`; `subgraph` is always complete.
 
-```python
-result = query(appgraph, "link2", path_limit=2)
-```
 
-```
-paths (truncated=True):
-    frontend::param-checkout-timeout -> link0 -> link2
-    inventory::param-db-pool-size -> link3 -> link2
-```
 
-Paths always come out in the same order, so a given limit always keeps the same
-paths.
-
-## Using your own graphs
-
-Write one `*.pmgraph.json` per module, following the format above, then run
-stitching and queries from an interactive session:
-
-```bash
-uv run python
-```
-
-```python
-from pathlib import Path
-from conftamer.pmgraph.models import PMGraph
-from conftamer.appgraph.stitch import stitch
-from conftamer.query import query
-graphs = [PMGraph.model_validate_json(p.read_text()) for p in Path("my-graphs").glob("*.pmgraph.json")]
-app = stitch(graphs)
-sorted(app.nodes)                       # find the node ID you care about
-result = query(app, "mymodule::my-param", path_limit=100)
-print(result.subgraph.model_dump_json(indent=2))   # subgraph as JSON
-result.paths
-```
 
 Things to keep in mind:
 
@@ -271,4 +224,4 @@ Things to keep in mind:
 - The `conftamer` CLI has no build, stitch, query, or export commands.
 - Nothing builds PMGraphs from ContextTrack runtime captures on this branch.
 - Nothing generates `Parameter` nodes automatically; you add them by hand.
-- There is no file writer and no GraphML export on this branch.
+

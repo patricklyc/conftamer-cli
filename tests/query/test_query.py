@@ -60,8 +60,8 @@ class TestToIgraph:
         assert _named_edges(graph) == {("a", "m"), ("m", "b")}
 
     def test_dangling_edge_raises(self) -> None:
-        # PMGraph does not itself validate edge endpoints; conversion does.
-        graph = PMGraph(
+        # Both graph models reject dangling edges, so bypass validation.
+        graph = PMGraph.model_construct(
             module_id="m", nodes={"a": Parameter(key="a")}, edges={("a", "ghost")}
         )
 

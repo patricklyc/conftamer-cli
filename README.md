@@ -109,7 +109,7 @@ appgraph = stitch([frontend, backend])
 
 While stitching, node IDs are namespaced as `module_id::node_id` so IDs from
 different modules can't collide. Because of this, `::` is not allowed inside a
-module ID or a node ID.
+module ID or a node ID, and a module ID may not end with `:`.
 
 ## Querying
 

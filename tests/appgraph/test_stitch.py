@@ -68,6 +68,14 @@ class TestPathMatchesPattern:
             ("/static/css/site.css", "/static/{rest...}"),
             ("/static/css/site.css", "/static/*rest"),
             ("/static/x", "/static/*rest"),
+            ("/api/v1/items", "/api/v1/"),
+            ("/api/v1/items/7", "/api/v1/"),
+            ("/api/v1/", "/api/v1/"),
+            ("/items", "/"),
+            ("/users/42/posts", "/users/{id}/"),
+            ("/items/", "/items/{$}"),
+            ("/", "/{$}"),
+            ("/items/42/", "/items/:id/"),
         ],
     )
     def test_matches(self, path: str, pattern: str) -> None:
@@ -82,10 +90,35 @@ class TestPathMatchesPattern:
             ("/other/42", "/items/{id}"),
             ("/static/", "/static/{rest...}"),  # wildcard segment must be nonempty
             ("/static", "/static/*rest"),
+            ("/api/v1", "/api/v1/"),
+            ("/api/v2/items", "/api/v1/"),
+            ("/items/wrong", "/items/{$}"),
+            ("/items", "/items/{$}"),
+            ("/items", "/{$}"),
+            ("/items/42/x", "/items/:id/"),  # httprouter: trailing slash is literal
         ],
     )
     def test_does_not_match(self, path: str, pattern: str) -> None:
         assert not path_matches_pattern(path, pattern)
+
+    @pytest.mark.parametrize(
+        "pattern",
+        [
+            "GET /items",
+            "example.com/items",
+            "/items/{id...}/more",
+            "/items/*rest/more",
+            "/items/{$}/more",
+            "/items/{}",
+            "/items/{...}",
+            "/items/:",
+            "/items/x{id}",
+            "/items/{id}/:sub",
+        ],
+    )
+    def test_unsupported_pattern_raises(self, pattern: str) -> None:
+        with pytest.raises(ValueError, match="unsupported route pattern"):
+            path_matches_pattern("/items/42", pattern)
 
 
 class TestStitch:
@@ -165,6 +198,43 @@ class TestStitch:
 
         assert app.nodes == {}
 
+    @pytest.mark.parametrize(
+        "server_path", ["/items/:id", "/items/{id}", "/items/*rest", "/items/{id...}"]
+    )
+    def test_fallback_path_is_literal_not_a_pattern(self, server_path: str) -> None:
+        client = _pmgraph(
+            "frontend",
+            {"param": Parameter(key="timeout"), "send": _send_request()},
+            {("param", "send")},
+        )
+        server = _pmgraph(
+            "backend",
+            {"recv": _receive_request(pattern=None, path=server_path)},
+            set(),
+        )
+
+        app = stitch([client, server])
+
+        assert list(app.nodes) == ["frontend::param"]
+
+    def test_fallback_path_matches_identical_path(self) -> None:
+        client = _pmgraph(
+            "frontend",
+            {"param": Parameter(key="timeout"), "send": _send_request()},
+            {("param", "send")},
+        )
+        server = _pmgraph(
+            "backend",
+            {"recv": _receive_request(pattern=None, path="/items/42")},
+            set(),
+        )
+
+        app = stitch([client, server])
+
+        link = app.nodes["link0"]
+        assert isinstance(link, LinkedMessage)
+        assert link.pattern == "/items/42"
+
     def test_status_code_mismatch_blocks_response_link_but_not_request_link(
         self,
     ) -> None:
@@ -202,6 +272,14 @@ class TestStitch:
         app = stitch([graph])
 
         assert app.nodes == {}
+
+    def test_unsupported_pattern_raises_even_without_a_candidate(self) -> None:
+        server = _pmgraph(
+            "backend", {"recv": _receive_request(pattern="GET /items/{id}")}, set()
+        )
+
+        with pytest.raises(ValueError, match="unsupported route pattern"):
+            stitch([server])
 
     def test_one_pattern_matches_many_senders(self) -> None:
         client_a = _pmgraph(
@@ -247,6 +325,29 @@ class TestStitch:
 
         with pytest.raises(ValueError, match="::"):
             stitch([graph])
+
+    def test_module_id_with_trailing_colon_rejected(self) -> None:
+        # "a:" + "::" + "cfg" would collide with "a" + "::" + ":cfg".
+        a = _pmgraph("a", {":cfg": Parameter(key="one")}, set())
+        b = _pmgraph("a:", {"cfg": Parameter(key="two")}, set())
+
+        with pytest.raises(ValueError, match="must not end with ':'"):
+            stitch([a, b])
+
+    def test_node_id_with_leading_colon_keeps_its_provenance(self) -> None:
+        client = _pmgraph(
+            "client",
+            {"cfg": Parameter(key="k"), ":send": _send_request()},
+            {("cfg", ":send")},
+        )
+        backend = _pmgraph("backend", {"recv": _receive_request()}, set())
+
+        app = stitch([client, backend])
+
+        link = app.nodes["link0"]
+        assert isinstance(link, LinkedMessage)
+        assert (link.sender_module, link.sender_node) == ("client", ":send")
+        assert set(app.nodes) == {"client::cfg", "link0"}
 
     def test_parameter_with_no_influence_is_still_kept(self) -> None:
         graph = _pmgraph("frontend", {"param": Parameter(key="unused")}, set())
