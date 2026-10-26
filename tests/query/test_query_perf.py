@@ -1,10 +1,30 @@
+import json
 import random
 import time
+from pathlib import Path
 
 import pytest
 
 from conftamer.pmgraph.models import Parameter, PMGraph
 from conftamer.query import query
+
+# Each test writes the paths it got here (git-ignored), replacing the last run's.
+OUTPUT_DIR = Path(__file__).parent / "perf-output"
+
+
+def _write_paths(
+    name: str, seed: int, target: str, paths: list[list[list[str]]]
+) -> Path:
+    """Write ``paths`` as JSON, one path per line so large outputs stay readable."""
+    OUTPUT_DIR.mkdir(exist_ok=True)
+    output = OUTPUT_DIR / f"{name}.json"
+    lines = ",\n".join("    " + json.dumps(path) for path in paths)
+    output.write_text(
+        f'{{"seed": {seed}, "target": {json.dumps(target)}, "paths": [\n{lines}\n]}}\n',
+        encoding="utf-8",
+        newline="\n",
+    )
+    return output
 
 
 def _random_dag(n_nodes: int, edges_per_node: int, seed: int) -> PMGraph:
@@ -27,7 +47,9 @@ def _random_dag(n_nodes: int, edges_per_node: int, seed: int) -> PMGraph:
 # edges_per_node can make this run very slow.
 @pytest.mark.parametrize("n_nodes", [100])
 def test_query_timing(n_nodes: int) -> None:
-    graph = _random_dag(n_nodes, edges_per_node=4, seed=n_nodes)
+    # A new graph every run; the seed is printed so a run can be reproduced.
+    seed = random.randrange(2**32)
+    graph = _random_dag(n_nodes, edges_per_node=4, seed=seed)
     # A node in the middle, so it has both ancestors and descendants.
     target = str(n_nodes // 2)
 
@@ -41,12 +63,14 @@ def test_query_timing(n_nodes: int) -> None:
     # Printed timing (run with `-s` to see it):
     #   uv run pytest tests/query/test_query_perf.py -s
     print(
-        f"\n[query timing] nodes={n_nodes:>4} "
+        f"\n[query timing] seed={seed} nodes={n_nodes:>4} "
         f"edges={len(graph.edges):>5} "
         f"subgraph_nodes={len(result.subgraph.nodes):>4} "
         f"paths={len(result.paths):>4} "
         f"time={elapsed_ms:.3f} ms"
     )
+    output = _write_paths("query_timing", seed, target, result.paths)
+    print(f"paths written to {output}")
 
 
 def _random_graph(n_nodes: int, edges_per_node: int, seed: int) -> PMGraph:
@@ -65,7 +89,8 @@ def _random_graph(n_nodes: int, edges_per_node: int, seed: int) -> PMGraph:
 
 @pytest.mark.parametrize("n_nodes", [100])
 def test_query_timing_with_cycles(n_nodes: int) -> None:
-    graph = _random_graph(n_nodes, edges_per_node=4, seed=n_nodes)
+    seed = random.randrange(2**32)
+    graph = _random_graph(n_nodes, edges_per_node=4, seed=seed)
     target = str(n_nodes // 2)
 
     start = time.perf_counter()
@@ -75,31 +100,11 @@ def test_query_timing_with_cycles(n_nodes: int) -> None:
     assert target in result.subgraph.nodes
 
     print(
-        f"\n[cyclic query timing] nodes={n_nodes:>4} "
+        f"\n[cyclic query timing] seed={seed} nodes={n_nodes:>4} "
         f"edges={len(graph.edges):>5} "
         f"subgraph_nodes={len(result.subgraph.nodes):>4} "
         f"paths={len(result.paths):>4} "
         f"time={elapsed_ms:.3f} ms"
     )
-
-
-def _show(graph: PMGraph, target: str) -> None:
-    """Print a graph's edges and the result of querying ``target`` in it."""
-    result = query(graph, target)
-    print(f"\n=== query {target!r} ===")
-    print("edges:")
-    for source, dest in sorted(graph.edges):
-        print(f"    {source} -> {dest}")
-    print(f"paths ({len(result.paths)}):")
-    for path in result.paths:
-        # A step with several nodes is a cycle; print it as [a, b].
-        steps = (s[0] if len(s) == 1 else "[" + ", ".join(s) + "]" for s in path)
-        print("    " + " -> ".join(steps))
-
-
-# Prints the edges and paths for a small random cyclic graph (run with `-s`):
-#   uv run pytest tests/query/test_query_perf.py -s -k show
-@pytest.mark.parametrize("n_nodes,seed", [(6, 1), (8, 2), (10, 3)])
-def test_show_cyclic_query(n_nodes: int, seed: int) -> None:
-    graph = _random_graph(n_nodes, edges_per_node=2, seed=seed)
-    _show(graph, str(n_nodes // 2))
+    output = _write_paths("query_timing_with_cycles", seed, target, result.paths)
+    print(f"paths written to {output}")

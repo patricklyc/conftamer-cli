@@ -229,6 +229,26 @@ before the other's on some path, and every node in the subgraph appears on at
 least one path. Only the order in which a path moves around inside a cycle is
 left out, and those edges are still in `subgraph`.
 
+#### How cycles are found
+
+The query never looks for individual cycles. It asks only which nodes can all
+reach each other: `_condense` in `src/conftamer/query.py` calls igraph's
+`connected_components(mode="strong")`, and every group of two or more nodes it
+returns is a cycle step. This has a few consequences:
+
+- **A group is as large as possible.** Two cycles that share a node merge into
+  one step: `a -> b -> a` and `b -> c -> b` give the single step
+  `["a", "b", "c"]`. Two cycles joined by a one-way edge stay separate steps,
+  because there is no way back from the second to the first.
+- **A self-loop is not a cycle step.** A node with an edge to itself (`a -> a`)
+  is a group of one, so it is the step `["a"]`. The loop is still in
+  `subgraph`'s edges.
+- **Cycles are never cut off by the subgraph.** If one member of a cycle is an
+  ancestor or descendant of the queried node, every member is, so `subgraph`
+  always holds whole cycles.
+- **Steps are sorted as strings.** Node IDs are strings, so a step lists
+  `"10"` before `"2"`.
+
 #### Why `paths` is a list of lists of lists
 
 `paths` has the type `list[list[list[str]]]`, read from the outside in:
