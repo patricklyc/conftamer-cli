@@ -1,15 +1,17 @@
+import errno
 import json
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from conftamer.appgraph.stitch import stitch as stitch_graphs
+from conftamer.appgraph.stitch import stitch_with_dropped
 from conftamer.contexttrack import load_contexttrack
 from conftamer.io import (
     graph_to_json,
     load_graph_json,
     load_pmgraph_json,
+    write_dropped_json,
     write_graph_json,
     write_graphml,
 )
@@ -45,11 +47,25 @@ def build(
 def stitch(
     input_paths: list[Path],
     output: Annotated[Path, typer.Option(..., "--output")],
+    dropped: Annotated[Path | None, typer.Option("--dropped")] = None,
 ) -> None:
-    """Stitch PMGraph JSON files into one AppGraph."""
+    """Stitch PMGraph JSON files into one AppGraph.
+
+    With --dropped, also write every input message left out of the AppGraph,
+    with the reason it was dropped.
+    """
     try:
-        graph = stitch_graphs(load_pmgraph_json(path) for path in input_paths)
-        write_graph_json(graph, output)
+        result = stitch_with_dropped(load_pmgraph_json(path) for path in input_paths)
+        # Check --dropped before writing anything, so a bad --dropped doesn't
+        # leave the AppGraph written without its report.
+        if dropped is not None:
+            if dropped.resolve() == output.resolve():
+                raise ValueError("--dropped and --output must be different files")
+            if dropped.exists():
+                raise FileExistsError(errno.EEXIST, "File exists", str(dropped))
+        write_graph_json(result.appgraph, output)
+        if dropped is not None:
+            write_dropped_json(result.dropped, dropped)
     except (OSError, ValueError) as error:
         raise _fail("Cannot stitch", error) from error
 
@@ -58,18 +74,13 @@ def stitch(
 def query(
     input_path: Path,
     node: Annotated[str, typer.Option(..., "--node")],
-    path_limit: Annotated[int, typer.Option("--path-limit")] = -1,
 ) -> None:
     """Query a node in a PMGraph or AppGraph JSON file."""
     try:
-        result = query_graph(load_graph_json(input_path), node, path_limit)
+        result = query_graph(load_graph_json(input_path), node)
     except (OSError, ValueError) as error:
         raise _fail(f"Cannot query {input_path}", error) from error
-    payload = {
-        "subgraph": graph_to_json(result.subgraph),
-        "paths": result.paths,
-        "truncated": result.truncated,
-    }
+    payload = {"subgraph": graph_to_json(result.subgraph), "paths": result.paths}
     typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
 
 

@@ -25,8 +25,8 @@ Run these from the repository root after `uv sync --locked --dev`:
 | Command | What it does |
 |---|---|
 | `conftamer build CAPTURE.jsonl --module-id ID --output OUT.json` | Builds a PMGraph from a ContextTrack capture. |
-| `conftamer stitch A.json B.json ... --output OUT.json` | Stitches PMGraph files into one AppGraph file. |
-| `conftamer query GRAPH.json --node ID [--path-limit N]` | Queries a node. Prints the subgraph, paths and `truncated` flag as JSON. |
+| `conftamer stitch A.json B.json ... --output OUT.json [--dropped DROPPED.json]` | Stitches PMGraph files into one AppGraph file. With `--dropped`, also writes the messages that were left out. |
+| `conftamer query GRAPH.json --node ID` | Queries a node. Prints the subgraph and every path through the node as JSON. |
 | `conftamer export GRAPH.json --output OUT.graphml` | Exports a graph to GraphML. |
 
 `query` and `export` accept either a PMGraph file or an AppGraph file. They tell
@@ -140,6 +140,37 @@ How to read this:
 - **`send-analytics` is gone.** No module receives it, so it was never merged,
   and stitching drops messages that weren't merged.
 
+To see what stitching dropped, add `--dropped`:
+
+```bash
+uv run conftamer stitch examples/pmgraphs/*.pmgraph.json --output app.json --dropped dropped.json
+```
+
+`dropped.json` lists every message that is not in the AppGraph, with the reason:
+
+```json
+[
+  {
+    "module_id": "frontend",
+    "node_id": "send-analytics",
+    "reason": "unmatched",
+    "message": {
+      "kind": "send_request",
+      "api_id": "analytics-api",
+      "method": "POST",
+      "host": "analytics:9000",
+      "path": "/events",
+      "pattern": null,
+      "status_code": null
+    }
+  }
+]
+```
+
+`unmatched` means no other module had a matching message. The other reason,
+`unreachable`, means the message matched but no parameter reaches it. Every
+message in this example that matched is reachable, so none are listed.
+
 ### 2. Ask what can influence a behavior
 
 Here the question is which configuration parameters, in any module, can
@@ -183,13 +214,13 @@ uv run conftamer query app.json --node orders::param-max-retries
     },
     "edges": [["link1", "link3"], ["link3", "link2"], ["orders::param-max-retries", "link1"]]
   },
-  "paths": [["orders::param-max-retries", "link1", "link3", "link2"]],
-  "truncated": false
+  "paths": [[["orders::param-max-retries"], ["link1"], ["link3"], ["link2"]]]
 }
 ```
 
 The subgraph contains only the queried node and the nodes connected to it.
-Unrelated parameters and the frontend→orders request (`link0`) are left out.
+Each step of a path is a list of node IDs. A step has more than one node only
+when those nodes form a cycle, and this example has none. Unrelated parameters and the frontend→orders request (`link0`) are left out.
 
 ### 4. Export to GraphML
 
@@ -225,6 +256,8 @@ AppGraph until you add `Parameter` nodes and their edges by hand.
 - **The same steps work from Python.** `uv run python examples/walkthrough.py`
   stitches and queries the example PMGraphs with the library (`stitch()`,
   `query()`), and `conftamer.io` loads and writes graph files.
+
+- Only tested on a windows system, should work on Linux but not tested
 
 ## Not available yet
 

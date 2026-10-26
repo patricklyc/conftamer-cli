@@ -1,7 +1,7 @@
 import pytest
 
-from conftamer.appgraph.models import LinkedMessage
-from conftamer.appgraph.stitch import path_matches_pattern, stitch
+from conftamer.appgraph.models import DroppedMessage, LinkedMessage
+from conftamer.appgraph.stitch import path_matches_pattern, stitch, stitch_with_dropped
 from conftamer.pmgraph.models import Message, Parameter, PMGraph
 
 
@@ -434,3 +434,98 @@ class TestStitch:
         assert links[web_orders_id].pattern == "/checkout/{cart}"
         assert links[orders_pay_id].pattern == "/charge/{cart}"
         assert links[orders_pay_id].receiver_node == "got_called"
+
+
+class TestDropped:
+    def test_reports_nothing_when_every_message_survives(self) -> None:
+        client = _pmgraph(
+            "frontend",
+            {"param": Parameter(key="timeout"), "send": _send_request()},
+            {("param", "send")},
+        )
+        server = _pmgraph("backend", {"recv": _receive_request()}, set())
+
+        result = stitch_with_dropped([client, server])
+
+        assert result.dropped == []
+        assert result.appgraph == stitch([client, server])
+
+    def test_unmatched_message(self) -> None:
+        send = _send_request(api_id="no-such-api")
+        client = _pmgraph(
+            "frontend",
+            {"param": Parameter(key="timeout"), "send": send},
+            {("param", "send")},
+        )
+
+        assert stitch_with_dropped([client]).dropped == [
+            DroppedMessage(
+                module_id="frontend", node_id="send", reason="unmatched", message=send
+            )
+        ]
+
+    def test_matched_but_unreachable_from_a_parameter(self) -> None:
+        # The two sides match, but no Parameter influences the link, so it is
+        # pruned and both of its messages are reported.
+        send, recv = _send_request(), _receive_request()
+        client = _pmgraph("frontend", {"send": send}, set())
+        server = _pmgraph("backend", {"recv": recv}, set())
+
+        result = stitch_with_dropped([client, server])
+
+        assert result.appgraph.nodes == {}
+        assert result.dropped == [
+            DroppedMessage(
+                module_id="backend", node_id="recv", reason="unreachable", message=recv
+            ),
+            DroppedMessage(
+                module_id="frontend",
+                node_id="send",
+                reason="unreachable",
+                message=send,
+            ),
+        ]
+
+    def test_message_kept_if_any_of_its_links_survives(self) -> None:
+        # One receiver matches two senders; only a's link is reachable from a
+        # Parameter. The receiver survives through it, b's sender does not.
+        a = _pmgraph(
+            "a",
+            {"param": Parameter(key="k"), "send": _send_request()},
+            {("param", "send")},
+        )
+        b = _pmgraph("b", {"send": _send_request(path="/items/7")}, set())
+        server = _pmgraph("server", {"recv": _receive_request()}, set())
+
+        dropped = stitch_with_dropped([a, b, server]).dropped
+
+        assert [(d.module_id, d.node_id, d.reason) for d in dropped] == [
+            ("b", "send", "unreachable")
+        ]
+
+    def test_parameters_are_never_reported(self) -> None:
+        graph = _pmgraph("m", {"param": Parameter(key="k")}, set())
+
+        assert stitch_with_dropped([graph]).dropped == []
+
+    def test_sorted_by_module_then_node(self) -> None:
+        # "a" sorts before "a-b" as a module ID even though "a::" > "a-b::".
+        graphs = [
+            _pmgraph("a-b", {"x": _send_request(api_id=None)}, set()),
+            _pmgraph(
+                "a",
+                {
+                    "y": _send_request(api_id=None),
+                    "x": _send_request(api_id=None),
+                },
+                set(),
+            ),
+        ]
+
+        dropped = stitch_with_dropped(graphs).dropped
+
+        assert [(d.module_id, d.node_id) for d in dropped] == [
+            ("a", "x"),
+            ("a", "y"),
+            ("a-b", "x"),
+        ]

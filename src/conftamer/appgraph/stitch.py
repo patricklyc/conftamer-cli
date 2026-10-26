@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterable
+from dataclasses import dataclass
 
-from conftamer.appgraph.models import AppGraph, LinkedMessage
+from conftamer.appgraph.models import AppGraph, DroppedMessage, LinkedMessage
 from conftamer.pmgraph.models import Message, Parameter, PMGraph
 
 _SEPARATOR = "::"
@@ -175,8 +176,25 @@ def _forward_reachable(seeds: Iterable[str], edges: set[tuple[str, str]]) -> set
     return reached
 
 
+@dataclass(frozen=True)
+class StitchResult:
+    """The AppGraph built by stitching, plus every input message it left out,
+    sorted by module ID and then node ID."""
+
+    appgraph: AppGraph
+    dropped: list[DroppedMessage]
+
+
 def stitch(graphs: Iterable[PMGraph]) -> AppGraph:
     """Combine per-module PMGraphs into one AppGraph (CompTool).
+
+    Raises the same errors as ``stitch_with_dropped``.
+    """
+    return stitch_with_dropped(graphs).appgraph
+
+
+def stitch_with_dropped(graphs: Iterable[PMGraph]) -> StitchResult:
+    """Stitch like ``stitch``, also reporting the messages that were dropped.
 
     Raises ``ValueError`` if two graphs share a ``module_id``, if any
     ``module_id``/node ID contains ``"::"`` (used internally to keep IDs
@@ -284,4 +302,22 @@ def stitch(graphs: Iterable[PMGraph]) -> AppGraph:
         if source in final_nodes and target in final_nodes
     }
 
-    return AppGraph(nodes=final_nodes, edges=final_edges)
+    # A message survives if at least one link it was merged into survived.
+    dropped = [
+        DroppedMessage(
+            module_id=_module_of(pid),
+            node_id=_unprefixed(pid),
+            reason="unreachable" if pid in replaces else "unmatched",
+            message=node,
+        )
+        for pid, node in sorted(
+            prefixed_nodes.items(),
+            key=lambda item: (_module_of(item[0]), _unprefixed(item[0])),
+        )
+        if isinstance(node, Message)
+        and not any(link_id in final_nodes for link_id in replaces.get(pid, ()))
+    ]
+
+    return StitchResult(
+        appgraph=AppGraph(nodes=final_nodes, edges=final_edges), dropped=dropped
+    )

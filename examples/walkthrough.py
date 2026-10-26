@@ -8,7 +8,7 @@ Run from the repository root:
 from pathlib import Path
 
 from conftamer.appgraph.models import AppGraph, LinkedMessage
-from conftamer.appgraph.stitch import stitch
+from conftamer.appgraph.stitch import stitch_with_dropped
 from conftamer.pmgraph.models import Message, Parameter, PMGraph
 from conftamer.query import QueryResult, query
 
@@ -46,13 +46,14 @@ def print_graph(graph: PMGraph | AppGraph) -> None:
         print(f"    {source} -> {target}")
 
 
-def print_result(result: QueryResult, show_subgraph: bool = True) -> None:
-    if show_subgraph:
-        print("subgraph:")
-        print_graph(result.subgraph)
-    print(f"paths (truncated={result.truncated}):")
+def print_result(result: QueryResult) -> None:
+    print("subgraph:")
+    print_graph(result.subgraph)
+    print("paths:")
     for path in result.paths:
-        print("    " + " -> ".join(path))
+        # A step with several nodes is a cycle; print it as [a, b].
+        steps = (s[0] if len(s) == 1 else "[" + ", ".join(s) + "]" for s in path)
+        print("    " + " -> ".join(steps))
 
 
 def main() -> None:
@@ -64,8 +65,13 @@ def main() -> None:
         print_graph(graph)
 
     print("\n== 2. Stitch all PMGraphs into an AppGraph ==")
-    appgraph = stitch(pmgraphs)
+    stitched = stitch_with_dropped(pmgraphs)
+    appgraph = stitched.appgraph
     print_graph(appgraph)
+    print("  dropped:")
+    for dropped in stitched.dropped:
+        node_id = f"{dropped.module_id}::{dropped.node_id}"
+        print(f"    {node_id:<34} {dropped.reason}")
 
     # Which configuration parameters, in any module, can influence the
     # checkout response the frontend receives?
@@ -83,9 +89,6 @@ def main() -> None:
     # the application?
     print("\n== 4. Query the AppGraph: orders::param-max-retries ==")
     print_result(query(appgraph, "orders::param-max-retries"))
-
-    print(f"\n== 5. Query {checkout_response} again with path_limit=2 ==")
-    print_result(query(appgraph, checkout_response, path_limit=2), show_subgraph=False)
 
 
 if __name__ == "__main__":

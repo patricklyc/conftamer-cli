@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from itertools import islice, product
+from itertools import product
 
 import igraph as ig
 
@@ -18,14 +18,21 @@ class QueryResult:
     ``subgraph`` is the induced subgraph over the queried node together with
     every node that can reach it (ancestors) and every node reachable from it
     (descendants); it is the same graph type as the input, so it can be
-    re-serialized or exported. ``paths`` is the list of root->leaf paths (each a
-    list of node IDs) that pass through the queried node, capped at the requested
-    limit. ``truncated`` is True when that cap dropped one or more paths.
+    re-serialized or exported. ``paths`` is the list of every root->leaf path
+    that passes through the queried node.
+
+    Each path is a list of steps, and each step is a sorted list of node IDs:
+    one strongly connected component (SCC) of the graph. On an acyclic graph
+    every step is a single node, so a path is the plain root->leaf path. On a
+    cyclic graph every member of a cycle influences every other, so the whole
+    cycle is one step instead of one path per route around it, and roots and
+    leaves generalize to source and sink SCCs. Every node with ancestors or
+    descendants gets at least one path, and the routes inside a cycle remain
+    in ``subgraph``.
     """
 
     subgraph: Graph
-    paths: list[list[str]]
-    truncated: bool
+    paths: list[list[list[str]]]
 
 
 def to_igraph(graph: Graph) -> ig.Graph:
@@ -48,27 +55,44 @@ def to_igraph(graph: Graph) -> ig.Graph:
     )
 
 
-def _paths_to_ends(
-    g: ig.Graph, vertex: int, mode: str, limit: int | None
-) -> list[list[int]]:
-    """Every simple path from ``vertex`` to a structural end, as vertex indices
-    starting at ``vertex``: roots (in-degree 0) when ``mode="in"``, leaves
-    (out-degree 0) when ``mode="out"``. At most ``limit`` paths (None = all)."""
-    degree = g.indegree if mode == "in" else g.outdegree
-    if degree(vertex) == 0:
+def _condense(g: ig.Graph) -> tuple[ig.Graph, list[int]]:
+    """Collapse each strongly connected component (SCC) of ``g`` into one vertex.
+
+    Returns the condensed graph, which is acyclic, and each original vertex's
+    SCC index in it. SCCs are numbered by their smallest member, so on a graph
+    sorted by node ID (see ``to_igraph``) the condensed graph is sorted the same
+    way, and on an acyclic graph it is ``g`` itself minus any self-loops.
+    """
+    membership = g.connected_components(mode="strong").membership
+    first: dict[int, int] = {}
+    for v, scc in enumerate(membership):
+        first.setdefault(scc, v)
+    rank = {scc: i for i, scc in enumerate(sorted(first, key=first.__getitem__))}
+    component = [rank[scc] for scc in membership]
+    edges = sorted(
+        {(component[s], component[t]) for s, t in g.get_edgelist()}
+        - {(c, c) for c in range(len(rank))}
+    )
+    return ig.Graph(n=len(rank), edges=edges, directed=True), component
+
+
+def _paths_to_ends(dag: ig.Graph, vertex: int, mode: str) -> list[list[int]]:
+    """Every path in the acyclic ``dag`` from ``vertex`` to a root (``mode="in"``)
+    or a leaf (``mode="out"``), as vertex indices starting at ``vertex``."""
+    if not dag.degree(vertex, mode=mode):
         # igraph never returns the zero-length path from a vertex to itself.
-        return [[vertex]] if limit != 0 else []
-    ends = [v for v, d in enumerate(degree()) if d == 0]
-    return g.get_all_simple_paths(vertex, to=ends, mode=mode, max_results=limit)
+        return [[vertex]]
+    ends = [v for v, d in enumerate(dag.degree(mode=mode)) if not d]
+    return dag.get_all_simple_paths(vertex, to=ends, mode=mode)
 
 
-def query(graph: Graph, node_id: str, path_limit: int = -1) -> QueryResult:
+def query(graph: Graph, node_id: str) -> QueryResult:
     """Query ``node_id`` in ``graph`` (a PMGraph or AppGraph).
 
     Returns the induced subgraph over the node's ancestors and descendants, plus
-    the root->leaf paths that pass through it. ``path_limit`` caps the number of
-    paths returned; ``-1`` means no limit. Raises ``ValueError`` if ``node_id``
-    is not a node of ``graph``.
+    every root->leaf path that passes through it, with each cycle collapsed into
+    a single step (see ``QueryResult``). Raises ``ValueError`` if
+    ``node_id`` is not a node of ``graph``.
     """
     if node_id not in graph.nodes:
         raise ValueError(f"node ID {node_id!r} not in graph")
@@ -85,23 +109,18 @@ def query(graph: Graph, node_id: str, path_limit: int = -1) -> QueryResult:
     sub_edges = {(sub_names[s], sub_names[t]) for s, t in sub.get_edgelist()}
     subgraph = graph.model_copy(update={"nodes": sub_nodes, "edges": sub_edges})
 
-    # Split enumeration: root->node prefixes x node->leaf suffixes. Pulling one
-    # extra past the cap tells a full result from a truncated one; the first
-    # path_limit + 1 cross-product items never need more than that many of either.
-    cap = None if path_limit < 0 else path_limit + 1
-    ups = _paths_to_ends(g, vertex, "in", cap)  # each is [node, ..., root]
-    downs = _paths_to_ends(g, vertex, "out", cap)  # each is [node, ..., leaf]
+    # Paths run over the SCCs, so a cycle's members form a single step. Split
+    # enumeration: root->node prefixes x node->leaf suffixes.
+    dag, component = _condense(g)
     names: list[str] = g.vs["name"]
-    paths_iter = (
-        [names[v] for v in reversed(up)] + [names[v] for v in down[1:]]
+    steps: list[list[str]] = [[] for _ in range(dag.vcount())]
+    for v, c in enumerate(component):
+        steps[c].append(names[v])
+    ups = _paths_to_ends(dag, component[vertex], "in")  # each is [node, ..., root]
+    downs = _paths_to_ends(dag, component[vertex], "out")  # [node, ..., leaf]
+    paths = [
+        [list(steps[c]) for c in reversed(up)] + [list(steps[c]) for c in down[1:]]
         for up, down in product(ups, downs)
-    )
-    if cap is None:
-        paths = list(paths_iter)
-        truncated = False
-    else:
-        paths = list(islice(paths_iter, cap))
-        truncated = len(paths) > path_limit
-        paths = paths[:path_limit]
+    ]
 
-    return QueryResult(subgraph=subgraph, paths=paths, truncated=truncated)
+    return QueryResult(subgraph=subgraph, paths=paths)

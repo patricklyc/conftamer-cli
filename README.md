@@ -113,36 +113,124 @@ While stitching, node IDs are namespaced as `module_id::node_id` so IDs from
 different modules can't collide. Because of this, `::` is not allowed inside a
 module ID or a node ID, and a module ID may not end with `:`.
 
+### Seeing what was dropped
+
+Stitching leaves messages out of the AppGraph for two reasons, and it can be
+hard to tell from the AppGraph alone what went missing. `stitch_with_dropped`
+stitches exactly like `stitch` and also returns a `DroppedMessage` for every
+input message that didn't make it into the AppGraph:
+
+- **`unmatched`**: no message in another module matched it. For example, a
+  request to a service that isn't one of the stitched modules, or a sender and
+  receiver whose `api_id`, method, status code, or path disagree.
+- **`unreachable`**: it matched, but no `Parameter` reaches any of the links it
+  was merged into, so they were pruned. Nothing creates `Parameter` nodes from
+  a capture yet, so stitching PMGraphs built by `conftamer build` reports every
+  matched message as `unreachable`.
+
+A message merged into several links counts as kept if any one of them
+survives. `Parameter` nodes are never dropped.
+
+```python
+from conftamer.appgraph.stitch import stitch_with_dropped
+
+result = stitch_with_dropped([frontend, backend])
+result.appgraph   # the same AppGraph that stitch() returns
+result.dropped    # [DroppedMessage(module_id=..., node_id=..., reason=..., message=...)]
+```
+
+`dropped` is sorted by module ID and then node ID, and each entry carries the
+original `Message` so you can see its `api_id`, method, path, and so on.
+
 ## Querying
 
-`query(graph, node_id, path_limit=-1)` works on **either** a PMGraph or an
-AppGraph. Given one node it returns a `QueryResult` with:
+`query(graph, node_id)` works on **either** a PMGraph or an AppGraph. Given one
+node it returns a `QueryResult` with:
 
 - **`subgraph`** — the part of the graph connected to the queried node: the node
   itself, every node that can reach it (its ancestors), and every node it can
   reach (its descendants), with all edges among them. It comes back as the same
   graph type you passed in.
 - **`paths`** — every path that runs from a root (a node with no incoming edges)
-  to a leaf (a node with no outgoing edges) and passes through the queried node,
-  as lists of node IDs.
-- **`truncated`** — whether `path_limit` cut off any paths.
+  to a leaf (a node with no outgoing edges) and passes through the queried node.
+  Each path is a list of steps, and each step is a list of node IDs. On a graph
+  without cycles every step is a single node. Graphs with cycles work too; see
+  [Cycles](#cycles).
 
-`path_limit` caps how many paths are returned; `-1` means no limit. A dense graph
-can contain an enormous number of root-to-leaf paths, so a limit is worth setting
-on large graphs. Paths are returned in a deterministic order (by node ID), so the
-same query always yields the same paths, and a limit always keeps the same ones.
+Every path is always returned. A dense graph can contain an enormous number of
+root-to-leaf paths, so a query on a large, densely connected graph can be slow
+and use a lot of memory. Paths are returned in a deterministic order (by node
+ID), so the same query always yields the same paths.
 
 ```python
 from conftamer.query import query
 
 result = query(appgraph, "frontend::timeout")
 # result.subgraph : an AppGraph with frontend::timeout and link0
-# result.paths    : [["frontend::timeout", "link0"]]
-# result.truncated: False
+# result.paths    : [[["frontend::timeout"], ["link0"]]]
 ```
 
 Querying an unknown node ID raises `ValueError`, as does querying a graph with
 an edge that points at a node ID missing from `nodes`.
+
+### Cycles
+
+A graph can contain cycles, for example when a client's request is influenced by
+an earlier response from the same API. Every node in a cycle influences every
+other node in it, so listing each route around the cycle as its own path would
+repeat the same information many times over: a cluster of a dozen densely
+connected nodes can produce hundreds of thousands of such paths. Instead, each
+group of nodes that all reach each other (a *strongly connected component*) is a
+single step of a path, listed as its sorted node IDs:
+
+```python
+# r -> a -> b -> a -> b -> l   (a and b form a cycle)
+query(graph, "a").paths   # [[["r"], ["a", "b"], ["l"]]]
+
+# r -> a -> b -> a   (a and b loop forever; there is no leaf)
+query(graph, "a").paths   # [[["r"], ["a", "b"]]]
+```
+
+A path starts in a group that nothing outside it points into and ends in a
+group with no edge leaving it, so a cycle with no root above it or no leaf below
+it can begin or end a path. A single node with no cycle is a group of one, which
+is why a graph without cycles gets exactly the root-to-leaf paths described
+above.
+
+No influence is lost: one node influences another exactly when its group comes
+before the other's on some path, and every node in the subgraph appears on at
+least one path. Only the order in which a path moves around inside a cycle is
+left out, and those edges are still in `subgraph`.
+
+#### Why `paths` is a list of lists of lists
+
+`paths` has the type `list[list[list[str]]]`, read from the outside in:
+
+1. **The list of paths.** One entry per root-to-leaf path through the node.
+2. **One path.** An ordered list of steps, from the start of the path to its end.
+3. **One step.** The sorted node IDs of one strongly connected component. A
+   node that is not in a cycle is a step of one node, such as `["link0"]`. A
+   cycle is a step of several nodes, such as `["a", "b"]`.
+
+A step has to be able to hold several nodes, because collapsing each cycle
+into one step is what keeps the number of paths small. We picked this shape over
+two alternatives:
+
+- **Mixing bare IDs and lists** (`["r", ["a", "b"], "l"]`). This is shorter, but
+  every consumer would have to check whether each step is a string or a list.
+  The type would be `list[list[str | list[str]]]`, which is awkward to type-check
+  and to describe in a JSON schema. With the nested form, every step is
+  handled the same way.
+- **Keeping `list[list[str]]` and naming each cycle with a made-up ID**
+  (`["r", "scc0", "l"]`, plus a separate `components: {"scc0": ["a", "b"]}`
+  map). A made-up ID could clash with a real node ID. Readers would also need
+  to look every step up in a second map, so a path would no longer stand on its
+  own.
+
+The cost is that a graph without cycles wraps every node in a one-item list:
+`[["a"], ["b"]]` instead of `["a", "b"]`. To get the plain form back when you
+know a graph has no cycles, use `[[node for (node,) in path] for path in
+result.paths]`. That line raises an error if any step has more than one node.
 
 ### igraph
 
@@ -165,13 +253,18 @@ g.vs["name"]  # ["frontend::timeout", "link0"]
 ```bash
 uv run conftamer build capture.jsonl --module-id frontend --output frontend.json
 uv run conftamer stitch frontend.json backend.json --output app.json
-uv run conftamer query app.json --node frontend::timeout [--path-limit 100]
+uv run conftamer stitch frontend.json backend.json --output app.json --dropped dropped.json
+uv run conftamer query app.json --node frontend::timeout
 uv run conftamer export app.json --output app.graphml
 ```
 
 - **`build`** turns a ContextTrack JSONL capture into a PMGraph.
-- **`stitch`** combines PMGraph files into an AppGraph.
-- **`query`** prints a `QueryResult` (`subgraph`, `paths`, `truncated`) as JSON.
+- **`stitch`** combines PMGraph files into an AppGraph. With `--dropped FILE`
+  it also writes the messages that were left out as a JSON list of
+  `DroppedMessage` (see [Seeing what was dropped](#seeing-what-was-dropped)).
+  `stitch` checks the `--dropped` file before writing anything, so if it
+  already exists or is the same file as `--output`, neither file is written.
+- **`query`** prints a `QueryResult` (`subgraph`, `paths`) as JSON.
 - **`export`** writes GraphML.
 
 `query` and `export` work on either graph type and detect which one they were

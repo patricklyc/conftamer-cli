@@ -77,6 +77,77 @@ def test_stitch_example_pmgraphs(tmp_path):
     assert ("link0", "link1") in graph.edges
 
 
+def test_stitch_writes_dropped_messages(tmp_path):
+    output, dropped = tmp_path / "app.json", tmp_path / "dropped.json"
+    result = runner.invoke(
+        app,
+        [
+            "stitch",
+            *map(str, PMGRAPHS),
+            "--output",
+            str(output),
+            "--dropped",
+            str(dropped),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert result.stdout == result.stderr == ""
+    assert output.exists()
+    assert json.loads(dropped.read_text(encoding="utf-8")) == [
+        {
+            "module_id": "frontend",
+            "node_id": "send-analytics",
+            "reason": "unmatched",
+            "message": {
+                "kind": "send_request",
+                "api_id": "analytics-api",
+                "method": "POST",
+                "host": "analytics:9000",
+                "path": "/events",
+                "pattern": None,
+                "status_code": None,
+            },
+        }
+    ]
+
+
+def test_stitch_without_dropped_writes_only_the_appgraph(tmp_path):
+    _stitched(tmp_path)
+
+    assert [path.name for path in tmp_path.iterdir()] == ["app.json"]
+
+
+@pytest.mark.parametrize("problem", ["exists", "same-as-output"])
+def test_stitch_rejects_bad_dropped_before_writing(tmp_path, problem):
+    output = tmp_path / "app.json"
+    dropped = output if problem == "same-as-output" else tmp_path / "dropped.json"
+    if problem == "exists":
+        dropped.write_bytes(b"keep")
+
+    result = runner.invoke(
+        app,
+        [
+            "stitch",
+            *map(str, PMGRAPHS),
+            "--output",
+            str(output),
+            "--dropped",
+            str(dropped),
+        ],
+    )
+
+    assert result.exit_code == 2 and result.stdout == ""
+    assert "Cannot stitch:" in result.stderr
+    assert "Traceback" not in result.stderr
+    if problem == "exists":
+        assert "dropped.json" in result.stderr
+        assert dropped.read_bytes() == b"keep"
+    else:
+        assert "must be different files" in result.stderr
+    assert not output.exists()
+
+
 @pytest.mark.parametrize("problem", ["duplicate", "appgraph", "missing", "exists"])
 def test_stitch_reports_errors_without_overwriting(tmp_path, problem):
     output = tmp_path / "out.json"
@@ -110,25 +181,24 @@ def test_query_pmgraph_json(tmp_path):
     assert result.exit_code == 0 and result.stderr == ""
     assert json.loads(result.stdout) == {
         "subgraph": json.loads(QUERY_GRAPH) | {"edges": [["a", "b"], ["b", "c"]]},
-        "paths": [["a", "b", "c"]],
-        "truncated": False,
+        "paths": [[["a"], ["b"], ["c"]]],
     }
 
 
-def test_query_appgraph_json_with_path_limit(tmp_path):
+def test_query_appgraph_json(tmp_path):
     source = _stitched(tmp_path)
 
-    result = runner.invoke(
-        app, ["query", str(source), "--node", "link2", "--path-limit", "2"]
-    )
+    result = runner.invoke(app, ["query", str(source), "--node", "link2"])
 
     assert result.exit_code == 0 and result.stderr == ""
     payload = json.loads(result.stdout)
-    assert payload["paths"] == [
+    assert [[node for (node,) in path] for path in payload["paths"]] == [
         ["frontend::param-checkout-timeout", "link0", "link2"],
         ["inventory::param-db-pool-size", "link3", "link2"],
+        ["frontend::param-checkout-timeout", "link0", "link1", "link3", "link2"],
+        ["orders::param-max-retries", "link1", "link3", "link2"],
     ]
-    assert payload["truncated"] is True
+    assert set(payload) == {"subgraph", "paths"}
     assert "module_id" not in payload["subgraph"]
     assert len(payload["subgraph"]["nodes"]) == 7
 

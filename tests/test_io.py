@@ -4,12 +4,13 @@ import re
 import igraph
 import pytest
 
-from conftamer.appgraph.models import AppGraph
+from conftamer.appgraph.models import AppGraph, DroppedMessage
 from conftamer.appgraph.stitch import stitch
 from conftamer.io import (
     load_appgraph_json,
     load_graph_json,
     load_pmgraph_json,
+    write_dropped_json,
     write_graph_json,
     write_graphml,
 )
@@ -223,3 +224,31 @@ def test_graphml_translates_igraph_failures(tmp_path, monkeypatch):
     monkeypatch.setattr(igraph.Graph, "write_graphml", fail)
     with pytest.raises(OSError, match="cannot write GraphML .*: broken writer"):
         write_graphml(PMGraph(module_id="m", nodes={}, edges=set()), path)
+
+
+def test_write_dropped_json(tmp_path):
+    message = Message(
+        kind="send_request", api_id="a", method="GET", host="höst", path="/x"
+    )
+    dropped = [
+        DroppedMessage(module_id="m", node_id="n", reason="unmatched", message=message)
+    ]
+    path = tmp_path / "dropped.json"
+
+    write_dropped_json(dropped, path)
+
+    raw = path.read_bytes()
+    assert raw.endswith(b"]\n") and b"\r" not in raw
+    text = raw.decode("utf-8")
+    assert "höst" in text
+    assert [DroppedMessage.model_validate(d) for d in json.loads(text)] == dropped
+
+
+def test_write_dropped_json_empty_and_never_overwrites(tmp_path):
+    path = tmp_path / "dropped.json"
+    write_dropped_json([], path)
+    assert json.loads(path.read_text(encoding="utf-8")) == []
+
+    with pytest.raises(FileExistsError):
+        write_dropped_json([], path)
+    assert path.read_bytes() == b"[]\n"

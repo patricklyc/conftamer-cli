@@ -1,11 +1,12 @@
 import json
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
 import igraph
 from pydantic import BaseModel
 
-from conftamer.appgraph.models import AppGraph
+from conftamer.appgraph.models import AppGraph, DroppedMessage
 from conftamer.pmgraph.models import PMGraph
 from conftamer.query import Graph, to_igraph
 
@@ -52,6 +53,14 @@ def graph_to_json(graph: Graph) -> dict[str, Any]:
 
 def write_graph_json(graph: Graph, path: str | Path) -> None:
     text = json.dumps(graph_to_json(graph), ensure_ascii=False, indent=2) + "\n"
+    with Path(path).open("x", encoding="utf-8", newline="\n") as output:
+        output.write(text)
+
+
+def write_dropped_json(dropped: Iterable[DroppedMessage], path: str | Path) -> None:
+    """Write the messages stitching dropped as a JSON list, in the given order."""
+    payload = [message.model_dump(mode="json") for message in dropped]
+    text = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
     with Path(path).open("x", encoding="utf-8", newline="\n") as output:
         output.write(text)
 

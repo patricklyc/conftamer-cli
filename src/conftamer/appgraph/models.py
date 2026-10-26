@@ -2,7 +2,7 @@ from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
-from conftamer.pmgraph.models import Parameter
+from conftamer.pmgraph.models import Message, Parameter
 
 
 class LinkedMessage(BaseModel):
@@ -31,6 +31,20 @@ class LinkedMessage(BaseModel):
         if self.sender_module == self.receiver_module:
             raise ValueError("sender_module and receiver_module must differ")
         return self
+
+
+class DroppedMessage(BaseModel):
+    """A PMGraph message that stitching left out of the AppGraph, and why.
+
+    ``reason`` is ``"unmatched"`` when no message in another module matched it,
+    or ``"unreachable"`` when it matched but no Parameter reaches any of the
+    links it was merged into, so they were all pruned.
+    """
+
+    module_id: str
+    node_id: str
+    reason: Literal["unmatched", "unreachable"]
+    message: Message
 
 
 AppGraphNode = Annotated[Parameter | LinkedMessage, Field(discriminator="kind")]

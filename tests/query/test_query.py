@@ -19,6 +19,13 @@ def _pmgraph(edges: set[tuple[str, str]], extra_nodes: Iterable[str] = ()) -> PM
     )
 
 
+def _flat(paths: list[list[list[str]]]) -> list[list[str]]:
+    """Paths on an acyclic graph, where every step is a single node, as plain
+    lists of node IDs."""
+    assert all(len(step) == 1 for path in paths for step in path)
+    return [[node for (node,) in path] for path in paths]
+
+
 def _named_edges(graph: PMGraph | AppGraph) -> set[tuple[str, str]]:
     g = to_igraph(graph)
     return {(g.vs[s]["name"], g.vs[t]["name"]) for s, t in g.get_edgelist()}
@@ -94,7 +101,7 @@ def test_subgraph_includes_bypass_edges_induced() -> None:
 
     assert ("a", "l") in result.subgraph.edges
     # ...but a bypass path is never enumerated as a path "through" m.
-    assert result.paths == [["a", "m", "l"]]
+    assert _flat(result.paths) == [["a", "m", "l"]]
 
 
 def test_isolated_node_returns_itself() -> None:
@@ -103,8 +110,7 @@ def test_isolated_node_returns_itself() -> None:
 
     assert set(result.subgraph.nodes) == {"solo"}
     assert result.subgraph.edges == set()
-    assert result.paths == [["solo"]]
-    assert result.truncated is False
+    assert _flat(result.paths) == [["solo"]]
 
 
 def test_paths_through_node_diamond() -> None:
@@ -115,33 +121,10 @@ def test_paths_through_node_diamond() -> None:
     result = query(graph, "m")
 
     # Deterministic (neighbors visited in sorted order).
-    assert result.paths == [
+    assert _flat(result.paths) == [
         ["r", "a", "m", "b1", "l"],
         ["r", "a", "m", "b2", "l"],
     ]
-    assert result.truncated is False
-
-
-def test_path_limit_caps_and_flags_truncation() -> None:
-    graph = _pmgraph(
-        {("r", "a"), ("a", "m"), ("m", "b1"), ("m", "b2"), ("b1", "l"), ("b2", "l")}
-    )
-
-    capped = query(graph, "m", path_limit=1)
-    assert capped.paths == [["r", "a", "m", "b1", "l"]]
-    assert capped.truncated is True
-
-    exact = query(graph, "m", path_limit=2)
-    assert len(exact.paths) == 2
-    assert exact.truncated is False
-
-    generous = query(graph, "m", path_limit=99)
-    assert len(generous.paths) == 2
-    assert generous.truncated is False
-
-    unlimited = query(graph, "m", path_limit=-1)
-    assert len(unlimited.paths) == 2
-    assert unlimited.truncated is False
 
 
 def test_paths_cross_multiple_roots_and_leaves() -> None:
@@ -149,33 +132,128 @@ def test_paths_cross_multiple_roots_and_leaves() -> None:
     # by prefix first, then suffix (both in sorted node-ID order).
     graph = _pmgraph({("r1", "m"), ("r2", "m"), ("m", "l1"), ("m", "l2")})
 
-    assert query(graph, "m").paths == [
+    assert _flat(query(graph, "m").paths) == [
         ["r1", "m", "l1"],
         ["r1", "m", "l2"],
         ["r2", "m", "l1"],
         ["r2", "m", "l2"],
     ]
 
-    capped = query(graph, "m", path_limit=3)
-    assert capped.paths == [["r1", "m", "l1"], ["r1", "m", "l2"], ["r2", "m", "l1"]]
-    assert capped.truncated is True
-
-
-def test_path_limit_zero_returns_none_but_flags_truncation() -> None:
-    graph = _pmgraph({("a", "m"), ("m", "b")})
-    result = query(graph, "m", path_limit=0)
-
-    assert result.paths == []
-    assert result.truncated is True
-
 
 def test_node_as_root_and_as_leaf() -> None:
     graph = _pmgraph({("m", "a"), ("a", "l")})
 
     # m is a root: single path from m down to the leaf.
-    assert query(graph, "m").paths == [["m", "a", "l"]]
+    assert _flat(query(graph, "m").paths) == [["m", "a", "l"]]
     # l is a leaf: single path from the root down to l.
-    assert query(graph, "l").paths == [["m", "a", "l"]]
+    assert _flat(query(graph, "l").paths) == [["m", "a", "l"]]
+
+
+class TestCyclicPaths:
+    """Each SCC is one step of a path, so roots and leaves generalize to source
+    and sink SCCs and a cycle never multiplies the number of paths."""
+
+    def test_cycle_between_a_root_and_a_leaf(self) -> None:
+        graph = _pmgraph({("r", "a"), ("a", "b"), ("b", "a"), ("b", "l")})
+
+        # Starts only at the real root r, not inside the a <-> b loop.
+        assert query(graph, "a").paths == [[["r"], ["a", "b"], ["l"]]]
+
+    def test_cycle_with_no_leaf_ends_in_it(self) -> None:
+        # Downstream of r there is no leaf, only the a <-> b sink cycle.
+        graph = _pmgraph({("r", "a"), ("a", "b"), ("b", "a")})
+
+        assert query(graph, "a").paths == [[["r"], ["a", "b"]]]
+        assert query(graph, "r").paths == [[["r"], ["a", "b"]]]
+
+    def test_cycle_with_no_root_starts_in_it(self) -> None:
+        # Upstream of m there is no root, only the x <-> y source cycle.
+        graph = _pmgraph({("x", "y"), ("y", "x"), ("x", "m"), ("m", "l")})
+
+        assert query(graph, "m").paths == [[["x", "y"], ["m"], ["l"]]]
+
+    def test_pure_cycle(self) -> None:
+        graph = _pmgraph({("a", "b"), ("b", "c"), ("c", "a")})
+
+        # The whole graph is one SCC, both the source and the sink.
+        assert query(graph, "a").paths == [[["a", "b", "c"]]]
+
+    def test_node_reachable_only_by_revisiting_another(self) -> None:
+        # Every r -> l route through a goes b -> a -> b; grouping the a <-> b
+        # loop still gives a its path.
+        graph = _pmgraph({("r", "b"), ("b", "a"), ("a", "b"), ("b", "l")})
+
+        assert query(graph, "a").paths == [[["r"], ["a", "b"], ["l"]]]
+
+    def test_self_loop(self) -> None:
+        graph = _pmgraph({("r", "a"), ("a", "a"), ("a", "l")})
+
+        assert query(graph, "a").paths == [[["r"], ["a"], ["l"]]]
+
+    def test_self_loop_as_the_only_way_out(self) -> None:
+        # a's only successor is itself, so a is a leaf.
+        graph = _pmgraph({("r", "a"), ("a", "a")})
+
+        assert query(graph, "a").paths == [[["r"], ["a"]]]
+
+    def test_multiple_roots_into_a_sink_cycle(self) -> None:
+        # Two roots into the sink cycle a <-> b: 2 prefixes x 1 suffix.
+        graph = _pmgraph({("r1", "a"), ("r2", "a"), ("a", "b"), ("b", "a")})
+
+        assert query(graph, "a").paths == [
+            [["r1"], ["a", "b"]],
+            [["r2"], ["a", "b"]],
+        ]
+
+    def test_routes_inside_a_cycle_are_one_path(self) -> None:
+        # a -> b -> c -> a plus a -> c has two routes around the cycle; both
+        # are the same SCC step, and the routes themselves stay in the subgraph.
+        graph = _pmgraph({("r", "a"), ("a", "b"), ("b", "c"), ("c", "a"), ("a", "c")})
+        result = query(graph, "a")
+
+        assert result.paths == [[["r"], ["a", "b", "c"]]]
+        assert result.subgraph.edges == graph.edges
+
+    def test_dense_cycle_does_not_multiply_paths(self) -> None:
+        # Every node of the cluster points at every other: thousands of simple
+        # routes through it, but one SCC step.
+        cluster = [f"c{i}" for i in range(8)]
+        edges = {(a, b) for a in cluster for b in cluster if a != b}
+        graph = _pmgraph(edges | {("r", "c0"), ("c7", "l")})
+
+        assert query(graph, "c3").paths == [[["r"], sorted(cluster), ["l"]]]
+
+    def test_branches_around_and_between_cycles(self) -> None:
+        # r feeds the a <-> b cycle directly and through m; the cycle feeds
+        # the x <-> y cycle, which feeds two leaves.
+        graph = _pmgraph(
+            {
+                ("r", "a"),
+                ("r", "m"),
+                ("m", "b"),
+                ("a", "b"),
+                ("b", "a"),
+                ("b", "x"),
+                ("x", "y"),
+                ("y", "x"),
+                ("x", "l1"),
+                ("y", "l2"),
+            }
+        )
+
+        assert query(graph, "y").paths == [
+            [["r"], ["m"], ["a", "b"], ["x", "y"], ["l1"]],
+            [["r"], ["m"], ["a", "b"], ["x", "y"], ["l2"]],
+            [["r"], ["a", "b"], ["x", "y"], ["l1"]],
+            [["r"], ["a", "b"], ["x", "y"], ["l2"]],
+        ]
+
+    def test_steps_are_independent_lists(self) -> None:
+        graph = _pmgraph({("r1", "a"), ("r2", "a"), ("a", "b"), ("b", "a")})
+        paths = query(graph, "a").paths
+
+        paths[0][1].append("mutated")
+        assert paths[1][1] == ["a", "b"]
 
 
 def test_returns_same_graph_type_pmgraph() -> None:
@@ -195,7 +273,7 @@ def test_returns_same_graph_type_appgraph() -> None:
 
     assert isinstance(result.subgraph, AppGraph)
     assert set(result.subgraph.nodes) == {"a", "m", "b"}
-    assert result.paths == [["a", "m", "b"]]
+    assert _flat(result.paths) == [["a", "m", "b"]]
 
 
 def test_path_ids_resolve_back_to_the_right_nodes() -> None:
@@ -217,9 +295,9 @@ def test_path_ids_resolve_back_to_the_right_nodes() -> None:
     )
 
     result = query(graph, "cfg")
-    assert result.paths == [["cfg", "call"]]
+    assert result.paths == [[["cfg"], ["call"]]]
 
-    root_id, leaf_id = result.paths[0]
+    [root_id], [leaf_id] = result.paths[0]
 
     # Resolve each ID back to its node via the returned subgraph...
     root = result.subgraph.nodes[root_id]
