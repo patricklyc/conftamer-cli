@@ -15,6 +15,7 @@ from conftamer.io import (
     write_graph_json,
     write_graphml,
 )
+from conftamer.query import Graph, find_parameters
 from conftamer.query import query as query_graph
 
 app = typer.Typer()
@@ -70,14 +71,49 @@ def stitch(
         raise _fail("Cannot stitch", error) from error
 
 
+def _check_query_options(node: str | None, key: str | None, module: str | None) -> None:
+    if (node is None) == (key is None):
+        raise ValueError("give exactly one of --node and --key")
+    if module is not None and key is None:
+        raise ValueError("--module only applies to --key")
+
+
+def _parameter_id(graph: Graph, key: str, module: str | None) -> str:
+    matches = find_parameters(graph, key, module)
+    where = "" if module is None else f" in module {module!r}"
+    if not matches:
+        raise ValueError(f"no parameter has key {key!r}{where}")
+    if len(matches) > 1:
+        hint = (
+            "use --node"
+            if module is not None
+            else "narrow it with --module or use --node"
+        )
+        raise ValueError(
+            f"key {key!r}{where} matches {len(matches)} parameters: "
+            f"{', '.join(matches)}; {hint}"
+        )
+    return matches[0]
+
+
 @app.command()
 def query(
     input_path: Path,
-    node: Annotated[str, typer.Option(..., "--node")],
+    node: Annotated[str | None, typer.Option("--node")] = None,
+    key: Annotated[str | None, typer.Option("--key")] = None,
+    module: Annotated[str | None, typer.Option("--module")] = None,
 ) -> None:
-    """Query a node in a PMGraph or AppGraph JSON file."""
+    """Query a node in a PMGraph or AppGraph JSON file.
+
+    Name the node with --node, or name a parameter by its configuration key with
+    --key (narrowed to one module with --module if the key is in several).
+    """
     try:
-        result = query_graph(load_graph_json(input_path), node)
+        _check_query_options(node, key, module)
+        graph = load_graph_json(input_path)
+        node_id = node if key is None else _parameter_id(graph, key, module)
+        assert node_id is not None
+        result = query_graph(graph, node_id)
     except (OSError, ValueError) as error:
         raise _fail(f"Cannot query {input_path}", error) from error
     payload = {"subgraph": graph_to_json(result.subgraph), "paths": result.paths}

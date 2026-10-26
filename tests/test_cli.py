@@ -215,6 +215,81 @@ def test_query_reports_expected_errors(tmp_path, text, node):
     assert "Traceback" not in result.stderr
 
 
+def test_query_by_key_matches_query_by_node(tmp_path):
+    source = _stitched(tmp_path)
+
+    by_key = runner.invoke(
+        app, ["query", str(source), "--key", "inventory.max_retries"]
+    )
+    by_key_and_module = runner.invoke(
+        app,
+        ["query", str(source), "--key", "inventory.max_retries", "--module", "orders"],
+    )
+    by_node = runner.invoke(
+        app, ["query", str(source), "--node", "orders::param-max-retries"]
+    )
+
+    assert by_key.exit_code == by_key_and_module.exit_code == by_node.exit_code == 0
+    assert by_key.stdout == by_key_and_module.stdout == by_node.stdout
+
+
+def test_query_by_key_on_a_pmgraph(tmp_path):
+    source = tmp_path / "graph.json"
+    source.write_text(QUERY_GRAPH, encoding="utf-8")
+
+    result = runner.invoke(app, ["query", str(source), "--key", "y", "--module", "m"])
+
+    assert result.exit_code == 0 and result.stderr == ""
+    assert json.loads(result.stdout)["paths"] == [[["a"], ["b"], ["c"]]]
+
+
+AMBIGUOUS_APPGRAPH = (
+    '{"nodes":{"frontend::p1":{"kind":"parameter","key":"timeout"},'
+    '"orders::p2":{"kind":"parameter","key":"timeout"}},"edges":[]}'
+)
+
+
+@pytest.mark.parametrize(
+    "options,message",
+    [
+        (["--key", "nope"], "no parameter has key 'nope'"),
+        (
+            ["--key", "timeout", "--module", "inventory"],
+            "no parameter has key 'timeout' in module 'inventory'",
+        ),
+        (
+            ["--key", "timeout"],
+            "key 'timeout' matches 2 parameters: frontend::p1, orders::p2; "
+            "narrow it with --module or use --node",
+        ),
+        ([], "give exactly one of --node and --key"),
+        (["--node", "orders::p2", "--key", "timeout"], "give exactly one of"),
+        (["--node", "orders::p2", "--module", "orders"], "--module only applies"),
+    ],
+)
+def test_query_by_key_reports_errors(tmp_path, options, message):
+    source = tmp_path / "app.json"
+    source.write_text(AMBIGUOUS_APPGRAPH, encoding="utf-8")
+
+    result = runner.invoke(app, ["query", str(source), *options])
+
+    assert result.exit_code == 2 and result.stdout == ""
+    assert f"Cannot query {source}: {message}" in result.stderr
+    assert "Traceback" not in result.stderr
+
+
+def test_query_by_key_narrowed_by_module(tmp_path):
+    source = tmp_path / "app.json"
+    source.write_text(AMBIGUOUS_APPGRAPH, encoding="utf-8")
+
+    result = runner.invoke(
+        app, ["query", str(source), "--key", "timeout", "--module", "orders"]
+    )
+
+    assert result.exit_code == 0
+    assert json.loads(result.stdout)["paths"] == [[["orders::p2"]]]
+
+
 def test_export_pmgraph_json(tmp_path):
     source, output = tmp_path / "graph.json", tmp_path / "graph.graphml"
     source.write_text(

@@ -4,7 +4,7 @@ import pytest
 
 from conftamer.appgraph.models import AppGraph
 from conftamer.pmgraph.models import Message, Parameter, PMGraph
-from conftamer.query import query, to_igraph
+from conftamer.query import find_parameters, query, to_igraph
 
 
 def _pmgraph(edges: set[tuple[str, str]], extra_nodes: Iterable[str] = ()) -> PMGraph:
@@ -315,3 +315,62 @@ def test_path_ids_resolve_back_to_the_right_nodes() -> None:
     # The resolved nodes are the same objects as in the original graph.
     assert root == graph.nodes["cfg"]
     assert leaf == graph.nodes["call"]
+
+
+class TestFindParameters:
+    @staticmethod
+    def _appgraph() -> AppGraph:
+        # Shaped like stitch() output: parameters are "module_id::node_id".
+        return AppGraph(
+            nodes={
+                "frontend::p-timeout": Parameter(key="timeout"),
+                "orders::p-timeout": Parameter(key="timeout"),
+                "orders::p-retries": Parameter(key="max_retries"),
+                "unprefixed": Parameter(key="timeout"),
+            },
+            edges=set(),
+        )
+
+    def test_pmgraph_by_key(self) -> None:
+        graph = PMGraph(
+            module_id="orders",
+            nodes={
+                "p1": Parameter(key="max_retries"),
+                "p2": Parameter(key="timeout"),
+                "send": Message(
+                    kind="send_request",
+                    api_id="a",
+                    method="GET",
+                    host="h",
+                    path="/max_retries",
+                ),
+            },
+            edges=set(),
+        )
+
+        assert find_parameters(graph, "max_retries") == ["p1"]
+        assert find_parameters(graph, "max_retries", module="orders") == ["p1"]
+        assert find_parameters(graph, "max_retries", module="frontend") == []
+
+    def test_appgraph_key_in_several_modules(self) -> None:
+        assert find_parameters(self._appgraph(), "timeout") == [
+            "frontend::p-timeout",
+            "orders::p-timeout",
+            "unprefixed",
+        ]
+
+    def test_appgraph_module_comes_from_the_id_prefix(self) -> None:
+        graph = self._appgraph()
+
+        assert find_parameters(graph, "timeout", module="orders") == [
+            "orders::p-timeout"
+        ]
+        # A parameter without a "module::" prefix belongs to no module.
+        assert find_parameters(graph, "timeout", module="unprefixed") == []
+
+    def test_key_must_match_exactly(self) -> None:
+        graph = self._appgraph()
+
+        assert find_parameters(graph, "time") == []
+        assert find_parameters(graph, "Timeout") == []
+        assert find_parameters(graph, "p-timeout") == []  # a node ID, not a key

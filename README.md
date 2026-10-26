@@ -173,6 +173,33 @@ result = query(appgraph, "frontend::timeout")
 Querying an unknown node ID raises `ValueError`, as does querying a graph with
 an edge that points at a node ID missing from `nodes`.
 
+### Finding a parameter by its key
+
+Node IDs are often not something you know in advance: `conftamer build` numbers
+nodes `n0`, `n1`, ..., and `stitch` numbers links `link0`, `link1`, ....
+Parameters can instead be found by their configuration key:
+
+```python
+from conftamer.query import find_parameters, query
+
+find_parameters(appgraph, "inventory.max_retries")            # ["orders::param-max-retries"]
+find_parameters(appgraph, "timeout", module="frontend")       # just frontend's "timeout"
+```
+
+`find_parameters(graph, key, module=None)` returns the sorted IDs of every
+`Parameter` whose `key` is exactly `key`. Keys are only unique within one module,
+so in an AppGraph a key can match parameters in several modules; `module`
+narrows the search to one. For a PMGraph, `module` is compared with the graph's
+`module_id`. For an AppGraph, it is compared with the `module_id::` prefix that
+`stitch` puts on every parameter's ID, so a parameter without that prefix
+belongs to no module.
+
+On the command line, `query --key KEY [--module MODULE]` does the lookup and
+then queries the parameter it finds, giving the same output as `--node`. It
+doesn't guess: if no parameter has the key, or the key matches more than one,
+it lists the matches and exits with code 2, so you can add `--module` or use
+`--node` instead.
+
 ### Cycles
 
 A graph can contain cycles, for example when a client's request is influenced by
@@ -255,6 +282,7 @@ uv run conftamer build capture.jsonl --module-id frontend --output frontend.json
 uv run conftamer stitch frontend.json backend.json --output app.json
 uv run conftamer stitch frontend.json backend.json --output app.json --dropped dropped.json
 uv run conftamer query app.json --node frontend::timeout
+uv run conftamer query app.json --key timeout --module frontend
 uv run conftamer export app.json --output app.graphml
 ```
 
@@ -264,7 +292,10 @@ uv run conftamer export app.json --output app.graphml
   `DroppedMessage` (see [Seeing what was dropped](#seeing-what-was-dropped)).
   `stitch` checks the `--dropped` file before writing anything, so if it
   already exists or is the same file as `--output`, neither file is written.
-- **`query`** prints a `QueryResult` (`subgraph`, `paths`) as JSON.
+- **`query`** prints a `QueryResult` (`subgraph`, `paths`) as JSON. Name the
+  node with `--node ID`, or name a parameter by its configuration key with
+  `--key KEY`, adding `--module MODULE` if the key is in several modules (see
+  [Finding a parameter by its key](#finding-a-parameter-by-its-key)).
 - **`export`** writes GraphML.
 
 `query` and `export` work on either graph type and detect which one they were

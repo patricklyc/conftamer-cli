@@ -6,7 +6,7 @@ from itertools import product
 import igraph as ig
 
 from conftamer.appgraph.models import AppGraph
-from conftamer.pmgraph.models import PMGraph
+from conftamer.pmgraph.models import Parameter, PMGraph
 
 Graph = PMGraph | AppGraph
 
@@ -52,6 +52,31 @@ def to_igraph(graph: Graph) -> ig.Graph:
         edges.append((index[source], index[target]))
     return ig.Graph(
         n=len(names), edges=edges, directed=True, vertex_attrs={"name": names}
+    )
+
+
+def _parameter_module(graph: Graph, node_id: str) -> str | None:
+    if isinstance(graph, PMGraph):
+        return graph.module_id
+    # stitch() namespaces every AppGraph parameter as "module_id::node_id".
+    module_id, separator, _ = node_id.partition("::")
+    return module_id if separator else None
+
+
+def find_parameters(graph: Graph, key: str, module: str | None = None) -> list[str]:
+    """The sorted IDs of the Parameter nodes in ``graph`` whose ``key`` is ``key``.
+
+    ``module`` narrows the search to one module: a PMGraph's ``module_id``, or in
+    an AppGraph the ``module_id::`` prefix that ``stitch`` gives each parameter.
+    Keys are only unique within a module, so without ``module`` an AppGraph can
+    return several IDs.
+    """
+    return sorted(
+        node_id
+        for node_id, node in graph.nodes.items()
+        if isinstance(node, Parameter)
+        and node.key == key
+        and (module is None or _parameter_module(graph, node_id) == module)
     )
 
 

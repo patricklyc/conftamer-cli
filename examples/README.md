@@ -27,6 +27,7 @@ Run these from the repository root after `uv sync --locked --dev`:
 | `conftamer build CAPTURE.jsonl --module-id ID --output OUT.json` | Builds a PMGraph from a ContextTrack capture. |
 | `conftamer stitch A.json B.json ... --output OUT.json [--dropped DROPPED.json]` | Stitches PMGraph files into one AppGraph file. With `--dropped`, also writes the messages that were left out. |
 | `conftamer query GRAPH.json --node ID` | Queries a node. Prints the subgraph and every path through the node as JSON. |
+| `conftamer query GRAPH.json --key KEY [--module MODULE]` | Queries the parameter with that configuration key. Same output as `--node`. |
 | `conftamer export GRAPH.json --output OUT.graphml` | Exports a graph to GraphML. |
 
 `query` and `export` accept either a PMGraph file or an AppGraph file. They tell
@@ -202,6 +203,15 @@ Querying a parameter gives the forward view:
 ```bash
 uv run conftamer query app.json --node orders::param-max-retries
 ```
+
+You don't need to know the node ID. The same query, by configuration key:
+
+```bash
+uv run conftamer query app.json --key inventory.max_retries
+```
+
+If two modules had a parameter with that key, this would fail and list both
+IDs. You'd then add `--module orders`, or use `--node`.
 
 ```json
 {
