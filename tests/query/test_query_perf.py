@@ -48,6 +48,7 @@ def test_query_timing(n_nodes: int) -> None:
         f"time={elapsed_ms:.3f} ms"
     )
 
+
 def _random_graph(n_nodes: int, edges_per_node: int, seed: int) -> PMGraph:
     """A random directed graph that allows cycles."""
     rng = random.Random(seed)
@@ -60,6 +61,7 @@ def _random_graph(n_nodes: int, edges_per_node: int, seed: int) -> PMGraph:
             edges.add((str(i), str(j)))
 
     return PMGraph(module_id="bench", nodes=nodes, edges=edges)
+
 
 @pytest.mark.parametrize("n_nodes", [100])
 def test_query_timing_with_cycles(n_nodes: int) -> None:
@@ -79,6 +81,7 @@ def test_query_timing_with_cycles(n_nodes: int) -> None:
         f"paths={len(result.paths):>4} "
         f"time={elapsed_ms:.3f} ms"
     )
+
 
 def _show(graph: PMGraph, target: str) -> None:
     """Print a graph's edges and the result of querying ``target`` in it."""
