@@ -1,4 +1,5 @@
 import json
+import re
 
 import pytest
 
@@ -36,23 +37,36 @@ def test_json_round_trip_is_deterministic_utf8(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "data",
+    "data, reason",
     [
-        b"{",
-        b"\xff",
-        b'{"module_id":"m","nodes":{},"edges":[],"extra":true}',
-        b'{"module_id":"m","nodes":{},"edges":[["absent","absent"]]}',
-        b'{"module_id":"m","nodes":{"p":{"kind":"parameter","key":"",',
-        b'"extra":true}},"edges":[]}',
-        b'{"module_id":"m","nodes":{"r":{"kind":"send_response","api_id":null,',
-        b'"method":"GET","path":"/","status_code":"200"}},"edges":[]}',
+        (b"{", "type=json_invalid"),
+        (b"\xff", "invalid start byte"),
+        (
+            b'{"module_id":"m","nodes":{},"edges":[],"extra":true}',
+            "type=extra_forbidden",
+        ),
+        (
+            b'{"module_id":"m","nodes":{},"edges":[["absent","absent"]]}',
+            "type=value_error",
+        ),
+        (
+            b'{"module_id":"m","nodes":{"p":{"kind":"parameter","key":"",'
+            b'"extra":true}},"edges":[]}',
+            "type=extra_forbidden",
+        ),
+        (
+            b'{"module_id":"m","nodes":{"r":{"kind":"send_response","api_id":null,'
+            b'"method":"GET","path":"/","status_code":"200"}},"edges":[]}',
+            "type=int_type",
+        ),
     ],
 )
-def test_load_rejects_invalid_input_with_path(tmp_path, data):
-    path = tmp_path / "invalid.json"
+def test_load_rejects_invalid_input_with_path(tmp_path, data, reason):
+    path = tmp_path / "invalid[graph].json"
     path.write_bytes(data)
-    with pytest.raises(ValueError, match=rf"{path}: .+"):
+    with pytest.raises(ValueError, match=rf"{re.escape(str(path))}: .+") as caught:
         load_pmgraph_json(path)
+    assert reason in str(caught.value)
 
 
 def test_empty_graph_and_filesystem_errors(tmp_path):

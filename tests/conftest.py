@@ -13,8 +13,3 @@ def normalized_scrape_capture() -> Path:
 @pytest.fixture
 def raw_scrape_capture() -> Path:
     return CAPTURES / "TestTargetScraperScrapeOK/raw.jsonl"
-
-
-@pytest.fixture
-def normalized_all_tests_capture() -> Path:
-    return CAPTURES / "all-tests/normalized.jsonl"
