@@ -66,7 +66,13 @@ def stitch(
                 raise FileExistsError(errno.EEXIST, "File exists", str(dropped))
         write_graph_json(result.appgraph, output)
         if dropped is not None:
-            write_dropped_json(result.dropped, dropped)
+            try:
+                write_dropped_json(result.dropped, dropped)
+            except OSError:
+                # The checks above can't foresee every failure (e.g. a missing
+                # directory), so remove the AppGraph this call just created.
+                output.unlink(missing_ok=True)
+                raise
     except (OSError, ValueError) as error:
         raise _fail("Cannot stitch", error) from error
 

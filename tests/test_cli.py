@@ -148,6 +148,28 @@ def test_stitch_rejects_bad_dropped_before_writing(tmp_path, problem):
     assert not output.exists()
 
 
+def test_stitch_removes_the_appgraph_if_dropped_cannot_be_written(tmp_path):
+    output = tmp_path / "app.json"
+    dropped = tmp_path / "missing-dir" / "dropped.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "stitch",
+            *map(str, PMGRAPHS),
+            "--output",
+            str(output),
+            "--dropped",
+            str(dropped),
+        ],
+    )
+
+    assert result.exit_code == 2 and result.stdout == ""
+    assert "Cannot stitch:" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert not output.exists()
+
+
 @pytest.mark.parametrize("problem", ["duplicate", "appgraph", "missing", "exists"])
 def test_stitch_reports_errors_without_overwriting(tmp_path, problem):
     output = tmp_path / "out.json"
