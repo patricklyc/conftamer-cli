@@ -143,13 +143,6 @@ Writes into GraphML. Each vertex has `name` (the
 node ID), `kind`, and `node_json` (the whole node). The export only goes one
 way: GraphML files can't be read back or queried.
 
-## Behavior you can rely on
-
-- **Outputs are never overwritten.** If an output file exists, the command
-  fails and leaves it alone.
-- **Errors** print one line to stderr and exit with code 2. When a command
-  succeeds it prints nothing to stdout, except `query`.
-- Output is the same every time for the same input.
 
 ## Not implemented yet
 
