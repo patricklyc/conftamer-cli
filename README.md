@@ -157,6 +157,7 @@ way: GraphML files can't be read back or queried.
   `sender_module`/`sender_node` or `receiver_module`/`receiver_node` match,
   and use `--node linkN`.
 - Searching by path, method or text, and querying several nodes at once.
+- not tested on Linux configurations
 
 ## Python library
 
