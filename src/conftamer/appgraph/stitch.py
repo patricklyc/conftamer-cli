@@ -185,16 +185,25 @@ class StitchResult:
     dropped: list[DroppedMessage]
 
 
-def stitch(graphs: Iterable[PMGraph]) -> AppGraph:
+def stitch(graphs: Iterable[PMGraph], *, prune_unconfigured: bool = False) -> AppGraph:
     """Combine per-module PMGraphs into one AppGraph (CompTool).
 
-    Raises the same errors as ``stitch_with_dropped``.
+    Takes the same options and raises the same errors as
+    ``stitch_with_dropped``.
     """
-    return stitch_with_dropped(graphs).appgraph
+    return stitch_with_dropped(graphs, prune_unconfigured=prune_unconfigured).appgraph
 
 
-def stitch_with_dropped(graphs: Iterable[PMGraph]) -> StitchResult:
+def stitch_with_dropped(
+    graphs: Iterable[PMGraph], *, prune_unconfigured: bool = False
+) -> StitchResult:
     """Stitch like ``stitch``, also reporting the messages that were dropped.
+
+    By default every matched link is kept, so graphs without Parameter nodes
+    (all the ContextTrack importer produces today) still compose. With
+    ``prune_unconfigured=True``, links that no Parameter can influence are
+    dropped too, as the paper's CompTool does (§6.3); that only makes sense
+    for inputs that carry Parameter nodes.
 
     Raises ``ValueError`` if two graphs share a ``module_id``, if any
     ``module_id``/node ID contains ``"::"`` (used internally to keep IDs
@@ -226,6 +235,12 @@ def stitch_with_dropped(graphs: Iterable[PMGraph]) -> StitchResult:
     links: dict[str, LinkedMessage] = {}
     link_counter = 0
 
+    # One link per (send node, receive node) pair. The paper (§6.3, Figure 2)
+    # describes one AppGraph node per route and calling module, and an AppGraph
+    # no larger than its PMGraphs combined. Per-pair links keep which concrete
+    # request each link came from, at the cost of size: N senders of one route
+    # give N links, and an edge between two such messages becomes N x N edges.
+    # Reachability between parameters and other nodes is the same either way.
     for concrete_kind, pattern_kind in _LINK_KIND_PAIRS:
         concrete_side = sorted(
             (pid, node)
@@ -290,17 +305,20 @@ def stitch_with_dropped(graphs: Iterable[PMGraph]) -> StitchResult:
                 if new_source != new_target:
                     final_edges.add((new_source, new_target))
 
-    # Pass 2: drop anything not forward-reachable from some Parameter.
-    parameter_ids = {
-        pid for pid, node in final_nodes.items() if isinstance(node, Parameter)
-    }
-    reachable = _forward_reachable(parameter_ids, final_edges)
-    final_nodes = {pid: node for pid, node in final_nodes.items() if pid in reachable}
-    final_edges = {
-        (source, target)
-        for source, target in final_edges
-        if source in final_nodes and target in final_nodes
-    }
+    # Pass 2 (optional): drop anything not forward-reachable from some Parameter.
+    if prune_unconfigured:
+        parameter_ids = {
+            pid for pid, node in final_nodes.items() if isinstance(node, Parameter)
+        }
+        reachable = _forward_reachable(parameter_ids, final_edges)
+        final_nodes = {
+            pid: node for pid, node in final_nodes.items() if pid in reachable
+        }
+        final_edges = {
+            (source, target)
+            for source, target in final_edges
+            if source in final_nodes and target in final_nodes
+        }
 
     # A message survives if at least one link it was merged into survived.
     dropped = [

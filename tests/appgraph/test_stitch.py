@@ -175,6 +175,41 @@ class TestStitch:
             (request_link_id, response_link_id),
         }
 
+    def test_message_only_pair_keeps_its_links_and_edge(self) -> None:
+        client = _pmgraph(
+            "frontend", {"send": _send_request(), "recv": _receive_response()}, set()
+        )
+        server = _pmgraph(
+            "backend",
+            {"recv": _receive_request(), "send": _send_response()},
+            {("recv", "send")},
+        )
+
+        result = stitch_with_dropped([client, server])
+
+        assert sorted(result.appgraph.nodes) == ["link0", "link1"]
+        assert result.appgraph.edges == {("link0", "link1")}
+        assert result.dropped == []
+
+    def test_edges_multiply_across_the_links_of_one_message(self) -> None:
+        # Per-pair links: the server's single receive->respond edge cannot say
+        # which request led to which response, so every pairing is kept.
+        a = _pmgraph("a", {"send": _send_request(), "recv": _receive_response()}, set())
+        b = _pmgraph("b", {"send": _send_request(), "recv": _receive_response()}, set())
+        server = _pmgraph(
+            "server",
+            {"recv": _receive_request(), "send": _send_response()},
+            {("recv", "send")},
+        )
+
+        app = stitch([a, b, server])
+
+        links = {i: n for i, n in app.nodes.items() if isinstance(n, LinkedMessage)}
+        requests = {i for i, n in links.items() if n.status_code is None}
+        responses = set(links) - requests
+        assert len(requests) == len(responses) == 2
+        assert app.edges == {(q, r) for q in requests for r in responses}
+
     def test_prunes_unmatched_message_and_edges_to_it(self) -> None:
         client = _pmgraph(
             "frontend",
@@ -471,7 +506,7 @@ class TestDropped:
         client = _pmgraph("frontend", {"send": send}, set())
         server = _pmgraph("backend", {"recv": recv}, set())
 
-        result = stitch_with_dropped([client, server])
+        result = stitch_with_dropped([client, server], prune_unconfigured=True)
 
         assert result.appgraph.nodes == {}
         assert result.dropped == [
@@ -497,7 +532,7 @@ class TestDropped:
         b = _pmgraph("b", {"send": _send_request(path="/items/7")}, set())
         server = _pmgraph("server", {"recv": _receive_request()}, set())
 
-        dropped = stitch_with_dropped([a, b, server]).dropped
+        dropped = stitch_with_dropped([a, b, server], prune_unconfigured=True).dropped
 
         assert [(d.module_id, d.node_id, d.reason) for d in dropped] == [
             ("b", "send", "unreachable")

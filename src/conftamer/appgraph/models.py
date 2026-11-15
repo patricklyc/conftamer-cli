@@ -6,6 +6,17 @@ from conftamer.pmgraph.models import Message, Parameter
 
 
 class LinkedMessage(BaseModel):
+    """One sent message joined to the received message it matched.
+
+    There is one link per (send node, receive node) pair. The paper (§6.3,
+    Figure 2) describes one AppGraph node per route and calling module, and an
+    AppGraph no larger than its PMGraphs combined. Per-pair links keep which
+    concrete request each link came from, at the cost of size: N senders of
+    one route give N links, and an edge between two such messages becomes
+    N x N edges. Reachability between parameters and other nodes is the same
+    either way.
+    """
+
     kind: Literal["linked_message"] = "linked_message"
     api_id: str
     method: str
@@ -38,7 +49,8 @@ class DroppedMessage(BaseModel):
 
     ``reason`` is ``"unmatched"`` when no message in another module matched it,
     or ``"unreachable"`` when it matched but no Parameter reaches any of the
-    links it was merged into, so they were all pruned.
+    links it was merged into, so they were all pruned. ``"unreachable"`` only
+    occurs when stitching with ``prune_unconfigured=True``.
     """
 
     module_id: str
