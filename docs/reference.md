@@ -163,6 +163,10 @@ parameters. `build` output carries none, so pruning it leaves an empty AppGraph.
 - A self-loop on a message that joins two or more links becomes edges between
   those links; on a message in one link it disappears.
 
+Compatibility: the merged AppGraph branch's `stitch` wrote the dropped-message
+report only with `--dropped` and always pruned links no parameter reaches. The
+report is now always written, and pruning is opt-in.
+
 ## Query
 
 `query GRAPH` reads a PMGraph or AppGraph JSON file and takes exactly one
@@ -210,10 +214,6 @@ and `conftamer.io.write_graphml`, which came from the merged AppGraph branch,
 are now the converter and writer described under GraphML export: vertices in
 original node order, one attribute per node field, and no `node_json`
 attribute.
-
-The merged branch's `stitch` wrote the dropped-message report only with
-`--dropped` and always pruned links no parameter reaches. The report is now
-always written, and pruning is opt-in (`--prune-unconfigured`).
 
 ## GraphML export
 

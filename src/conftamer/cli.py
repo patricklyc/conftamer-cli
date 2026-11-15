@@ -70,13 +70,13 @@ def _write_stitch_outputs(result: StitchResult, output: Path, report: Path) -> N
     try:
         write_dropped_json(result.dropped, report)
     except OSError as error:
-        # Removal is best effort; the write error is the one worth reporting.
-        with suppress(OSError):
-            output.unlink(missing_ok=True)
-            # FileExistsError means something else created the report after
-            # the check, so that file is not this call's to remove.
-            if not isinstance(error, FileExistsError):
-                report.unlink(missing_ok=True)
+        # FileExistsError means something else created the report after the
+        # check, so that file is not this call's to remove.
+        created = [output] if isinstance(error, FileExistsError) else [output, report]
+        for path in created:
+            # Removal is best effort; the write error is the one worth reporting.
+            with suppress(OSError):
+                path.unlink(missing_ok=True)
         raise
 
 

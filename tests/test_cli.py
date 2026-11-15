@@ -77,6 +77,13 @@ def _client_and_server(tmp_path: Path) -> list[Path]:
     return paths
 
 
+def _dangling_symlink(path: Path) -> None:
+    try:
+        path.symlink_to(path.with_name("nowhere"))
+    except OSError:  # Windows without the symlink privilege
+        pytest.skip("cannot create symlinks here")
+
+
 def _read_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -307,9 +314,9 @@ def test_stitch_checks_both_paths_before_writing(tmp_path, monkeypatch, problem)
         (tmp_path / "sub").mkdir()
         options = ["--dropped", tmp_path / "sub" / ".." / "app.json"]
     elif problem == "report-dangling-symlink":
-        report.symlink_to(tmp_path / "nowhere")
+        _dangling_symlink(report)
     else:
-        output.symlink_to(tmp_path / "nowhere")
+        _dangling_symlink(output)
     before = sorted(tmp_path.iterdir())
 
     result = _stitch(*PMGRAPHS, "--output", output, *options)
