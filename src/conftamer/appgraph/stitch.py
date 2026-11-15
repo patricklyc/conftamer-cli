@@ -323,7 +323,8 @@ def stitch_with_dropped(
     # no larger than its PMGraphs combined. Per-pair links keep which concrete
     # request each link came from, at the cost of size: N senders of one route
     # give N links, and an edge between two such messages becomes N x N edges.
-    # Reachability between parameters and other nodes is the same either way.
+    # Reachability between parameters and other nodes is the same either way
+    # when edges run from a module's inputs to its outputs, as the importer's do.
     for concrete_kind, pattern_kind in _LINK_KIND_PAIRS:
         concrete_side = sorted(
             (pid, node)

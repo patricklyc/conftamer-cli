@@ -14,7 +14,8 @@ class LinkedMessage(BaseModel):
     concrete request each link came from, at the cost of size: N senders of
     one route give N links, and an edge between two such messages becomes
     N x N edges. Reachability between parameters and other nodes is the same
-    either way.
+    either way when edges run from a module's inputs to its outputs, as the
+    importer's do.
     """
 
     kind: Literal["linked_message"] = "linked_message"
