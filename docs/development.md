@@ -23,6 +23,9 @@ Tests cover consumer graph policy, the tracked small normalized capture, and
 representative upstream-reader failures, including raw-input rejection. Synthetic
 traces cover association boundaries. Larger local captures are not needed.
 Exhaustive wire-schema validation belongs to the pinned ContextTrack package.
+The two randomized query timing tests are opt-in and show as skipped in the
+default run. To run them, with their output in pytest's temporary directory:
+`uv run pytest tests/query/test_query_perf.py --perf -s`.
 See the [example inventory and fixture policy](../examples/README.md) before
 working with captures.
 

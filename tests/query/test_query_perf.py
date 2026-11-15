@@ -8,16 +8,21 @@ import pytest
 from conftamer.pmgraph.models import Parameter, PMGraph
 from conftamer.query import query
 
-# Each test writes the paths it got here (git-ignored), replacing the last run's.
-OUTPUT_DIR = Path(__file__).parent / "perf-output"
+
+@pytest.fixture(autouse=True)
+def _only_with_perf_option(request: pytest.FixtureRequest) -> None:
+    # These tests draw a new random graph each run and enumerate every path,
+    # so they are timing runs, not checks the default suite should depend on:
+    #   uv run pytest tests/query/test_query_perf.py --perf -s
+    if not request.config.getoption("--perf"):
+        pytest.skip("randomized timing run; pass --perf")
 
 
 def _write_paths(
-    name: str, seed: int, target: str, paths: list[list[list[str]]]
+    directory: Path, name: str, seed: int, target: str, paths: list[list[list[str]]]
 ) -> Path:
     """Write ``paths`` as JSON, one path per line so large outputs stay readable."""
-    OUTPUT_DIR.mkdir(exist_ok=True)
-    output = OUTPUT_DIR / f"{name}.json"
+    output = directory / f"{name}.json"
     lines = ",\n".join("    " + json.dumps(path) for path in paths)
     output.write_text(
         f'{{"seed": {seed}, "target": {json.dumps(target)}, "paths": [\n{lines}\n]}}\n',
@@ -46,7 +51,7 @@ def _random_dag(n_nodes: int, edges_per_node: int, seed: int) -> PMGraph:
 # root->leaf paths (millions at these sizes), so raising n_nodes or
 # edges_per_node can make this run very slow.
 @pytest.mark.parametrize("n_nodes", [100])
-def test_query_timing(n_nodes: int) -> None:
+def test_query_timing(n_nodes: int, tmp_path: Path) -> None:
     # A new graph every run; the seed is printed so a run can be reproduced.
     seed = random.randrange(2**32)
     graph = _random_dag(n_nodes, edges_per_node=4, seed=seed)
@@ -61,7 +66,7 @@ def test_query_timing(n_nodes: int) -> None:
     assert target in result.subgraph.nodes
 
     # Printed timing (run with `-s` to see it):
-    #   uv run pytest tests/query/test_query_perf.py -s
+    #   uv run pytest tests/query/test_query_perf.py --perf -s
     print(
         f"\n[query timing] seed={seed} nodes={n_nodes:>4} "
         f"edges={len(graph.edges):>5} "
@@ -69,7 +74,7 @@ def test_query_timing(n_nodes: int) -> None:
         f"paths={len(result.paths):>4} "
         f"time={elapsed_ms:.3f} ms"
     )
-    output = _write_paths("query_timing", seed, target, result.paths)
+    output = _write_paths(tmp_path, "query_timing", seed, target, result.paths)
     print(f"paths written to {output}")
 
 
@@ -88,7 +93,7 @@ def _random_graph(n_nodes: int, edges_per_node: int, seed: int) -> PMGraph:
 
 
 @pytest.mark.parametrize("n_nodes", [100])
-def test_query_timing_with_cycles(n_nodes: int) -> None:
+def test_query_timing_with_cycles(n_nodes: int, tmp_path: Path) -> None:
     seed = random.randrange(2**32)
     graph = _random_graph(n_nodes, edges_per_node=4, seed=seed)
     target = str(n_nodes // 2)
@@ -106,5 +111,7 @@ def test_query_timing_with_cycles(n_nodes: int) -> None:
         f"paths={len(result.paths):>4} "
         f"time={elapsed_ms:.3f} ms"
     )
-    output = _write_paths("query_timing_with_cycles", seed, target, result.paths)
+    output = _write_paths(
+        tmp_path, "query_timing_with_cycles", seed, target, result.paths
+    )
     print(f"paths written to {output}")
