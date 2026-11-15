@@ -93,12 +93,10 @@ def path_matches_pattern(path: str, pattern: str) -> bool:
     trailing ``{$}``, and a trailing ``/`` matching the whole subtree) and
     httprouter patterns (``:name``, trailing ``*name``; a trailing ``/`` is
     literal). A trailing rest wildcard consumes the rest of the path, which
-    must be nonempty. Raises ``ValueError`` for unsupported syntax, including
+    may be empty. Raises ``ValueError`` for unsupported syntax, including
     a method or host prefix.
     """
     check_pattern(pattern)
-    if path == pattern:
-        return True
 
     path_segments = path.split("/")
     pattern_segments = pattern.split("/")
@@ -110,9 +108,9 @@ def path_matches_pattern(path: str, pattern: str) -> bool:
 
     for index, segment in enumerate(pattern_segments):
         if _is_rest_wildcard(segment):
-            remainder = path_segments[index:]
-            is_empty_remainder = remainder == [] or remainder == [""]
-            return not is_empty_remainder
+            # "/static/" leaves an empty final segment for the wildcard;
+            # "/static" leaves none, and routers redirect it instead.
+            return index < len(path_segments)
         if index >= len(path_segments):
             return False
         if not _segment_matches(path_segments[index], segment):

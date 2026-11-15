@@ -76,6 +76,10 @@ class TestPathMatchesPattern:
             ("/items/", "/items/{$}"),
             ("/", "/{$}"),
             ("/items/42/", "/items/:id/"),
+            ("/static/", "/static/{rest...}"),
+            ("/static/", "/static/*rest"),
+            ("/", "/{rest...}"),
+            ("/", "/*path"),
         ],
     )
     def test_matches(self, path: str, pattern: str) -> None:
@@ -88,7 +92,8 @@ class TestPathMatchesPattern:
             ("/items", "/items/{id}"),
             ("/items/42/reviews", "/items/{id}"),
             ("/other/42", "/items/{id}"),
-            ("/static/", "/static/{rest...}"),  # wildcard segment must be nonempty
+            ("/static", "/static/{rest...}"),  # Go redirects; handler not reached
+            ("/items/{$}", "/items/{$}"),  # {$} is an anchor, never a literal
             ("/static", "/static/*rest"),
             ("/api/v1", "/api/v1/"),
             ("/api/v2/items", "/api/v1/"),
