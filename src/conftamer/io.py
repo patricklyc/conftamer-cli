@@ -3,12 +3,21 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-import igraph
 from pydantic import BaseModel
 
 from conftamer.appgraph.models import AppGraph, DroppedMessage, Graph
+from conftamer.igraph_ops import write_graphml
 from conftamer.pmgraph.models import PMGraph
-from conftamer.query import to_igraph
+
+__all__ = [
+    "graph_to_json",
+    "load_appgraph_json",
+    "load_graph_json",
+    "load_pmgraph_json",
+    "write_dropped_json",
+    "write_graph_json",
+    "write_graphml",
+]
 
 
 def _read(path: str | Path) -> str:
@@ -38,7 +47,7 @@ def load_graph_json(path: str | Path) -> Graph:
     text = _read(path)
     try:
         is_pmgraph = "module_id" in json.loads(text)
-    except (ValueError, TypeError) as error:
+    except (ValueError, TypeError, RecursionError) as error:
         raise ValueError(f"{path}: {error}") from error
     if is_pmgraph:
         return _validate(PMGraph, text, path)
@@ -63,35 +72,3 @@ def write_dropped_json(dropped: Iterable[DroppedMessage], path: str | Path) -> N
     text = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
     with Path(path).open("x", encoding="utf-8", newline="\n") as output:
         output.write(text)
-
-
-def _check_graphml_identity(value: str) -> None:
-    for character in value:
-        code = ord(character)
-        if character == "\r" or not (
-            code in (9, 10)
-            or 0x20 <= code <= 0xD7FF
-            or 0xE000 <= code <= 0xFFFD
-            or 0x10000 <= code <= 0x10FFFF
-        ):
-            raise ValueError(f"GraphML cannot preserve identity {value!r}")
-
-
-def write_graphml(graph: Graph, path: str | Path) -> None:
-    network = to_igraph(graph)
-    nodes = [graph.nodes[name] for name in network.vs["name"]]
-    network.vs["kind"] = [node.kind for node in nodes]
-    network.vs["node_json"] = [
-        node.model_dump_json(ensure_ascii=True) for node in nodes
-    ]
-    identities = list(graph.nodes)
-    if isinstance(graph, PMGraph):
-        network["module_id"] = graph.module_id
-        identities.append(graph.module_id)
-    for value in identities:
-        _check_graphml_identity(value)
-    with Path(path).open("xb") as output:
-        try:
-            network.write_graphml(output, prefixattr=True)
-        except igraph.InternalError as error:
-            raise OSError(f"cannot write GraphML {path}: {error}") from error

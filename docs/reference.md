@@ -32,11 +32,14 @@ uv run python -m json.tool "$RUN/module.pmgraph.json"
 
 ## Files and errors
 
-- **Inputs:** `build` reads normalized ContextTrack v1 UTF-8 JSONL; `query` and
-  `export` read PMGraph JSON. PMGraph JSON loading rejects type coercion and
-  unknown fields, and validates message field combinations, nonempty module/node
-  IDs, and existing edge endpoints. PMGraph JSON output preserves node order and
-  explicit nulls and sorts edge pairs.
+- **Inputs:** `build` reads normalized ContextTrack v1 UTF-8 JSONL; `query`
+  reads PMGraph JSON; `export` reads PMGraph or AppGraph JSON. A file with a
+  top-level `module_id` is read as a PMGraph, any other as an AppGraph. No
+  command produces an AppGraph yet; the library's `stitch` does. Loading either
+  graph type rejects type coercion and unknown fields, and validates message
+  field combinations, nonempty module/node IDs, and existing edge endpoints.
+  PMGraph JSON output preserves node order and explicit nulls and sorts edge
+  pairs.
 - **Outputs:** `build` and `export` require `--output`. The parent directory must
   exist and the file must be new; existing files are never overwritten. Writes
   are not atomic, so a filesystem failure can leave a partial new file.
@@ -48,15 +51,21 @@ uv run python -m json.tool "$RUN/module.pmgraph.json"
 
 ## GraphML export
 
-Export preserves directed named topology, isolates, and the graph attribute
-`module_id`. Vertices expose `name`, `kind`, `key`, `api_id`, `method`, `host`,
-`path`, `pattern`, and `status_code` as named attributes, not an embedded JSON
-document. Use `name` for original node IDs; readers may also expose
-writer-generated XML IDs.
+The input may be a PMGraph or an AppGraph. Export preserves directed named
+topology, isolates, and original node order, and writes each node field as a
+named vertex attribute, not an embedded JSON document. Use `name` for original
+node IDs; readers may also expose writer-generated XML IDs.
+
+- **PMGraph:** the graph attribute `module_id`, and the vertex attributes
+  `name`, `kind`, `key`, `api_id`, `method`, `host`, `path`, `pattern`, and
+  `status_code`.
+- **AppGraph:** no `module_id` graph attribute, and the vertex attributes
+  `name`, `kind`, `key`, `api_id`, `method`, `pattern`, `status_code`,
+  `sender_module`, `sender_node`, `receiver_module`, and `receiver_node`.
 
 Native conversions can turn nulls into `"None"`, numeric `NaN`, or `False` for
 all-null attributes; large integers may lose precision. GraphML is not lossless
-PMGraph persistence; use PMGraph JSON for that. Export rejects XML-invalid
+graph persistence; use the JSON file for that. Export rejects XML-invalid
 characters and carriage returns in module/node IDs and every string-valued node
 field rather than silently altering them.
 

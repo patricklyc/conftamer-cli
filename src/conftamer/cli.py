@@ -5,7 +5,8 @@ from typing import Annotated
 import typer
 
 from conftamer.contexttrack import load_contexttrack
-from conftamer.pmgraph.igraph_ops import query_node, write_graphml
+from conftamer.igraph_ops import query_node, write_graphml
+from conftamer.io import load_graph_json
 from conftamer.pmgraph.io import load_pmgraph_json, write_pmgraph_json
 
 app = typer.Typer()
@@ -48,8 +49,9 @@ def export_graph(
     input_path: Path,
     output: Annotated[Path, typer.Option(..., "--output")],
 ) -> None:
+    """Export a PMGraph or AppGraph JSON file to GraphML."""
     try:
-        write_graphml(load_pmgraph_json(input_path), output)
+        write_graphml(load_graph_json(input_path), output)
     except (OSError, ValueError) as error:
         typer.echo(f"Cannot export {input_path} to {output}: {error}", err=True)
         raise typer.Exit(code=2) from error

@@ -4,7 +4,10 @@ import re
 import igraph
 import pytest
 
-from conftamer.appgraph.models import AppGraph, DroppedMessage
+import conftamer.igraph_ops
+import conftamer.io
+import conftamer.pmgraph.igraph_ops
+from conftamer.appgraph.models import AppGraph, DroppedMessage, LinkedMessage
 from conftamer.appgraph.stitch import stitch
 from conftamer.io import (
     load_appgraph_json,
@@ -67,7 +70,17 @@ def test_load_graph_json_detects_the_graph_type(tmp_path):
     assert isinstance(load_graph_json(app_path), AppGraph)
 
 
-@pytest.mark.parametrize("data", [b"{", b"\xff", b"null", b"[]", b'{"nodes":{}}'])
+@pytest.mark.parametrize(
+    "data",
+    [
+        b"{",
+        b"\xff",
+        b"null",
+        b"[]",
+        b'{"nodes":{}}',
+        pytest.param(b"[" * 200000, id="nested-too-deeply"),
+    ],
+)
 def test_load_graph_json_rejects_invalid_input_with_path(tmp_path, data):
     path = tmp_path / "invalid.json"
     path.write_bytes(data)
@@ -104,82 +117,67 @@ def _named_edges(network: igraph.Graph) -> set[tuple[str, str]]:
     }
 
 
-def test_graphml_round_trip_preserves_a_pmgraph(tmp_path):
-    graph = PMGraph(
-        module_id="module<&",
-        nodes={
-            "10": Parameter(key="same\0<&é"),
-            '2<&"': Message(
-                kind="receive_response",
-                api_id=None,
-                method="GET",
-                host="example.test",
-                path="/",
-                status_code=10**30,
-            ),
-            "isolated": Parameter(key="same\0<&é"),
-        },
-        edges={("10", '2<&"'), ('2<&"', "10"), ('2<&"', '2<&"')},
-    )
-    path = tmp_path / "graph.graphml"
-    write_graphml(graph, path)
-
-    network = igraph.Graph.Read_GraphML(str(path))
-    assert network.is_directed()
-    assert network["module_id"] == graph.module_id
-    assert network.vs["name"] == sorted(graph.nodes)
-    assert _named_edges(network) == graph.edges
-    assert {
-        name: json.loads(node_json)
-        for name, node_json in zip(network.vs["name"], network.vs["node_json"])
-    } == {name: node.model_dump(mode="json") for name, node in graph.nodes.items()}
-    assert network.degree("isolated", mode="all") == 0
-
-
-def test_graphml_exports_an_appgraph(tmp_path):
+def test_graphml_exports_an_appgraph_with_flattened_attributes(tmp_path):
     graph = _appgraph()
     path = tmp_path / "app.graphml"
     write_graphml(graph, path)
 
     network = igraph.Graph.Read_GraphML(str(path))
     assert "module_id" not in network.attributes()
-    assert network.vs["kind"] == ["parameter", "linked_message"]
+    assert network.vs["name"] == ["client::cfg", "link0"]
+    assert set(network.vertex_attributes()) - {"id"} == {
+        "name",
+        "kind",
+        "key",
+        "api_id",
+        "method",
+        "pattern",
+        "status_code",
+        "sender_module",
+        "sender_node",
+        "receiver_module",
+        "receiver_node",
+    }
+    assert network.vs.find(name="client::cfg")["key"] == "timeout"
+    link = network.vs.find(name="link0")
+    assert link["kind"] == "linked_message"
+    assert (link["sender_module"], link["sender_node"]) == ("client", "send")
+    assert (link["receiver_module"], link["receiver_node"]) == ("backend", "recv")
+    assert link["pattern"] == "/items/{id}"
     assert _named_edges(network) == graph.edges
 
 
-def test_graphml_never_overwrites(tmp_path):
-    graph = PMGraph(module_id="empty", nodes={}, edges=set())
-    path = tmp_path / "empty.graphml"
-    write_graphml(graph, path)
-    original = path.read_bytes()
+LINK = LinkedMessage(
+    api_id="api",
+    method="GET",
+    pattern="/x",
+    sender_module="a",
+    sender_node="s",
+    receiver_module="b",
+    receiver_node="r",
+)
 
-    assert igraph.Graph.Read_GraphML(str(path)).vcount() == 0
-    with pytest.raises(FileExistsError):
-        write_graphml(graph, path)
-    assert path.read_bytes() == original
 
-
-@pytest.mark.parametrize(("module_id", "node_id"), [("m\u0001", "n"), ("m", "n\r")])
-def test_graphml_rejects_unpreservable_identities(tmp_path, module_id, node_id):
+@pytest.mark.parametrize(
+    "nodes",
+    [
+        {"p": Parameter(key="bad\0key")},
+        {"l": LINK.model_copy(update={"sender_node": "bad\0"})},
+        {"n\r": Parameter(key="ok")},
+    ],
+)
+def test_graphml_rejects_unpreservable_appgraph_text(tmp_path, nodes):
     path = tmp_path / "invalid.graphml"
-    graph = PMGraph(
-        module_id=module_id, nodes={node_id: Parameter(key="ok")}, edges=set()
-    )
+    graph = AppGraph(nodes=nodes, edges=set())
 
-    with pytest.raises(ValueError, match="GraphML cannot preserve identity"):
+    with pytest.raises(ValueError, match="GraphML cannot preserve"):
         write_graphml(graph, path)
     assert not path.exists()
 
 
-def test_graphml_translates_igraph_failures(tmp_path, monkeypatch):
-    path = tmp_path / "failed.graphml"
-
-    def fail(*args, **kwargs):
-        raise igraph.InternalError("broken writer")
-
-    monkeypatch.setattr(igraph.Graph, "write_graphml", fail)
-    with pytest.raises(OSError, match="cannot write GraphML .*: broken writer"):
-        write_graphml(PMGraph(module_id="m", nodes={}, edges=set()), path)
+def test_graphml_writers_are_one_function():
+    assert conftamer.io.write_graphml is conftamer.igraph_ops.write_graphml
+    assert conftamer.pmgraph.igraph_ops.write_graphml is conftamer.io.write_graphml
 
 
 def test_write_dropped_json(tmp_path):

@@ -1,0 +1,72 @@
+from pathlib import Path
+
+import igraph
+
+from conftamer.appgraph.models import Graph, LinkedMessage
+from conftamer.pmgraph.models import Message, Parameter, PMGraph
+
+
+def _node_attributes(graph: Graph) -> list[str]:
+    """The node fields that become vertex attributes, by graph type."""
+    message = Message if isinstance(graph, PMGraph) else LinkedMessage
+    return list(Parameter.model_fields | message.model_fields)
+
+
+def to_igraph(graph: Graph) -> igraph.Graph:
+    node_ids = list(graph.nodes)
+    indices = {node_id: index for index, node_id in enumerate(node_ids)}
+    edges = [(indices[a], indices[b]) for a, b in sorted(graph.edges)]
+    network = igraph.Graph(n=len(node_ids), edges=edges, directed=True)
+    if isinstance(graph, PMGraph):
+        network["module_id"] = graph.module_id
+    network.vs["name"] = node_ids
+    for attribute in _node_attributes(graph):
+        network.vs[attribute] = [
+            getattr(node, attribute, None) for node in graph.nodes.values()
+        ]
+    return network
+
+
+def query_node(graph: PMGraph, node_id: str) -> dict[str, list[str]]:
+    if node_id not in graph.nodes:
+        raise ValueError(f"unknown node ID {node_id!r}")
+    network = to_igraph(graph)
+    selected = network.vs.find(name=node_id).index
+    names = network.vs["name"]
+    result: dict[str, list[str]] = {}
+    for relation, mode in (("ancestors", "in"), ("descendants", "out")):
+        reached = set(network.subcomponent(selected, mode=mode))
+        reached.discard(selected)
+        result[relation] = [
+            name for index, name in enumerate(names) if index in reached
+        ]
+    return result
+
+
+def _check_graphml_text(value: str, location: str) -> None:
+    for character in value:
+        code = ord(character)
+        if character == "\r" or not (
+            code in (9, 10)
+            or 0x20 <= code <= 0xD7FF
+            or 0xE000 <= code <= 0xFFFD
+            or 0x10000 <= code <= 0x10FFFF
+        ):
+            raise ValueError(f"GraphML cannot preserve {location} {value!r}")
+
+
+def write_graphml(graph: Graph, path: str | Path) -> None:
+    if isinstance(graph, PMGraph):
+        _check_graphml_text(graph.module_id, "module ID")
+    for node_id, node in graph.nodes.items():
+        _check_graphml_text(node_id, "node ID")
+        for attribute, value in node.model_dump().items():
+            if isinstance(value, str):
+                _check_graphml_text(value, f"node {node_id!r} attribute {attribute}")
+
+    network = to_igraph(graph)
+    with Path(path).open("xb") as output:
+        try:
+            network.write_graphml(output, prefixattr=True)
+        except igraph.InternalError as error:
+            raise OSError(f"cannot write GraphML {path}: {error}") from error

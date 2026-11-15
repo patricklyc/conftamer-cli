@@ -17,6 +17,13 @@ QUERY_GRAPH = (
     '"a":{"kind":"parameter","key":"x"},"b":{"kind":"parameter","key":"y"}},'
     '"edges":[["a","b"],["b","c"]]}'
 )
+APPGRAPH = (
+    '{"nodes":{"frontend::cfg":{"kind":"parameter","key":"timeout"},'
+    '"link0":{"kind":"linked_message","api_id":"api","method":"GET",'
+    '"pattern":"/items/{id}","status_code":null,"sender_module":"frontend",'
+    '"sender_node":"send","receiver_module":"backend","receiver_node":"recv"}},'
+    '"edges":[["frontend::cfg","link0"]]}'
+)
 
 
 def test_build_capture(tmp_path, normalized_scrape_capture):
@@ -136,9 +143,30 @@ def test_export_pmgraph_json(tmp_path):
     assert network.degree("isolate", mode="all") == 0
 
 
+def test_export_appgraph_json(tmp_path):
+    source, output = tmp_path / "app.json", tmp_path / "app.graphml"
+    source.write_text(APPGRAPH, encoding="utf-8")
+
+    result = runner.invoke(app, ["export", str(source), "--output", str(output)])
+
+    assert result.exit_code == 0, result.output
+    assert result.stdout == result.stderr == ""
+    network = igraph.Graph.Read_GraphML(str(output))
+    assert network.vs["name"] == ["frontend::cfg", "link0"]
+    assert network.vs.find(name="link0")["receiver_module"] == "backend"
+    assert network.get_eid("frontend::cfg", "link0") >= 0
+
+
 @pytest.mark.parametrize(
     "text, existing_output",
-    [("{", False), ('{"module_id":"m","nodes":{},"edges":[]}', True)],
+    [
+        ("{", False),
+        ("[]", False),
+        ("null", False),
+        ('{"nodes":{}}', False),
+        pytest.param("[" * 200000, False, id="nested-too-deeply"),
+        ('{"module_id":"m","nodes":{},"edges":[]}', True),
+    ],
 )
 def test_export_reports_errors_without_overwriting(tmp_path, text, existing_output):
     source, output = tmp_path / "graph.json", tmp_path / "graph.graphml"
