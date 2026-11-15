@@ -15,6 +15,7 @@ uvx ruff format --check src tests
 uvx ty check
 uv run conftamer --help
 uv run conftamer build --help
+uv run conftamer stitch --help
 git diff --check
 ```
 

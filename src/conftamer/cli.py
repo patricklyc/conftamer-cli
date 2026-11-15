@@ -1,13 +1,23 @@
+import errno
 import json
+import os
+from contextlib import suppress
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from conftamer.appgraph.models import Graph
+from conftamer.appgraph.stitch import StitchResult, stitch_with_dropped
 from conftamer.contexttrack import load_contexttrack
 from conftamer.igraph_ops import write_graphml
-from conftamer.io import graph_to_json, load_graph_json
+from conftamer.io import (
+    graph_to_json,
+    load_graph_json,
+    load_pmgraph_json,
+    write_dropped_json,
+    write_graph_json,
+)
 from conftamer.pmgraph.io import write_pmgraph_json
 from conftamer.query import find_parameters, query_paths, query_subgraph
 
@@ -30,6 +40,74 @@ def build(
         write_pmgraph_json(load_contexttrack(input_path, module_id=module_id), output)
     except (OSError, TypeError, ValueError) as error:
         typer.echo(f"Cannot build {input_path}: {error}", err=True)
+        raise typer.Exit(code=2) from error
+
+
+def _report_path(output: Path) -> Path:
+    """Where the dropped-message report goes when --dropped is not given."""
+    return output.with_name(output.name.removesuffix(".json") + ".dropped.json")
+
+
+def _check_new_outputs(output: Path, report: Path) -> None:
+    """Refuse output paths that cannot both be created, before writing either."""
+    if output.resolve() == report.resolve():
+        raise ValueError("--dropped and --output must be different files")
+    for path in (output, report):
+        # lexists, not exists: exclusive creation also refuses a dangling
+        # symlink, which exists() reports as absent.
+        if os.path.lexists(path):
+            raise FileExistsError(errno.EEXIST, "File exists", str(path))
+
+
+def _write_stitch_outputs(result: StitchResult, output: Path, report: Path) -> None:
+    """Write the AppGraph and its report, leaving neither if the report fails.
+
+    The check above cannot foresee every failure (a missing directory, a full
+    disk), so an AppGraph is not left behind without its report. The two writes
+    are still separate and non-atomic.
+    """
+    write_graph_json(result.appgraph, output)
+    try:
+        write_dropped_json(result.dropped, report)
+    except OSError as error:
+        # Removal is best effort; the write error is the one worth reporting.
+        with suppress(OSError):
+            output.unlink(missing_ok=True)
+            # FileExistsError means something else created the report after
+            # the check, so that file is not this call's to remove.
+            if not isinstance(error, FileExistsError):
+                report.unlink(missing_ok=True)
+        raise
+
+
+@app.command()
+def stitch(
+    input_paths: list[Path],
+    output: Annotated[Path, typer.Option(..., "--output")],
+    dropped: Annotated[Path | None, typer.Option("--dropped")] = None,
+    prune_unconfigured: Annotated[bool, typer.Option("--prune-unconfigured")] = False,
+) -> None:
+    """Stitch PMGraph JSON files into one AppGraph.
+
+    Also writes a report of every input message left out of the AppGraph, with
+    its module, node ID, reason, and original message. The report goes next to
+    the output, named like it with .json replaced by .dropped.json, unless
+    --dropped names another path. It is written even when it is empty.
+
+    With --prune-unconfigured, links that no parameter can influence are left
+    out too. That empties a graph whose inputs carry no parameters, which is
+    all that build produces.
+    """
+    try:
+        report = _report_path(output) if dropped is None else dropped
+        _check_new_outputs(output, report)
+        result = stitch_with_dropped(
+            (load_pmgraph_json(path) for path in input_paths),
+            prune_unconfigured=prune_unconfigured,
+        )
+        _write_stitch_outputs(result, output, report)
+    except (OSError, ValueError) as error:
+        typer.echo(f"Cannot stitch: {error}", err=True)
         raise typer.Exit(code=2) from error
 
 

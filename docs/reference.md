@@ -1,8 +1,8 @@
 # ConfTamer reference
 
-See the [README](../README.md) for setup and runnable build/query/export commands.
-This reference describes the current message-only ContextTrack consumer, not the
-broader system proposed in the paper.
+See the [README](../README.md) for setup and runnable build/stitch/query/export
+commands. This reference describes the current message-only ContextTrack
+consumer, not the broader system proposed in the paper.
 
 ## Graph semantics and limits
 
@@ -19,9 +19,14 @@ broader system proposed in the paper.
   [Query](#query).
 - **Incomplete or ambiguous evidence emits warnings.** It does not become an
   invented association; unusable events or associations are omitted.
+- **Stitching joins modules through matching messages.** `stitch` merges a
+  message one module sent with the matching message another received into one
+  `linked_message` node and moves each module's edges onto those nodes. It adds
+  no influence that a PMGraph did not record. See [Stitch](#stitch) for the
+  rules and their limits.
 - Parameter ingestion and GraphML importing or querying are not implemented.
-  Cross-module stitching exists as a library function only; no command exposes
-  it yet.
+  `build` produces message nodes only; parameters appear only in graphs from
+  other sources, such as `examples/pmgraphs/`.
 
 The module identity is supplied by you through `--module-id`, not inferred from
 API IDs. Node IDs are keys in the PMGraph JSON file's top-level `nodes` object,
@@ -34,22 +39,129 @@ uv run python -m json.tool "$RUN/module.pmgraph.json"
 
 ## Files and errors
 
-- **Inputs:** `build` reads normalized ContextTrack v1 UTF-8 JSONL; `query` and
-  `export` read PMGraph or AppGraph JSON. A file with a
-  top-level `module_id` is read as a PMGraph, any other as an AppGraph. No
-  command produces an AppGraph yet; the library's `stitch` does. Loading either
-  graph type rejects type coercion and unknown fields, and validates message
-  field combinations, nonempty module/node IDs, and existing edge endpoints.
-  PMGraph JSON output preserves node order and explicit nulls and sorts edge
-  pairs.
-- **Outputs:** `build` and `export` require `--output`. The parent directory must
-  exist and the file must be new; existing files are never overwritten. Writes
-  are not atomic, so a filesystem failure can leave a partial new file.
-- **Diagnostics:** Build and export leave stdout empty on success; query prints
-  indented graph JSON. Warnings go to stderr. Expected input or filesystem errors,
-  including unknown node IDs, produce stderr diagnostics and exit code 2 without
-  a traceback. Capture record diagnostics include the input path and physical
-  line number.
+- **Inputs:** `build` reads normalized ContextTrack v1 UTF-8 JSONL; `stitch`
+  reads PMGraph JSON only; `query` and `export` read PMGraph or AppGraph JSON. A
+  file with a top-level `module_id` is read as a PMGraph, any other as an
+  AppGraph. Loading either graph type rejects type coercion and unknown fields,
+  and validates message field combinations, nonempty module/node IDs, and
+  existing edge endpoints. Graph JSON output preserves node order and explicit
+  nulls and sorts edge pairs.
+- **Outputs:** `build`, `stitch`, and `export` require `--output`. The parent
+  directory must exist and the file must be new; existing files are never
+  overwritten. Writes are not atomic, so a filesystem failure can leave a
+  partial new file. `stitch` writes a second file, the dropped-message report;
+  see [Stitch](#stitch).
+- **Diagnostics:** Build, stitch, and export leave stdout empty on success;
+  query prints indented graph JSON. Warnings go to stderr. Expected input or
+  filesystem errors, including unknown node IDs, produce stderr diagnostics and
+  exit code 2 without a traceback. Capture record diagnostics include the input
+  path and physical line number; graph-file diagnostics include the file's path.
+
+## Stitch
+
+`stitch A.json B.json ... --output OUT` reads one PMGraph JSON file per module
+and writes an AppGraph. One input is allowed; it yields no links. Module IDs
+must be unique, module and node IDs must not contain `::`, and a module ID must
+not end with `:`; otherwise the command fails.
+
+### Matching
+
+A message is linked to a message in a **different** module when all of these
+hold. Requests pair a `send_request` with a `receive_request`; responses pair a
+`send_response` with a `receive_response`.
+
+- Both carry the same nonempty `api_id`. A message without one never links.
+- The methods are equal and the status codes are equal.
+- The client's concrete `path` satisfies the server's route `pattern`:
+  - net/http syntax: `{name}` matches one nonempty segment, a trailing
+    `{name...}` matches the rest of the path (which may be empty), a trailing
+    `{$}` matches only the path ending there, and a trailing `/` matches the
+    whole subtree.
+  - httprouter syntax: `:name` matches one nonempty segment, a trailing `*name`
+    matches the rest of the path (which may be empty), and a trailing `/` is
+    literal.
+  - A pattern may start with a method and a host as Go writes them
+    (`GET /items/{id}`, `example.com/items/{id}`). The method must admit the
+    message's method (`GET` also admits `HEAD`). The host must equal the
+    client's destination host without its port, compared exactly.
+- A server message that has a `path` instead of a `pattern` links only to an
+  equal, nonempty client path. Wildcard syntax in a `path` is read literally.
+
+A pattern the matcher cannot read (for example one mixing the two syntaxes) does
+not stop the stitch. That message never links and is reported with the reason
+`unsupported_pattern`.
+
+### The AppGraph
+
+- Parameters keep their node and are renamed `module::node`.
+- Each matched pair becomes one `linked_message` node named `link0`, `link1`,
+  and so on. It records the route (`api_id`, `method`, `pattern`,
+  `status_code`) and both original nodes (`sender_module`, `sender_node`,
+  `receiver_module`, `receiver_node`). The pattern is the server's label,
+  unchanged.
+- Each PMGraph edge is kept with its endpoints replaced by the links those
+  messages joined. A message in several links has its edges repeated for each.
+  An edge that touches a message with no link is not in the AppGraph.
+- Link numbers follow a fixed order (requests before responses, each in sorted
+  ID order), so the same inputs give the same file. Adding or renaming a module
+  renumbers them. Find a particular call by its sender and receiver fields, not
+  by its number.
+
+### The dropped-message report
+
+`stitch` always writes a second file listing every input message that is not in
+the AppGraph, sorted by module ID and node ID. It is `[]` when nothing was left
+out.
+
+- **Path:** by default the output's name with one trailing `.json` removed and
+  `.dropped.json` appended, in the same directory: `app.json` gives
+  `app.dropped.json`, and `app` gives `app.dropped.json` too. `--dropped PATH`
+  writes the report there instead.
+- **Entries:** `module_id`, `node_id`, `reason`, and `message` (the original
+  node). The reasons are `unmatched` (no message in another module matched it,
+  for example a call to a service that was not stitched in),
+  `unsupported_pattern` (see above), and `unreachable` (only with
+  `--prune-unconfigured`).
+- **It is not a graph file.** `query`, `export`, and `stitch` reject it. Keep the
+  original PMGraphs: the report lists messages, not the edges that touched them.
+
+Both output paths are checked before anything is written: they must differ, and
+neither may exist, a dangling symlink included. If the report then cannot be
+written, the AppGraph this call created is removed, and so is a partly written
+report. The two writes are separate and not atomic; do not treat the pair as a
+transaction.
+
+### `--prune-unconfigured`
+
+By default every matched link is kept. With `--prune-unconfigured`, links that
+no parameter can influence are left out and reported as `unreachable`, as the
+paper's CompTool does (§6.3). This only makes sense for inputs that carry
+parameters. `build` output carries none, so pruning it leaves an empty AppGraph.
+
+### Limits
+
+- The tracked Prometheus capture is a single module, and messages in the same
+  module are never linked. Stitching is therefore tested on synthetic graphs
+  only; there is no verified multi-module corpus.
+- Matching uses API ID, method, status, and path. The client's destination host
+  is used only when a pattern names a host. An API ID identifies a package
+  organisation, not a service, so unrelated services can share one.
+- There is one link per pair of send node and receive node. One message can join
+  several links, and edges are multiplied across them: a server's
+  receive-to-respond edge with two clients becomes four edges, including one
+  client's request to the response sent to the other. The paper (§6.3, Figure 2)
+  instead describes one node per route and calling module, and an AppGraph no
+  larger than its PMGraphs combined; an AppGraph written here can exceed that
+  bound.
+- A request links to every pattern it satisfies, not only the one a router would
+  pick. A pattern ending in `/` is read as a Go subtree; httprouter treats it as
+  literal, and the label cannot tell the two apart. The pattern `/` therefore
+  matches every path, and it is the most common pattern in the local
+  `all-tests` capture.
+- Go labels a redirected request with a pattern its path does not satisfy, and
+  logs decoded paths. Such requests stay unmatched.
+- A self-loop on a message that joins two or more links becomes edges between
+  those links; on a message in one link it disappears.
 
 ## Query
 
@@ -78,6 +190,19 @@ node per step. The number of paths grows exponentially on branching graphs, so
 enumerates paths. The `--paths` object is not a graph file: `export` and
 `query` reject it.
 
+Every node in a cycle influences every other node in it, so a cycle is one step
+holding its sorted node IDs, not one path per route around it:
+
+```text
+r -> a -> b -> a, b -> l     paths: [[["r"], ["a", "b"], ["l"]]]
+r -> a -> b -> a             paths: [[["r"], ["a", "b"]]]      (the cycle ends the path)
+```
+
+Overlapping cycles merge into one step, and a node whose only cycle is an edge
+to itself is a one-node step. The edges inside a cycle are still in `subgraph`.
+For a graph without cycles, `[[node for (node,) in path] for path in paths]`
+gives plain ID lists.
+
 Compatibility: `query` used to print `{"ancestors": [...], "descendants": [...]}`
 ID lists and now prints the subgraph. `conftamer.pmgraph.igraph_ops.query_node`
 was removed; use `conftamer.query.query_subgraph`. `conftamer.query.to_igraph`
@@ -85,6 +210,10 @@ and `conftamer.io.write_graphml`, which came from the merged AppGraph branch,
 are now the converter and writer described under GraphML export: vertices in
 original node order, one attribute per node field, and no `node_json`
 attribute.
+
+The merged branch's `stitch` wrote the dropped-message report only with
+`--dropped` and always pruned links no parameter reaches. The report is now
+always written, and pruning is opt-in (`--prune-unconfigured`).
 
 ## GraphML export
 
@@ -134,6 +263,10 @@ The README's bundled capture produces four nodes and one edge, `n1 → n2`:
 normalized capture retains all 20 observations, including eight received-response
 hooks, rather than deduplicating them into the four semantic nodes.
 
+`examples/pmgraphs/` holds three synthetic, hand-written PMGraphs with
+parameters, used to show and test stitching. They are not captured data. The
+[example inventory](../examples/README.md) walks through them.
+
 The [example inventory](../examples/README.md) also records historical results
 for optional local `all-tests` captures. Those larger artifacts are not tracked
 or required by the test suite; their results are not general graph-size
@@ -155,9 +288,13 @@ print(query_subgraph(graph, "n1"))
 ```
 
 `conftamer.query` also provides `query_paths(graph, node_id)` and
-`find_parameters(graph, key, module=None)`. For persistence, `conftamer.io`
+`find_parameters(graph, key, module=None)`. `conftamer.appgraph.stitch` provides
+`stitch(graphs, prune_unconfigured=False)`, which returns the AppGraph, and
+`stitch_with_dropped(...)`, which also returns the dropped messages; neither
+touches the filesystem. For persistence, `conftamer.io`
 provides `load_graph_json(path)` and `write_graph_json(graph, path)` for either
-graph type; `conftamer.pmgraph.io` keeps `load_pmgraph_json(path)` and
+graph type, and `write_dropped_json(dropped, path)` for the report;
+`conftamer.pmgraph.io` keeps `load_pmgraph_json(path)` and
 `write_pmgraph_json(graph, path)`. For conversion and export,
 `conftamer.igraph_ops` provides `to_igraph(graph)` and
 `write_graphml(graph, path)`; `conftamer.pmgraph.igraph_ops` re-exports both.
