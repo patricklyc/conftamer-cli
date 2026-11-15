@@ -12,14 +12,16 @@ broader system proposed in the paper.
 - **Edges represent possible influence.** A received message can influence a later
   sent message within the same capture and `(pid, context_id)`. The result is not
   an execution replay or a complete call graph.
-- **Queries report directed reachability.** Ancestors and descendants include
-  indirect connections. Each list contains unique IDs in original node order and
-  excludes the selected node, even in cycles or self-loops. An isolated node
-  returns two empty lists.
+- **Queries return a subgraph.** It holds the selected node, every node that can
+  reach it, every node it can reach (indirect connections included), and every
+  edge among those nodes, including edges that bypass the selected node. Nodes
+  keep the input's order. An isolated node returns itself alone. See
+  [Query](#query).
 - **Incomplete or ambiguous evidence emits warnings.** It does not become an
   invented association; unusable events or associations are omitted.
-- Parameter ingestion, GraphML importing or querying, path explanation, and
-  cross-module stitching are not implemented.
+- Parameter ingestion and GraphML importing or querying are not implemented.
+  Cross-module stitching exists as a library function only; no command exposes
+  it yet.
 
 The module identity is supplied by you through `--module-id`, not inferred from
 API IDs. Node IDs are keys in the PMGraph JSON file's top-level `nodes` object,
@@ -32,8 +34,8 @@ uv run python -m json.tool "$RUN/module.pmgraph.json"
 
 ## Files and errors
 
-- **Inputs:** `build` reads normalized ContextTrack v1 UTF-8 JSONL; `query`
-  reads PMGraph JSON; `export` reads PMGraph or AppGraph JSON. A file with a
+- **Inputs:** `build` reads normalized ContextTrack v1 UTF-8 JSONL; `query` and
+  `export` read PMGraph or AppGraph JSON. A file with a
   top-level `module_id` is read as a PMGraph, any other as an AppGraph. No
   command produces an AppGraph yet; the library's `stitch` does. Loading either
   graph type rejects type coercion and unknown fields, and validates message
@@ -44,10 +46,45 @@ uv run python -m json.tool "$RUN/module.pmgraph.json"
   exist and the file must be new; existing files are never overwritten. Writes
   are not atomic, so a filesystem failure can leave a partial new file.
 - **Diagnostics:** Build and export leave stdout empty on success; query prints
-  indented JSON. Warnings go to stderr. Expected input or filesystem errors,
+  indented graph JSON. Warnings go to stderr. Expected input or filesystem errors,
   including unknown node IDs, produce stderr diagnostics and exit code 2 without
   a traceback. Capture record diagnostics include the input path and physical
   line number.
+
+## Query
+
+`query GRAPH` reads a PMGraph or AppGraph JSON file and takes exactly one
+selector:
+
+- `--node ID` selects a node by its exact ID.
+- `--key KEY` selects the parameter whose configuration key is `KEY`. If several
+  parameters share the key, the error lists their node IDs; narrow the choice
+  with `--module MODULE` or use `--node`. `--module` matches a PMGraph's
+  `module_id`, or in an AppGraph the `module::` prefix of a parameter's node ID.
+  Graphs written by `build` hold no parameters, so `--key` applies to graphs
+  from other sources, such as `examples/pmgraphs/`.
+
+By default the command prints the subgraph as graph JSON of the same type as
+its input. The output is formatted like `build` output, except that non-ASCII
+characters are written as `\u` escapes so the result does not depend on the
+terminal's encoding. It can be saved and passed to `export` or `query`.
+
+`--paths` prints `{"subgraph": ..., "paths": [...]}` instead. `paths` lists
+every root-to-leaf path through the selected node, in a fixed order. Each path
+is a list of steps and each step is a list of node IDs. A step is one strongly
+connected component, so a cycle is a single step and an acyclic graph has one
+node per step. The number of paths grows exponentially on branching graphs, so
+`--paths` can run very long or exhaust memory; the default output never
+enumerates paths. The `--paths` object is not a graph file: `export` and
+`query` reject it.
+
+Compatibility: `query` used to print `{"ancestors": [...], "descendants": [...]}`
+ID lists and now prints the subgraph. `conftamer.pmgraph.igraph_ops.query_node`
+was removed; use `conftamer.query.query_subgraph`. `conftamer.query.to_igraph`
+and `conftamer.io.write_graphml`, which came from the merged AppGraph branch,
+are now the converter and writer described under GraphML export: vertices in
+original node order, one attribute per node field, and no `node_json`
+attribute.
 
 ## GraphML export
 
@@ -108,19 +145,22 @@ The same operations are callable without the CLI:
 
 ```python
 from conftamer.contexttrack import load_contexttrack
-from conftamer.pmgraph.igraph_ops import query_node
+from conftamer.query import query_subgraph
 
 graph = load_contexttrack(
     "examples/contexttrack/prometheus/TestTargetScraperScrapeOK/normalized.jsonl",
     module_id="example-module",
 )
-print(query_node(graph, "n1"))
+print(query_subgraph(graph, "n1"))
 ```
 
-For persistence, `conftamer.pmgraph.io` provides `load_pmgraph_json(path)` and
+`conftamer.query` also provides `query_paths(graph, node_id)` and
+`find_parameters(graph, key, module=None)`. For persistence, `conftamer.io`
+provides `load_graph_json(path)` and `write_graph_json(graph, path)` for either
+graph type; `conftamer.pmgraph.io` keeps `load_pmgraph_json(path)` and
 `write_pmgraph_json(graph, path)`. For conversion and export,
-`conftamer.pmgraph.igraph_ops` provides `to_igraph(graph)` and
-`write_graphml(graph, path)`.
+`conftamer.igraph_ops` provides `to_igraph(graph)` and
+`write_graphml(graph, path)`; `conftamer.pmgraph.igraph_ops` re-exports both.
 
 The ContextTrack reader raises `contexttrack.EventFileError` (a `ValueError`)
 for invalid input, retaining `.path`, physical `.line`, `.reason`, and the original

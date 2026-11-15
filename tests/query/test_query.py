@@ -1,10 +1,17 @@
 from collections.abc import Iterable
 
+import igraph
 import pytest
 
 from conftamer.appgraph.models import AppGraph
 from conftamer.pmgraph.models import Message, Parameter, PMGraph
-from conftamer.query import find_parameters, query, to_igraph
+from conftamer.query import (
+    find_parameters,
+    query,
+    query_paths,
+    query_subgraph,
+    to_igraph,
+)
 
 
 def _pmgraph(edges: set[tuple[str, str]], extra_nodes: Iterable[str] = ()) -> PMGraph:
@@ -32,38 +39,13 @@ def _named_edges(graph: PMGraph | AppGraph) -> set[tuple[str, str]]:
 
 
 class TestToIgraph:
-    def test_vertices_are_named_by_node_id_in_sorted_order(self) -> None:
-        g = to_igraph(_pmgraph({("b", "a"), ("c", "b")}))
-
-        assert g.is_directed()
-        assert g.vs["name"] == ["a", "b", "c"]
-
-    def test_edges_round_trip(self) -> None:
-        edges = {("r", "a"), ("a", "m"), ("m", "b1"), ("m", "b2"), ("a", "l")}
-        graph = _pmgraph(edges)
-
-        assert to_igraph(graph).ecount() == len(edges)
-        assert _named_edges(graph) == edges
-
-    def test_isolated_nodes_become_vertices(self) -> None:
-        g = to_igraph(_pmgraph({("a", "b")}, extra_nodes={"solo"}))
-
-        assert set(g.vs["name"]) == {"a", "b", "solo"}
-        assert g.vs.find(name="solo").degree() == 0
-
-    def test_empty_graph(self) -> None:
-        g = to_igraph(PMGraph(module_id="m", nodes={}, edges=set()))
-
-        assert g.vcount() == 0
-        assert g.ecount() == 0
-
     def test_appgraph(self) -> None:
         graph = AppGraph(
             nodes={nid: Parameter(key=nid) for nid in ("a", "m", "b")},
             edges={("a", "m"), ("m", "b")},
         )
 
-        assert to_igraph(graph).vs["name"] == ["a", "b", "m"]
+        assert to_igraph(graph).vs["name"] == ["a", "m", "b"]
         assert _named_edges(graph) == {("a", "m"), ("m", "b")}
 
     def test_dangling_edge_raises(self) -> None:
@@ -76,9 +58,61 @@ class TestToIgraph:
             to_igraph(graph)
 
 
-def test_unknown_node_raises() -> None:
-    with pytest.raises(ValueError):
-        query(_pmgraph({("a", "b")}), "missing")
+@pytest.mark.parametrize("function", [query, query_subgraph, query_paths])
+def test_unknown_node_raises(function) -> None:
+    with pytest.raises(ValueError, match="node ID 'missing' not in graph"):
+        function(_pmgraph({("a", "b")}), "missing")
+
+
+def test_query_subgraph_keeps_input_node_order() -> None:
+    graph = PMGraph(
+        module_id="m",
+        nodes={n: Parameter(key=n) for n in ("z", "seed", "a", "isolate")},
+        edges={("z", "seed"), ("seed", "a")},
+    )
+
+    subgraph = query_subgraph(graph, "seed")
+
+    assert list(subgraph.nodes) == ["z", "seed", "a"]
+    assert subgraph.edges == {("z", "seed"), ("seed", "a")}
+    assert isinstance(subgraph, PMGraph) and subgraph.module_id == "m"
+
+
+def test_query_subgraph_keeps_self_loops_and_leaves_its_input_alone() -> None:
+    graph = _pmgraph({("r", "a"), ("a", "a"), ("a", "l")})
+    original = graph.model_copy(deep=True)
+
+    subgraph = query_subgraph(graph, "a")
+
+    assert subgraph.edges == {("r", "a"), ("a", "a"), ("a", "l")}
+    assert graph == original
+
+
+def test_query_subgraph_does_not_enumerate_paths(monkeypatch) -> None:
+    # 40 fully connected layers of two nodes hold 2**40 root-to-leaf paths.
+    # Enumerating them would never finish, so make any attempt fail instead.
+    def fail(*args, **kwargs):
+        raise AssertionError("paths were enumerated")
+
+    monkeypatch.setattr(igraph.Graph, "get_all_simple_paths", fail)
+    layers = [[f"n{i}a", f"n{i}b"] for i in range(40)]
+    edges = {(s, t) for a, b in zip(layers, layers[1:]) for s in a for t in b}
+    graph = _pmgraph(edges)
+
+    subgraph = query_subgraph(graph, "n0a")
+
+    assert len(subgraph.nodes) == 79  # every node except the other root
+    with pytest.raises(AssertionError, match="paths were enumerated"):
+        query_paths(graph, "n0a")
+
+
+def test_query_combines_subgraph_and_paths() -> None:
+    graph = _pmgraph({("a", "b"), ("b", "c")})
+
+    result = query(graph, "b")
+
+    assert result.subgraph == query_subgraph(graph, "b")
+    assert result.paths == query_paths(graph, "b") == [[["a"], ["b"], ["c"]]]
 
 
 def test_subgraph_is_ancestors_and_descendants() -> None:

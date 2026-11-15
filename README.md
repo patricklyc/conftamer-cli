@@ -30,7 +30,8 @@ uv run conftamer build \
   examples/contexttrack/prometheus/TestTargetScraperScrapeOK/normalized.jsonl \
   --module-id example-module --output "$RUN/module.pmgraph.json"
 
-# Print ancestors and descendants of the received-request node.
+# Print the subgraph of everything that can influence, or be influenced by,
+# the received-request node.
 uv run conftamer query "$RUN/module.pmgraph.json" --node n1
 
 # Export the same graph to GraphML.
@@ -41,9 +42,10 @@ uv run conftamer export "$RUN/module.pmgraph.json" \
 uv run python -m json.tool "$RUN/module.pmgraph.json"
 ```
 
-The query returns `{"ancestors": [], "descendants": ["n2"]}`. For your own capture,
-replace the input path and choose `--module-id`; module identity is not inferred
-from API IDs. Output files must be new and their parent directory must exist.
+The query prints a PMGraph JSON document holding `n1`, `n2`, and the edge between
+them, which can be saved and passed to `export`. For your own capture, replace
+the input path and choose `--module-id`; module identity is not inferred from
+API IDs. Output files must be new and their parent directory must exist.
 
 ## Normalize raw captures
 

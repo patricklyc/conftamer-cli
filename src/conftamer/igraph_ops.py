@@ -15,7 +15,11 @@ def _node_attributes(graph: Graph) -> list[str]:
 def to_igraph(graph: Graph) -> igraph.Graph:
     node_ids = list(graph.nodes)
     indices = {node_id: index for index, node_id in enumerate(node_ids)}
-    edges = [(indices[a], indices[b]) for a, b in sorted(graph.edges)]
+    edges: list[tuple[int, int]] = []
+    for source, target in sorted(graph.edges):
+        if source not in indices or target not in indices:
+            raise ValueError(f"edge {(source, target)!r} has a missing endpoint")
+        edges.append((indices[source], indices[target]))
     network = igraph.Graph(n=len(node_ids), edges=edges, directed=True)
     if isinstance(graph, PMGraph):
         network["module_id"] = graph.module_id
@@ -25,22 +29,6 @@ def to_igraph(graph: Graph) -> igraph.Graph:
             getattr(node, attribute, None) for node in graph.nodes.values()
         ]
     return network
-
-
-def query_node(graph: PMGraph, node_id: str) -> dict[str, list[str]]:
-    if node_id not in graph.nodes:
-        raise ValueError(f"unknown node ID {node_id!r}")
-    network = to_igraph(graph)
-    selected = network.vs.find(name=node_id).index
-    names = network.vs["name"]
-    result: dict[str, list[str]] = {}
-    for relation, mode in (("ancestors", "in"), ("descendants", "out")):
-        reached = set(network.subcomponent(selected, mode=mode))
-        reached.discard(selected)
-        result[relation] = [
-            name for index, name in enumerate(names) if index in reached
-        ]
-    return result
 
 
 def _check_graphml_text(value: str, location: str) -> None:
