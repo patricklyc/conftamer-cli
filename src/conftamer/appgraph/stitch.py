@@ -4,6 +4,7 @@ import re
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import Literal
 
 from conftamer.appgraph.models import AppGraph, DroppedMessage, LinkedMessage
 from conftamer.pmgraph.models import Message, Parameter, PMGraph
@@ -210,8 +211,10 @@ def _messages_match(concrete: Message, pattern_side: Message) -> bool:
             return False
         return _path_matches_route(concrete.path, route)
     # A fallback path is literal evidence, not a route expression: wildcard
-    # syntax in it (":id", "{id}", "*rest") must not match other paths.
-    return concrete.path == pattern_side.path
+    # syntax in it (":id", "{id}", "*rest") must not match other paths. An
+    # empty path (possible in saved PMGraphs, never produced by the importer)
+    # identifies no route, so two of them are not linked.
+    return concrete.path != "" and concrete.path == pattern_side.path
 
 
 def _check_unique_module_ids(graphs: list[PMGraph]) -> None:
@@ -275,10 +278,14 @@ def stitch_with_dropped(
     dropped too, as the paper's CompTool does (§6.3); that only makes sense
     for inputs that carry Parameter nodes.
 
+    A message whose route pattern uses unsupported syntax (see
+    ``parse_pattern``) never links and is reported with reason
+    ``"unsupported_pattern"``; it does not stop the other messages from being
+    stitched.
+
     Raises ``ValueError`` if two graphs share a ``module_id``, if any
     ``module_id``/node ID contains ``"::"`` (used internally to keep IDs
-    globally unique while stitching), if a ``module_id`` ends with ``":"``, or
-    if any route pattern uses unsupported syntax (see ``parse_pattern``).
+    globally unique while stitching), or if a ``module_id`` ends with ``":"``.
     """
     graphs = list(graphs)
     _check_unique_module_ids(graphs)
@@ -293,9 +300,15 @@ def stitch_with_dropped(
                 (_prefixed(graph.module_id, source), _prefixed(graph.module_id, target))
             )
 
-    for node in prefixed_nodes.values():
+    # Messages whose pattern cannot be read are left out of matching and
+    # reported, so one odd label does not block the whole application.
+    unreadable: set[str] = set()
+    for pid, node in prefixed_nodes.items():
         if isinstance(node, Message) and node.pattern is not None:
-            parse_pattern(node.pattern)
+            try:
+                parse_pattern(node.pattern)
+            except ValueError:
+                unreadable.add(pid)
 
     # prefixed node ID -> the link ID(s) it was merged into. A node can
     # participate in more than one link (e.g. one route pattern matching
@@ -320,7 +333,9 @@ def stitch_with_dropped(
         pattern_side = sorted(
             (pid, node)
             for pid, node in prefixed_nodes.items()
-            if isinstance(node, Message) and node.kind == pattern_kind
+            if isinstance(node, Message)
+            and node.kind == pattern_kind
+            and pid not in unreadable
         )
 
         for concrete_pid, concrete_node in concrete_side:
@@ -390,12 +405,17 @@ def stitch_with_dropped(
             if source in final_nodes and target in final_nodes
         }
 
+    def reason(pid: str) -> Literal["unmatched", "unreachable", "unsupported_pattern"]:
+        if pid in unreadable:
+            return "unsupported_pattern"
+        return "unreachable" if pid in replaces else "unmatched"
+
     # A message survives if at least one link it was merged into survived.
     dropped = [
         DroppedMessage(
             module_id=_module_of(pid),
             node_id=_unprefixed(pid),
-            reason="unreachable" if pid in replaces else "unmatched",
+            reason=reason(pid),
             message=node,
         )
         for pid, node in sorted(

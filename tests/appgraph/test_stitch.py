@@ -320,14 +320,6 @@ class TestStitch:
 
         assert app.nodes == {}
 
-    def test_unsupported_pattern_raises_even_without_a_candidate(self) -> None:
-        server = _pmgraph(
-            "backend", {"recv": _receive_request(pattern="/items/x{id}")}, set()
-        )
-
-        with pytest.raises(ValueError, match="unsupported route pattern"):
-            stitch([server])
-
     def test_method_prefixed_pattern_links_and_keeps_its_label(self) -> None:
         client = _pmgraph("frontend", {"send": _send_request()}, set())
         server = _pmgraph(
@@ -586,6 +578,48 @@ class TestDropped:
 
         assert [(d.module_id, d.node_id, d.reason) for d in dropped] == [
             ("b", "send", "unreachable")
+        ]
+
+    def test_unreadable_pattern_is_reported_and_the_rest_still_stitches(self) -> None:
+        bad = _receive_request(pattern="/items/x{id}")
+        client = _pmgraph("frontend", {"send": _send_request()}, set())
+        server = _pmgraph("backend", {"recv": _receive_request(), "odd": bad}, set())
+
+        result = stitch_with_dropped([client, server])
+
+        assert list(result.appgraph.nodes) == ["link0"]
+        assert result.dropped == [
+            DroppedMessage(
+                module_id="backend",
+                node_id="odd",
+                reason="unsupported_pattern",
+                message=bad,
+            )
+        ]
+
+    def test_unreadable_pattern_without_an_api_id_keeps_the_specific_reason(
+        self,
+    ) -> None:
+        bad = _receive_request(api_id=None, pattern="/items/x{id}")
+        server = _pmgraph("backend", {"odd": bad}, set())
+
+        (dropped,) = stitch_with_dropped([server]).dropped
+
+        assert dropped.reason == "unsupported_pattern"
+
+    def test_empty_literal_paths_do_not_link(self) -> None:
+        # Saved PMGraphs may hold an empty path; the importer never produces one.
+        client = _pmgraph("frontend", {"send": _send_request(path="")}, set())
+        server = _pmgraph(
+            "backend", {"recv": _receive_request(pattern=None, path="")}, set()
+        )
+
+        result = stitch_with_dropped([client, server])
+
+        assert result.appgraph.nodes == {}
+        assert [(d.node_id, d.reason) for d in result.dropped] == [
+            ("recv", "unmatched"),
+            ("send", "unmatched"),
         ]
 
     def test_parameters_are_never_reported(self) -> None:

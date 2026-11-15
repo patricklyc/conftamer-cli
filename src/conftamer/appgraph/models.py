@@ -50,12 +50,14 @@ class DroppedMessage(BaseModel):
     ``reason`` is ``"unmatched"`` when no message in another module matched it,
     or ``"unreachable"`` when it matched but no Parameter reaches any of the
     links it was merged into, so they were all pruned. ``"unreachable"`` only
-    occurs when stitching with ``prune_unconfigured=True``.
+    occurs when stitching with ``prune_unconfigured=True``. It is
+    ``"unsupported_pattern"`` when the message's route pattern uses syntax the
+    matcher cannot read, so it was never compared with anything.
     """
 
     module_id: str
     node_id: str
-    reason: Literal["unmatched", "unreachable"]
+    reason: Literal["unmatched", "unreachable", "unsupported_pattern"]
     message: Message
 
 
