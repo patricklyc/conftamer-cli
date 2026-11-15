@@ -51,6 +51,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+tests/query/perf-output/
 
 # Translations
 *.mo
@@ -218,3 +219,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+#pictures
+*.pdf
+
+# Claude Code (local only)
+.claude/
