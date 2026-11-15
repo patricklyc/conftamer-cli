@@ -23,7 +23,17 @@ def test_walkthrough_runs_and_matches_documented_output(
         "    frontend::param-checkout-timeout -> link0 -> link1 -> link3 -> link2\n"
         "    orders::param-max-retries -> link1 -> link3 -> link2\n"
     ) in output
+    parameter_query = output.split("== 4.")[1]
     assert (
-        "    orders::param-max-retries -> link1 -> link3 -> link2\n"
-        in (output.split("== 4.")[1])
+        "    orders::param-max-retries -> link1 -> link3 -> link2\n" in parameter_query
     )
+    # The subgraph lists nodes in the AppGraph's own order, as `conftamer query`
+    # prints them, and leaves out what the parameter cannot reach.
+    listed = parameter_query.split("  nodes:\n")[1].split("  edges:\n")[0]
+    assert [line.split()[0] for line in listed.splitlines()] == [
+        "orders::param-max-retries",
+        "link1",
+        "link2",
+        "link3",
+    ]
+    assert output.count("paths (--paths):\n") == 2
