@@ -3,6 +3,8 @@ import re
 
 import pytest
 
+import conftamer.io
+import conftamer.pmgraph.io
 from conftamer.pmgraph.io import load_pmgraph_json, write_pmgraph_json
 from conftamer.pmgraph.models import PMGraph
 
@@ -83,3 +85,7 @@ def test_empty_graph_and_filesystem_errors(tmp_path):
     with pytest.raises(FileNotFoundError):
         write_pmgraph_json(graph, missing)
     assert not missing.parent.exists()
+
+
+def test_pmgraph_io_delegates_to_the_shared_implementation():
+    assert conftamer.pmgraph.io.load_pmgraph_json is conftamer.io.load_pmgraph_json

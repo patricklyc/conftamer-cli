@@ -6,9 +6,9 @@ from typing import Any
 import igraph
 from pydantic import BaseModel
 
-from conftamer.appgraph.models import AppGraph, DroppedMessage
+from conftamer.appgraph.models import AppGraph, DroppedMessage, Graph
 from conftamer.pmgraph.models import PMGraph
-from conftamer.query import Graph, to_igraph
+from conftamer.query import to_igraph
 
 
 def _read(path: str | Path) -> str:

@@ -2,7 +2,7 @@ from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
-from conftamer.pmgraph.models import Message, Parameter
+from conftamer.pmgraph.models import Message, Parameter, PMGraph
 
 
 class LinkedMessage(BaseModel):
@@ -77,3 +77,6 @@ class AppGraph(BaseModel):
             if source not in self.nodes or target not in self.nodes:
                 raise ValueError(f"edge {(source, target)!r} has a missing endpoint")
         return self
+
+
+Graph = PMGraph | AppGraph

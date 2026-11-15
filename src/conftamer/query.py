@@ -5,10 +5,8 @@ from itertools import product
 
 import igraph as ig
 
-from conftamer.appgraph.models import AppGraph
+from conftamer.appgraph.models import Graph
 from conftamer.pmgraph.models import Parameter, PMGraph
-
-Graph = PMGraph | AppGraph
 
 
 @dataclass(frozen=True)
