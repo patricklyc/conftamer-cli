@@ -1,22 +1,23 @@
 # Examples and test fixtures
 
-This directory contains real upstream ContextTrack HTTP artifacts used as
-read-only source fixtures. Each capture directory contains an original
-`raw.jsonl` and its supplied schema-v1 `normalized.jsonl`. ConfTamer consumes the
-**normalized file directly**; Go's raw output still requires separate upstream
-normalization. These files are observations, not generated PMGraphs.
+This directory contains a tracked upstream ContextTrack HTTP capture used as a
+read-only source fixture. Each capture pair contains an original `raw.jsonl` and
+its supplied schema-v1 `normalized.jsonl`. ConfTamer consumes the **normalized
+file directly**; Go's raw output still requires separate upstream normalization.
+Larger `all-tests` captures may be present locally but are not tracked or required
+by tests. These files are observations, not generated PMGraphs.
 
 ## ContextTrack Prometheus captures
 
-The pairs under [`contexttrack/prometheus/`](contexttrack/prometheus/) come from
-instrumented Prometheus tests. Each JSONL record is one observation, not one
-semantic graph node. Both pairs are repository test fixtures, not optional
-sibling-checkout inputs.
+The captures under [`contexttrack/prometheus/`](contexttrack/prometheus/) come
+from instrumented Prometheus tests. Each JSONL record is one observation, not one
+semantic graph node. Only the small scrape pair is a tracked test fixture; the
+broad pair below is optional local data, retained here as a historical result.
 
 | Capture directory | Observations per file | Current PMGraph | Warnings | Intended use |
 | --- | ---: | --- | ---: | --- |
 | [`TestTargetScraperScrapeOK/`](contexttrack/prometheus/TestTargetScraperScrapeOK/) | 20 | 4 nodes, 1 edge | 0 | Exact correlation and deduplication regression; CLI build and raw-input rejection |
-| [`all-tests/`](contexttrack/prometheus/all-tests/) | 7,235 | 960 nodes, 117 edges | 373 | Larger importer regression with routing, multiple PIDs, and conflicting/incomplete associations |
+| `all-tests/` (optional, untracked) | 7,235 | 960 nodes, 117 edges | 373 | Historical manual smoke check; not required by tests |
 
 ### Small scrape capture
 
@@ -36,7 +37,12 @@ empty client path becomes `/` during upstream normalization, not during import.
 See the [quick start](../README.md#quick-start) for build/query/export using the
 supplied normalized file.
 
-### Broad test capture
+### Optional broad capture
+
+The local `all-tests` pair is intentionally not tracked. There is no test fixture
+or regression requiring it; use synthetic traces and the small tracked capture
+for automated verification. The following results describe a previous manual
+smoke check, not a CI prerequisite.
 
 `all-tests/normalized.jsonl` contains 69 PIDs with context-ID strings reused across
 processes and 911 routing observations. Correlation remains scoped to
@@ -51,9 +57,9 @@ The current conservative importer emits 373 warnings:
 These unusable response observations are omitted without discarding other usable
 evidence, including nonconflicting duplicate hooks. Warnings identify the file
 actually imported and physical line, not producer debug `file`/`line` values.
-The tests pin the graph counts, message-only receive-to-send direction,
-representative routed labels, and warning reasons/locations. These results do not
-authorize broader matching or establish complete capture coverage.
+The historical smoke check inspected graph counts, message-only receive-to-send
+direction, representative routed labels, and warning reasons/locations. These
+results do not authorize broader matching or establish complete capture coverage.
 
 ## Raw versus normalized workflow
 
@@ -73,10 +79,10 @@ uv run conftamer build "$RUN/events.v1.jsonl" \
   --module-id example-module --output "$RUN/module.pmgraph.json"
 ```
 
-ContextTrack 0.2.0 at the repository's pinned revision reproduces both supplied
-normalized files byte-for-byte. Normalization preserves observation order and
-repeated hooks; association, label recovery, node deduplication, and influence
-projection belong to the consumer. Exhaustive normalizer/schema tests belong to
+Previous reproducibility checks with ContextTrack 0.2.0 at the repository's
+pinned revision reproduced the supplied normalized captures byte-for-byte.
+Normalization preserves observation order and repeated hooks; association,
+label recovery, node deduplication, and influence projection belong to the consumer. Exhaustive normalizer/schema tests belong to
 the upstream package, not this repository.
 
 ## Fixture policy
@@ -84,6 +90,8 @@ the upstream package, not this repository.
 - Do not edit, regenerate, or normalize the supplied artifacts in place to make
   tests pass. Importer tests read the supplied normalized fixtures directly.
 - Use small synthetic traces for focused boundary-case tests.
+- Keep `all-tests` captures local and untracked. Do not add a test dependency on
+  them or require them in CI.
 - Write generated normalized copies, PMGraphs, and other outputs to a pytest
   temporary directory or another explicitly selected output directory, not
   beside these files.
