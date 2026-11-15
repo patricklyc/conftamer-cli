@@ -80,6 +80,11 @@ class TestPathMatchesPattern:
             ("/static/", "/static/*rest"),
             ("/", "/{rest...}"),
             ("/", "/*path"),
+            ("/items/42", "GET /items/{id}"),
+            ("/items/42", "GET\t/items/{id}"),
+            ("/items/42", "GET   /items/{id}"),
+            ("/hosted/1", "example.com/hosted/{x}"),
+            ("/x", "GET example.com/x"),
         ],
     )
     def test_matches(self, path: str, pattern: str) -> None:
@@ -109,8 +114,10 @@ class TestPathMatchesPattern:
     @pytest.mark.parametrize(
         "pattern",
         [
-            "GET /items",
-            "example.com/items",
+            "GET items",
+            "GET /items/:id",
+            "GET /files/*rest",
+            "ex{a}mple.com/items",
             "/items/{id...}/more",
             "/items/*rest/more",
             "/items/{$}/more",
@@ -315,11 +322,49 @@ class TestStitch:
 
     def test_unsupported_pattern_raises_even_without_a_candidate(self) -> None:
         server = _pmgraph(
-            "backend", {"recv": _receive_request(pattern="GET /items/{id}")}, set()
+            "backend", {"recv": _receive_request(pattern="/items/x{id}")}, set()
         )
 
         with pytest.raises(ValueError, match="unsupported route pattern"):
             stitch([server])
+
+    def test_method_prefixed_pattern_links_and_keeps_its_label(self) -> None:
+        client = _pmgraph("frontend", {"send": _send_request()}, set())
+        server = _pmgraph(
+            "backend", {"recv": _receive_request(pattern="GET /items/{id}")}, set()
+        )
+
+        (link,) = stitch([client, server]).nodes.values()
+
+        assert isinstance(link, LinkedMessage)
+        assert link.pattern == "GET /items/{id}"
+
+    @pytest.mark.parametrize(
+        ("method", "links"), [("GET", 1), ("HEAD", 1), ("POST", 0)]
+    )
+    def test_get_prefix_admits_get_and_head_only(self, method: str, links: int) -> None:
+        client = _pmgraph("frontend", {"send": _send_request(method=method)}, set())
+        server = _pmgraph(
+            "backend",
+            {"recv": _receive_request(method=method, pattern="GET /items/{id}")},
+            set(),
+        )
+
+        assert len(stitch([client, server]).nodes) == links
+
+    @pytest.mark.parametrize(
+        ("host", "links"),
+        [("backend:8080", 1), ("backend", 1), ("other:8080", 0), ("BACKEND:8080", 0)],
+    )
+    def test_host_prefix_must_equal_the_client_host_without_port(
+        self, host: str, links: int
+    ) -> None:
+        client = _pmgraph("frontend", {"send": _send_request(host=host)}, set())
+        server = _pmgraph(
+            "backend", {"recv": _receive_request(pattern="backend/items/{id}")}, set()
+        )
+
+        assert len(stitch([client, server]).nodes) == links
 
     def test_one_pattern_matches_many_senders(self) -> None:
         client_a = _pmgraph(

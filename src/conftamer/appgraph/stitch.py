@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -36,6 +37,8 @@ def _unprefixed(prefixed_id: str) -> str:
 
 
 _END_ANCHOR = "{$}"
+_METHOD_SEPARATOR = re.compile(r"[ \t]")
+_HTTP_TOKEN = re.compile(r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+")
 
 
 def _is_go_wildcard(segment: str) -> bool:
@@ -52,16 +55,51 @@ def _is_rest_wildcard(segment: str) -> bool:
     )
 
 
-def check_pattern(pattern: str) -> None:
-    """Raise ``ValueError`` if ``pattern`` uses syntax ``path_matches_pattern``
-    does not support."""
+@dataclass(frozen=True)
+class RoutePattern:
+    """A route pattern split the way Go's ServeMux reads ``[METHOD ][HOST]/path``.
+
+    ``method`` and ``host`` are ``None`` when the pattern does not restrict
+    them. An httprouter pattern is always a bare path.
+    """
+
+    method: str | None
+    host: str | None
+    path: str
+
+
+def parse_pattern(pattern: str) -> RoutePattern:
+    """Split ``pattern`` into its method, host, and path.
+
+    Raises ``ValueError`` if ``pattern`` uses syntax the matcher does not
+    support.
+    """
 
     def unsupported(reason: str) -> ValueError:
         return ValueError(f"unsupported route pattern {pattern!r}: {reason}")
 
-    if not pattern.startswith("/"):
-        raise unsupported("must start with '/' (no method or host prefix)")
-    segments = pattern.split("/")
+    method = host = None
+    path = pattern
+    has_prefix = not pattern.startswith("/")
+    if has_prefix:
+        # net/http: text before the first space or tab is the method, and
+        # whatever precedes the first "/" after it is the host.
+        rest = pattern
+        separator = _METHOD_SEPARATOR.search(pattern)
+        if separator:
+            method = pattern[: separator.start()] or None
+            rest = pattern[separator.end() :].lstrip(" \t")
+        if method is not None and not _HTTP_TOKEN.fullmatch(method):
+            raise unsupported(f"invalid method {method!r}")
+        if "/" not in rest:
+            raise unsupported("host/path missing '/'")
+        slash = rest.index("/")
+        host = rest[:slash] or None
+        path = rest[slash:]
+        if host is not None and "{" in host:
+            raise unsupported(f"host {host!r} contains a wildcard")
+
+    segments = path.split("/")
     for index, segment in enumerate(segments):
         is_last = index == len(segments) - 1
         if _is_go_wildcard(segment):
@@ -76,6 +114,32 @@ def check_pattern(pattern: str) -> None:
             raise unsupported(f"{segment!r} must be the last segment")
     if any(map(_is_go_wildcard, segments)) and any(map(_is_router_wildcard, segments)):
         raise unsupported("mixes net/http and httprouter wildcards")
+    if has_prefix and any(map(_is_router_wildcard, segments)):
+        # net/http reads ":name" and "*name" literally, but only httprouter
+        # labels are expected to contain them; do not guess which wrote this.
+        raise unsupported("httprouter wildcard after a method or host prefix")
+    return RoutePattern(method=method, host=host, path=path)
+
+
+def _method_admits(pattern_method: str | None, method: str) -> bool:
+    """net/http: no method admits every method, and GET also admits HEAD."""
+    return (
+        pattern_method is None
+        or pattern_method == method
+        or (pattern_method == "GET" and method == "HEAD")
+    )
+
+
+def _host_without_port(host: str) -> str:
+    """Drop a port the way net/http does before matching a host pattern."""
+    name, colon, _port = host.rpartition(":")
+    if not colon:
+        return host
+    if name.startswith("[") and name.endswith("]"):
+        return name[1:-1]  # "[::1]:80" -> "::1"
+    if ":" in name or "[" in name or "]" in name:
+        return host  # not host:port (e.g. a bare IPv6 address); leave unchanged
+    return name
 
 
 def _segment_matches(path_segment: str, pattern_segment: str) -> bool:
@@ -93,13 +157,16 @@ def path_matches_pattern(path: str, pattern: str) -> bool:
     trailing ``{$}``, and a trailing ``/`` matching the whole subtree) and
     httprouter patterns (``:name``, trailing ``*name``; a trailing ``/`` is
     literal). A trailing rest wildcard consumes the rest of the path, which
-    may be empty. Raises ``ValueError`` for unsupported syntax, including
-    a method or host prefix.
+    may be empty. A net/http method or host prefix is accepted and ignored
+    here; ``_messages_match`` checks it against the messages. Raises
+    ``ValueError`` for unsupported syntax (see ``parse_pattern``).
     """
-    check_pattern(pattern)
+    return _path_matches_route(path, parse_pattern(pattern))
 
+
+def _path_matches_route(path: str, route: RoutePattern) -> bool:
     path_segments = path.split("/")
-    pattern_segments = pattern.split("/")
+    pattern_segments = route.path.split("/")
     is_subtree = pattern_segments[-1] == "" and not any(
         map(_is_router_wildcard, pattern_segments)
     )
@@ -134,9 +201,14 @@ def _messages_match(concrete: Message, pattern_side: Message) -> bool:
     # Guaranteed by Message's own validators: concrete-path kinds always
     # have a path, and pattern-or-path kinds always have exactly one of
     # path/pattern.
-    assert concrete.path is not None
+    assert concrete.path is not None and concrete.host is not None
     if pattern_side.pattern is not None:
-        return path_matches_pattern(concrete.path, pattern_side.pattern)
+        route = parse_pattern(pattern_side.pattern)
+        if not _method_admits(route.method, pattern_side.method):
+            return False
+        if route.host is not None and _host_without_port(concrete.host) != route.host:
+            return False
+        return _path_matches_route(concrete.path, route)
     # A fallback path is literal evidence, not a route expression: wildcard
     # syntax in it (":id", "{id}", "*rest") must not match other paths.
     return concrete.path == pattern_side.path
@@ -206,7 +278,7 @@ def stitch_with_dropped(
     Raises ``ValueError`` if two graphs share a ``module_id``, if any
     ``module_id``/node ID contains ``"::"`` (used internally to keep IDs
     globally unique while stitching), if a ``module_id`` ends with ``":"``, or
-    if any route pattern uses unsupported syntax (see ``check_pattern``).
+    if any route pattern uses unsupported syntax (see ``parse_pattern``).
     """
     graphs = list(graphs)
     _check_unique_module_ids(graphs)
@@ -223,7 +295,7 @@ def stitch_with_dropped(
 
     for node in prefixed_nodes.values():
         if isinstance(node, Message) and node.pattern is not None:
-            check_pattern(node.pattern)
+            parse_pattern(node.pattern)
 
     # prefixed node ID -> the link ID(s) it was merged into. A node can
     # participate in more than one link (e.g. one route pattern matching
